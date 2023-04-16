@@ -23,10 +23,10 @@ mod Governance {
     }
 
     #[event]
-    fn Proposed(prop_id: felt252, impl_hash: felt252, to_upgrade: ContractType) {} // TODO use type aliases
+    fn Proposed(prop_id: felt252, impl_hash: felt252, to_upgrade: ContractType) {}
 
     #[event]
-    fn Voted(prop_id: felt252, voter: ContractAddress, opinion: VoteStatus) {} // TODO use type aliases
+    fn Voted(prop_id: felt252, voter: ContractAddress, opinion: VoteStatus) {}
 
     //#[view]
     //fn get_proposal_details(prop_id: felt252) -> PropDetails {
@@ -39,6 +39,4 @@ mod Governance {
     fn get_vote_counts(prop_id: felt252) -> (felt252, felt252) {
         Proposals::get_vote_counts(prop_id)
     }
-
-    #[view]
 }
