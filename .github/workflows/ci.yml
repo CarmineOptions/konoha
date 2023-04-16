@@ -19,7 +19,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pre-build dev container image
+      - name: Pre-build dev container image and run cairo-format
         uses: devcontainers/ci@v0.3
         with:
           imageName: ghcr.io/carmineoptions/governance

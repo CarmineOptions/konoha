@@ -3,7 +3,7 @@
 {
 	"name": "Cairo 1.0",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"build": { "dockerfile": "Dockerfile" },
+	"build": { "dockerfile": "Dockerfile", "cacheFrom": "ghcr.io/carmineoptions/governance"}
 	// Use 'mounts' to make the cargo cache persistent in a Docker Volume.
 	// "mounts": [
 	// 	{
