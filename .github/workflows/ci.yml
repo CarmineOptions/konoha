@@ -2,8 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [master]
-  pull_request:
+    paths:
+      - '**.cairo'
+      - 'devcontainer.json'
 
 jobs:
   build:
@@ -19,10 +20,20 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pre-build dev container image and run cairo-format
+      - name: Pre-build dev container image
         uses: devcontainers/ci@v0.3
         with:
           imageName: ghcr.io/carmineoptions/governance
           cacheFrom: ghcr.io/carmineoptions/governance
           push: always
-          runCmd: cairo-format -cvr
+          runCmd: cairo-format -cr
+
+      - name: Run cairo-format
+        uses: devcontainers/ci@v0.3
+        with:
+          runCmd: cairo-format -cr
+
+      - name: Build with scarb
+        uses: devcontainers/ci@v0.3
+        with:
+          runCmd: scarb build
