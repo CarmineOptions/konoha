@@ -22,7 +22,7 @@ jobs:
       - name: Pre-build dev container image
         uses: devcontainers/ci@v0.3
         with:
-          imageName: ghcr.io/CarmineOptions/governance
-          cacheFrom: ghcr.io/CarmineOptions/governance
+          imageName: ghcr.io/carmineoptions/governance
+          cacheFrom: ghcr.io/carmineoptions/governance
           push: always
           runCmd: cairo-format -cvr
