@@ -12,7 +12,9 @@ mod Governance {
 
 
     struct Storage {
-        //proposal_details: LegacyMap::<felt252, PropDetails>, // waiting for C1.0 docs to be finished so struct behavior in storage is clearer
+        // waiting for C1.0 docs to be finished so struct behavior in storage is clearer
+        // or probably I just need to implement the right trait for the struct
+        //proposal_details: LegacyMap::<felt252, PropDetails>, 
         proposal_vote_ends: LegacyMap::<felt252, BlockNumber>,
         proposal_voted_by: LegacyMap::<(felt252, ContractAddress), VoteStatus>,
         proposal_total_yay: LegacyMap::<felt252, felt252>,
@@ -20,6 +22,7 @@ mod Governance {
         proposal_applied: LegacyMap::<felt252, felt252>, // should be Bool after migration
         investor_voting_power: LegacyMap::<ContractAddress, felt252>,
         total_investor_distributed_power: felt252,
+        governance_token_address: ContractAddress
     }
 
     #[event]
@@ -38,5 +41,10 @@ mod Governance {
     #[view]
     fn get_vote_counts(prop_id: felt252) -> (felt252, felt252) {
         Proposals::get_vote_counts(prop_id)
+    }
+
+    #[external]
+    fn submit_proposal(impl_hash: felt252, to_upgrade: ContractType) -> felt252 {
+        Proposals::submit_proposal(impl_hash, to_upgrade)
     }
 }
