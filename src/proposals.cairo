@@ -9,6 +9,7 @@ mod Proposals {
     use governance::contract::Governance::proposal_total_yay;
     use governance::contract::Governance::proposal_total_nay;
     use governance::contract::Governance::proposal_vote_ends;
+    use governance::types::ContractType;
 
     fn get_vote_counts(prop_id: felt252) -> (felt252, felt252) {
         let yay = proposal_total_yay::read(prop_id);
@@ -31,10 +32,15 @@ mod Proposals {
         }
     }
 
+    fn assert_correct_contract_type(contract_type: ContractType) {
+        let contract_type_u: u64 = contract_type.try_into().unwrap();
+        assert(contract_type_u <= 2_u64, 'invalid contract type')
+    }
+
     fn assert_voting_in_progress(prop_id: felt252) {
         let end_block_number_felt: felt252 = proposal_vote_ends::read(prop_id);
         let end_block_number: u64 = end_block_number_felt.try_into().unwrap();
-        assert(end_block_number != 0, 'prop_id not found');
+        assert(end_block_number != 0_u64, 'prop_id not found');
 
         let current_block_number: u64 = get_block_info().unbox().block_number;
 
