@@ -4,9 +4,7 @@ This first version attempts to preserve interface- and storage-compatibility wit
 
 ## Setup
 
-Run this in a Devcontainer or on Codespaces. Cairo 1.0 comes installed.
-
-Install [Scarb](https://github.com/software-mansion/scarb) – [installation instructions](https://docs.swmansion.com/scarb/download)
+Run this in a Devcontainer or on Codespaces. Cairo 1.0 and Scarbcomes installed.
 
 Install [vscode-cairo](https://github.com/starkware-libs/cairo/tree/main/vscode-cairo) , run the `npm install` and `vsce package` on your local machine and then only find the Extension in your Extension sidebar and select Install in Devcontainer.
 
