@@ -1,2 +1,3 @@
-mod types;
 mod contract;
+mod proposals;
+mod types;
