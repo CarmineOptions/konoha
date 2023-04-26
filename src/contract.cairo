@@ -12,9 +12,7 @@ mod Governance {
 
 
     struct Storage {
-        // waiting for C1.0 docs to be finished so struct behavior in storage is clearer
-        // or probably I just need to implement the right trait for the struct
-        //proposal_details: LegacyMap::<felt252, PropDetails>, 
+        proposal_details: LegacyMap::<felt252, PropDetails>,
         proposal_vote_ends: LegacyMap::<felt252, BlockNumber>,
         proposal_voted_by: LegacyMap::<(felt252, ContractAddress), VoteStatus>,
         proposal_total_yay: LegacyMap::<felt252, felt252>,
@@ -31,13 +29,14 @@ mod Governance {
     #[event]
     fn Voted(prop_id: felt252, voter: ContractAddress, opinion: VoteStatus) {}
 
-    //#[view]
-    //fn get_proposal_details(prop_id: felt252) -> PropDetails {
-    //
-    //}
+    #[view]
+    fn get_proposal_details(prop_id: felt252) -> PropDetails {
+        Proposals::get_proposal_details(prop_id)
+    }
 
     // This should ideally return VoteCounts, but it seems like structs can't be returned from 
     // C1.0 external fns as they can't be serialized
+    // Actually it can, TODO do the same as I did with PropDetails for this
     #[view]
     fn get_vote_counts(prop_id: felt252) -> (felt252, felt252) {
         Proposals::get_vote_counts(prop_id)
@@ -46,5 +45,10 @@ mod Governance {
     #[external]
     fn submit_proposal(impl_hash: felt252, to_upgrade: ContractType) -> felt252 {
         Proposals::submit_proposal(impl_hash, to_upgrade)
+    }
+
+    #[external]
+    fn vote(prop_id: felt252, opinion: felt252) {
+        Proposals::vote(prop_id, opinion)
     }
 }

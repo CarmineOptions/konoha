@@ -11,10 +11,13 @@ mod Proposals {
     use governance::contract::Governance::proposal_total_yay;
     use governance::contract::Governance::proposal_total_nay;
     use governance::contract::Governance::proposal_vote_ends;
+    use governance::contract::Governance::proposal_details;
+    use governance::contract::Governance::proposal_voted_by;
     use governance::contract::Governance::governance_token_address;
     use governance::contract::Governance;
     use governance::types::BlockNumber;
     use governance::types::ContractType;
+    use governance::types::PropDetails;
     use governance::traits::IERC20Dispatcher;
     use governance::traits::IERC20DispatcherTrait;
     use governance::constants;
@@ -24,6 +27,10 @@ mod Proposals {
         let nay = proposal_total_nay::read(prop_id);
 
         (yay, nay)
+    }
+
+    fn get_proposal_details(prop_id: felt252) -> PropDetails {
+        proposal_details::read(prop_id)
     }
 
     fn get_free_prop_id() -> felt252 {
@@ -66,15 +73,17 @@ mod Proposals {
         assert_correct_contract_type(to_upgrade);
         let govtoken_addr = governance_token_address::read();
         let caller = get_caller_address();
-        // conversion to u128 must go through felt, nothing else is supported in Cairo rn
         let caller_balance : u128  = IERC20Dispatcher{contract_address: govtoken_addr}.balanceOf(caller).low;
         let total_supply = IERC20Dispatcher{contract_address: govtoken_addr}.totalSupply();
         let res: u256 = as_u256(0_u128, caller_balance * constants::NEW_PROPOSAL_QUORUM); // TODO use such multiplication that u128 * u128 = u256
         assert(total_supply < res, 'not enough tokens to submit');
 
         let prop_id = get_free_prop_id();
-
-        // TODO write to prop_details once writes to it are solved
+        let prop_details = PropDetails {
+            impl_hash: impl_hash,
+            to_upgrade: to_upgrade
+        };
+        proposal_details::write(prop_id, prop_details);
 
         let current_block_number: u64 = get_block_info().unbox().block_number;
         let end_block_number: BlockNumber = (current_block_number + constants::PROPOSAL_VOTING_TIME_BLOCKS).into();
@@ -83,4 +92,39 @@ mod Proposals {
         Governance::Proposed(prop_id, impl_hash, to_upgrade);
         prop_id
     }
+
+    fn vote(prop_id: felt252, opinion: felt252) {
+        // Checks
+        // This is quite awful and a mistake by me, will be fixed but not during C1 migration.
+        let MINUS_ONE: felt252 = 3618502788666131213697322783095070105623107215331596699973092056135872020480;
+        assert(opinion == MINUS_ONE | opinion == 1, 'opinion must be either 1 or -1');
+        let gov_token_addr = governance_token_address::read();
+        let caller_addr = get_caller_address();
+        let curr_vote_status: felt252 = proposal_voted_by::read((prop_id, caller_addr));
+        assert(curr_vote_status == 0, 'already voted');
+
+        let caller_balance_u256: u256 = IERC20Dispatcher { contract_address: gov_token_addr }.balanceOf(caller_addr);
+        assert(caller_balance_u256.high == 0_u128, 'CARM balance > u128');
+        let caller_balance: u128 = caller_balance_u256.low;
+        assert(caller_balance != 0_u128, 'CARM balance is zero');
+
+        assert_voting_in_progress(prop_id);
+
+        // Cast vote
+        // TODO fix Illegal bigint value during serialization.
+        //proposal_voted_by::write((prop_id, caller_addr), opinion);
+        if opinion == MINUS_ONE {
+            let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
+            let new_votes: u128 = curr_votes + caller_balance;
+            assert(new_votes >= 0_u128, 'new_votes must be non-negative');
+            proposal_total_nay::write(prop_id, new_votes.into());
+        } else {
+            let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
+            let new_votes: u128 = curr_votes + caller_balance;
+            assert(new_votes >= 0_u128, 'new_votes must be non-negative');
+            proposal_total_yay::write(prop_id, new_votes.into());
+        }
+        Governance::Voted(prop_id, caller_addr, opinion);
+    }
+
 }
