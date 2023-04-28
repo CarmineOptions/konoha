@@ -138,8 +138,11 @@ mod Proposals {
         let total_eligible_votes_from_tokenholders_u256: u256 = IERC20Dispatcher {
             contract_address: gov_token_addr
         }.totalSupply();
-        assert(total_eligible_votes_from_tokenholders_u256.high == 0_u128, 'totalSupply weirdly high');
-        let total_eligible_votes_from_tokenholders: u128 = total_eligible_votes_from_tokenholders_u256.low;
+        assert(
+            total_eligible_votes_from_tokenholders_u256.high == 0_u128, 'totalSupply weirdly high'
+        );
+        let total_eligible_votes_from_tokenholders: u128 =
+            total_eligible_votes_from_tokenholders_u256.low;
 
         // Not only tokenholders are eligible, but investors as well, they hold 1/4th of the voting power
         // However, their votes are currently stored in storage_var, not tokens
