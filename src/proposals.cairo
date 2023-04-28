@@ -14,6 +14,8 @@ mod Proposals {
     use governance::contract::Governance::proposal_details;
     use governance::contract::Governance::proposal_voted_by;
     use governance::contract::Governance::governance_token_address;
+    use governance::contract::Governance::investor_voting_power;
+    use governance::contract::Governance::total_investor_distributed_power;
     use governance::contract::Governance;
     use governance::types::BlockNumber;
     use governance::types::ContractType;
@@ -115,8 +117,7 @@ mod Proposals {
         assert_voting_in_progress(prop_id);
 
         // Cast vote
-        // TODO fix Illegal bigint value during serialization.
-        //proposal_voted_by::write((prop_id, caller_addr), opinion);
+        proposal_voted_by::write((prop_id, caller_addr), opinion);
         if opinion == constants::MINUS_ONE {
             let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
             let new_votes: u128 = curr_votes + caller_balance;
@@ -194,6 +195,47 @@ mod Proposals {
             return 1; // yay_tally > nay_tally
         } else {
             return constants::MINUS_ONE; // yay_tally < nay_tally
+        }
+    }
+
+    fn vote_investor(prop_id: felt252, opinion: felt252) {
+        // Checks
+        assert(opinion == constants::MINUS_ONE | opinion == 1, 'opinion must be either 1 or -1');
+
+        let caller_addr = get_caller_address();
+        let investor_voting_power: u128 = investor_voting_power::read(caller_addr).try_into().unwrap();
+        assert(investor_voting_power != 0_u128, 'caller not whitelisted investor');
+
+        let curr_vote_status: felt252 = proposal_voted_by::read((prop_id, caller_addr));
+        assert(curr_vote_status == 0, 'already voted');
+
+        assert_voting_in_progress(prop_id);
+
+        // Calculate real voting power
+        let gov_token_addr = governance_token_address::read();
+        let total_supply_u256: u256 = IERC20Dispatcher {
+            contract_address: gov_token_addr 
+        }.totalSupply();
+        assert(total_supply_u256.high == 0_u128, 'totalSupply weirdly high');
+        let total_supply: u128 = total_supply_u256.low;
+        let real_investor_voting_power: u128 = total_supply - constants::TEAM_TOKEN_BALANCE;
+        assert(total_supply >= constants::TEAM_TOKEN_BALANCE, 'total_supply<team token bal?');
+        let total_distributed_power: u128 = total_investor_distributed_power::read().try_into().unwrap();
+        let vote_power = (real_investor_voting_power * investor_voting_power) / total_distributed_power;
+        assert(vote_power != 0_u128, 'vote_power is zero');
+
+        // Cast vote
+        proposal_voted_by::write((prop_id, caller_addr), opinion);
+        if opinion == constants::MINUS_ONE {
+            let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
+            let new_votes: u128 = curr_votes + vote_power;
+            assert(new_votes >= 0_u128, 'new_votes negative');
+            proposal_total_nay::write(prop_id, new_votes.into());
+        } else {
+            let curr_votes: u128 = proposal_total_yay::read(prop_id).try_into().unwrap();
+            let new_votes: u128 = curr_votes + vote_power;
+            assert(new_votes >= 0_u128, 'new_votes negative');
+            proposal_total_yay::write(prop_id, new_votes.into());
         }
     }
 }
