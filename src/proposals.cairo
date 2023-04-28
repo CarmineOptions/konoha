@@ -67,8 +67,8 @@ mod Proposals {
     }
 
     fn submit_proposal(impl_hash: felt252, to_upgrade: ContractType) -> felt252 {
-        let IMPL_HASH_MIN_VALUE: felt252 =
-            0x200000000000000000000000000000000000000000000000000000000000;
+        // let IMPL_HASH_MIN_VALUE: felt252 =
+        //    0x200000000000000000000000000000000000000000000000000000000000;
         // assert(IMPL_HASH_MIN_VALUE < impl_hash, 'impl_hash weirdly small'); < Trait has no implementation in context: core::traits::PartialOrd::<core::felt252>
         // so skipping this check for now, FIXME
         assert_correct_contract_type(to_upgrade);
@@ -99,9 +99,7 @@ mod Proposals {
     fn vote(prop_id: felt252, opinion: felt252) {
         // Checks
         // This is quite awful and a mistake by me, will be fixed but not during C1 migration.
-        let MINUS_ONE: felt252 =
-            3618502788666131213697322783095070105623107215331596699973092056135872020480;
-        assert(opinion == MINUS_ONE | opinion == 1, 'opinion must be either 1 or -1');
+        assert(opinion == constants::MINUS_ONE | opinion == 1, 'opinion must be either 1 or -1');
         let gov_token_addr = governance_token_address::read();
         let caller_addr = get_caller_address();
         let curr_vote_status: felt252 = proposal_voted_by::read((prop_id, caller_addr));
@@ -119,7 +117,7 @@ mod Proposals {
         // Cast vote
         // TODO fix Illegal bigint value during serialization.
         //proposal_voted_by::write((prop_id, caller_addr), opinion);
-        if opinion == MINUS_ONE {
+        if opinion == constants::MINUS_ONE {
             let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
             let new_votes: u128 = curr_votes + caller_balance;
             assert(new_votes >= 0_u128, 'new_votes must be non-negative');
@@ -131,5 +129,68 @@ mod Proposals {
             proposal_total_yay::write(prop_id, new_votes.into());
         }
         Governance::Voted(prop_id, caller_addr, opinion);
+    }
+
+    fn check_proposal_passed_express(prop_id: felt252) -> u8 {
+        let gov_token_addr = governance_token_address::read();
+        let yay_tally_felt: felt252 = proposal_total_yay::read(prop_id);
+        let yay_tally: u128 = yay_tally_felt.try_into().unwrap();
+        let total_eligible_votes_from_tokenholders_u256: u256 = IERC20Dispatcher {
+            contract_address: gov_token_addr
+        }.totalSupply();
+        assert(total_eligible_votes_from_tokenholders_u256.high == 0_u128, 'totalSupply weirdly high');
+        let total_eligible_votes_from_tokenholders: u128 = total_eligible_votes_from_tokenholders_u256.low;
+
+        // Not only tokenholders are eligible, but investors as well, they hold 1/4th of the voting power
+        // However, their votes are currently stored in storage_var, not tokens
+        // So we must calculate 4/3 of the total supply (additional supply will be 1/4th of new total)
+        // and from that 1/2, because that's 50%, So (4/3) * (1/2) = 2/3 of the total supply
+        // Multiply total votes by 2 and divide by 3
+        let minimum_for_express: u128 = total_eligible_votes_from_tokenholders * 2_u128 / 3_u128;
+
+        // Check if yay_tally >= minimum_for_express
+        if yay_tally >= minimum_for_express {
+            1_u8
+        } else {
+            0_u8
+        }
+    }
+
+    fn get_proposal_status(prop_id: felt252) -> felt252 {
+        let end_block_number_felt: felt252 = proposal_vote_ends::read(prop_id);
+        let end_block_number: u64 = end_block_number_felt.try_into().unwrap();
+        let current_block_number: u64 = get_block_info().unbox().block_number;
+
+        if current_block_number <= end_block_number {
+            return check_proposal_passed_express(prop_id).into();
+        }
+
+        let gov_token_addr = governance_token_address::read();
+        let nay_tally_felt: felt252 = proposal_total_nay::read(prop_id);
+        let yay_tally_felt: felt252 = proposal_total_yay::read(prop_id);
+        let nay_tally: u128 = nay_tally_felt.try_into().unwrap();
+        let yay_tally: u128 = yay_tally_felt.try_into().unwrap();
+        let total_tally: u128 = yay_tally + nay_tally;
+
+        let total_eligible_votes_u256: u256 = IERC20Dispatcher {
+            contract_address: gov_token_addr
+        }.totalSupply();
+        assert(total_eligible_votes_u256.high == 0_u128, 'unable to check quorum');
+        let total_eligible_votes: u128 = total_eligible_votes_u256.low;
+
+        let quorum_threshold: u128 = total_eligible_votes * constants::QUORUM;
+        if total_tally < quorum_threshold {
+            return constants::MINUS_ONE; // didn't meet quorum
+        }
+
+        if yay_tally == nay_tally {
+            return constants::MINUS_ONE; // yay_tally = nay_tally
+        }
+
+        if yay_tally > nay_tally {
+            return 1; // yay_tally > nay_tally
+        } else {
+            return constants::MINUS_ONE; // yay_tally < nay_tally
+        }
     }
 }
