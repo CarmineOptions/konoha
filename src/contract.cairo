@@ -7,6 +7,7 @@ mod Governance {
     use governance::types::VoteStatus;
     use governance::types::ContractType;
     use governance::proposals::Proposals;
+    use governance::upgrades::Upgrades;
 
     use starknet::ContractAddress;
 
@@ -20,8 +21,11 @@ mod Governance {
         proposal_applied: LegacyMap::<felt252, felt252>, // should be Bool after migration
         investor_voting_power: LegacyMap::<ContractAddress, felt252>,
         total_investor_distributed_power: felt252,
-        governance_token_address: ContractAddress
+        governance_token_address: ContractAddress,
+        amm_address: ContractAddress
     }
+
+    // PROPOSALS
 
     #[event]
     fn Proposed(prop_id: felt252, impl_hash: felt252, to_upgrade: ContractType) {}
@@ -50,5 +54,32 @@ mod Governance {
     #[external]
     fn vote(prop_id: felt252, opinion: felt252) {
         Proposals::vote(prop_id, opinion)
+    }
+
+    #[view]
+    fn get_proposal_status(prop_id: felt252) -> felt252 {
+        Proposals::get_proposal_status(prop_id)
+    }
+
+    #[external]
+    fn vote_investor(prop_id: felt252, opinion: felt252) {
+        Proposals::vote_investor(prop_id, opinion)
+    }
+
+    // UPGRADES
+
+    #[view]
+    fn get_governance_token_address() -> ContractAddress {
+        governance_token_address::read()
+    }
+
+    #[view]
+    fn get_amm_address() -> ContractAddress {
+        amm_address::read()
+    }
+
+    #[external]
+    fn apply_passed_proposal(prop_id: felt252) {
+        Upgrades::apply_passed_proposal(prop_id)
     }
 }
