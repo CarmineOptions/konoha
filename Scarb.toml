@@ -10,4 +10,5 @@ version = "0.1.0"
 [[target.starknet-contract]]
 
 [dependencies]
-quaireaux_data_structures = { path = "vendor/quaireaux/quaireaux/data_structures" }
+quaireaux_data_structures = { git = "https://github.com/tensojka/quaireaux.git", branch = "fix-merkle-tree-alpha6" }
+#quaireaux_data_structures = { path = "vendor/quaireaux/quaireaux/data_structures" }
