@@ -23,7 +23,8 @@ mod Governance {
         investor_voting_power: LegacyMap::<ContractAddress, felt252>,
         total_investor_distributed_power: felt252,
         governance_token_address: ContractAddress,
-        amm_address: ContractAddress
+        amm_address: ContractAddress,
+        airdrop_claimed: LegacyMap::<ContractAddress, u128>
     }
 
     // PROPOSALS
@@ -86,8 +87,11 @@ mod Governance {
 
     // AIRDROPS
 
+    #[event]
+    fn Claimed(address: ContractAddress, received: u128) {}
+
     #[external]
-    fn mint(address: felt252, amount: felt252, proof: Array::<felt252>) {
-        Airdrop::mint(address, amount, proof)
+    fn claim(address: ContractAddress, amount: u128, proof: Array::<felt252>) {
+        Airdrop::claim(address, amount, proof)
     }
 }
