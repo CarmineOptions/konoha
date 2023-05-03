@@ -1,3 +1,4 @@
+mod airdrop;
 mod constants;
 mod contract;
 mod proposals;

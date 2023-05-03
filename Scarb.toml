@@ -8,3 +8,6 @@ version = "0.1.0"
 # foo = { path = "vendor/foo" }
 
 [[target.starknet-contract]]
+
+[dependencies]
+quaireaux_data_structures = { path = "vendor/quaireaux/quaireaux/data_structures" }

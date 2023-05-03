@@ -8,6 +8,7 @@ mod Governance {
     use governance::types::ContractType;
     use governance::proposals::Proposals;
     use governance::upgrades::Upgrades;
+    use governance::airdrop::Airdrop;
 
     use starknet::ContractAddress;
 
@@ -81,5 +82,12 @@ mod Governance {
     #[external]
     fn apply_passed_proposal(prop_id: felt252) {
         Upgrades::apply_passed_proposal(prop_id)
+    }
+
+    // AIRDROPS
+
+    #[external]
+    fn mint(address: felt252, amount: felt252, proof: Array::<felt252>) {
+        Airdrop::mint(address, amount, proof)
     }
 }
