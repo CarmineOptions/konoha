@@ -35,11 +35,93 @@ mod Proposals {
         proposal_details::read(prop_id)
     }
 
+    //_get_free_prop_id(0)
     fn get_free_prop_id() -> felt252 {
-        _get_free_prop_id(0)
+        if proposal_vote_ends::read(
+            0
+        ) == 0 {
+            0
+        } else if proposal_vote_ends::read(
+            1
+        ) == 0 {
+            1
+        } else if proposal_vote_ends::read(
+            2
+        ) == 0 {
+            2
+        } else if proposal_vote_ends::read(
+            3
+        ) == 0 {
+            3
+        } else if proposal_vote_ends::read(
+            4
+        ) == 0 {
+            4
+        } else if proposal_vote_ends::read(
+            5
+        ) == 0 {
+            5
+        } else if proposal_vote_ends::read(
+            6
+        ) == 0 {
+            6
+        } else if proposal_vote_ends::read(
+            7
+        ) == 0 {
+            7
+        } else if proposal_vote_ends::read(
+            8
+        ) == 0 {
+            8
+        } else if proposal_vote_ends::read(
+            9
+        ) == 0 {
+            9
+        } else if proposal_vote_ends::read(
+            10
+        ) == 0 {
+            10
+        } else if proposal_vote_ends::read(
+            11
+        ) == 0 {
+            11
+        } else if proposal_vote_ends::read(
+            12
+        ) == 0 {
+            12
+        } else if proposal_vote_ends::read(
+            13
+        ) == 0 {
+            13
+        } else if proposal_vote_ends::read(
+            14
+        ) == 0 {
+            14
+        } else if proposal_vote_ends::read(
+            15
+        ) == 0 {
+            15
+        } else if proposal_vote_ends::read(
+            16
+        ) == 0 {
+            16
+        } else if proposal_vote_ends::read(
+            17
+        ) == 0 {
+            17
+        } else if proposal_vote_ends::read(
+            18
+        ) == 0 {
+            18
+        } else if proposal_vote_ends::read(19) == 0 {
+            19
+        } else {
+            20
+        }
     }
 
     fn _get_free_prop_id(currid: felt252) -> felt252 {
+        gas::withdraw_gas_all(get_builtin_costs()).expect('Out of gas'); // remove after alpha7
         let res = proposal_vote_ends::read(currid);
 
         if res == 0 {
@@ -73,6 +155,7 @@ mod Proposals {
         //    0x200000000000000000000000000000000000000000000000000000000000;
         // assert(IMPL_HASH_MIN_VALUE < impl_hash, 'impl_hash weirdly small'); < Trait has no implementation in context: core::traits::PartialOrd::<core::felt252>
         // so skipping this check for now, FIXME
+        // so this check is actually inside Cairo now. Very cool, ClassHash has its own type.
         assert_correct_contract_type(to_upgrade);
         let govtoken_addr = governance_token_address::read();
         let caller = get_caller_address();
