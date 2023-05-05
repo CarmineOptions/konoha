@@ -183,8 +183,12 @@ mod Proposals {
 
     fn vote(prop_id: felt252, opinion: felt252) {
         // Checks
-        // This is quite awful and a mistake by me, will be fixed but not during C1 migration.
-        assert(opinion == constants::MINUS_ONE | opinion == 1, 'opinion must be either 1 or -1');
+        assert(opinion == 1 | opinion == 2, 'opinion must be either 1 or 2');
+        if opinion == 2 {
+            let actual_opinion = constants::MINUS_ONE;
+        } else {
+            let actual_opinion = 1;
+        }
         let gov_token_addr = governance_token_address::read();
         let caller_addr = get_caller_address();
         let curr_vote_status: felt252 = proposal_voted_by::read((prop_id, caller_addr));
@@ -200,8 +204,8 @@ mod Proposals {
         assert_voting_in_progress(prop_id);
 
         // Cast vote
-        proposal_voted_by::write((prop_id, caller_addr), opinion);
-        if opinion == constants::MINUS_ONE {
+        proposal_voted_by::write((prop_id, caller_addr), actual_opinion);
+        if actual_opinion == constants::MINUS_ONE {
             let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
             let new_votes: u128 = curr_votes + caller_balance;
             assert(new_votes >= 0_u128, 'new_votes must be non-negative');
