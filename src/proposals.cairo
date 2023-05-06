@@ -184,10 +184,11 @@ mod Proposals {
     fn vote(prop_id: felt252, opinion: felt252) {
         // Checks
         assert(opinion == 1 | opinion == 2, 'opinion must be either 1 or 2');
+        let mut actual_opinion = 0;
         if opinion == 2 {
-            let actual_opinion = constants::MINUS_ONE;
+            actual_opinion = constants::MINUS_ONE;
         } else {
-            let actual_opinion = 1;
+            actual_opinion = 1;
         }
         let gov_token_addr = governance_token_address::read();
         let caller_addr = get_caller_address();
