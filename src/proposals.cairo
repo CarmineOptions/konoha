@@ -7,6 +7,7 @@ mod Proposals {
     use starknet::get_block_info;
     use starknet::get_caller_address;
     use starknet::BlockInfo;
+    use starknet::ContractAddress;
 
     use governance::contract::Governance::proposal_total_yay;
     use governance::contract::Governance::proposal_total_nay;
@@ -16,6 +17,8 @@ mod Proposals {
     use governance::contract::Governance::governance_token_address;
     use governance::contract::Governance::investor_voting_power;
     use governance::contract::Governance::total_investor_distributed_power;
+    use governance::contract::Governance::delegated_pairs;
+    use governance::contract::Governance::delegated_voting_power;
     use governance::contract::Governance;
     use governance::types::BlockNumber;
     use governance::types::ContractType;
@@ -181,6 +184,25 @@ mod Proposals {
         prop_id
     }
 
+    fn delegate_vote(to_address: ContractAddress) {
+        let caller_addr = get_caller_address();
+        let curr_delegate = delegated_pairs::read(caller_addr);
+        //assert(curr_delegate == ContractAddress(null), 'Already delegated');
+
+        let gov_token_addr = governance_token_address::read();
+        let caller_balance_u256: u256 = IERC20Dispatcher {
+            contract_address: gov_token_addr
+        }.balanceOf(caller_addr);
+        assert(caller_balance_u256.high == 0_u128, 'CARM balance > u128');
+        let caller_balance: u128 = caller_balance_u256.low;
+        assert(caller_balance != 0_u128, 'CARM balance is zero');
+
+        delegated_pairs::write(caller_addr, to_address);
+        let current_voting_power = delegated_voting_power::read(to_address);
+        delegated_voting_power::write(to_address, current_voting_power + caller_balance);
+        delegated_voting_power::write(caller_addr, 0_u128);
+    }
+
     fn vote(prop_id: felt252, opinion: felt252) {
         // Checks
         // This is quite awful and a mistake by me, will be fixed but not during C1 migration.
@@ -190,12 +212,23 @@ mod Proposals {
         let curr_vote_status: felt252 = proposal_voted_by::read((prop_id, caller_addr));
         assert(curr_vote_status == 0, 'already voted');
 
-        let caller_balance_u256: u256 = IERC20Dispatcher {
+        let delegate_addr = delegated_pairs::read(caller_addr);
+        //let caller_voting_power: u128;
+
+        //if delegate_addr != 0 {
+          //  let caller_voting_power = 0_u128;
+        //} else {
+            let caller_balance_u256: u256 = IERC20Dispatcher {
             contract_address: gov_token_addr
-        }.balanceOf(caller_addr);
-        assert(caller_balance_u256.high == 0_u128, 'CARM balance > u128');
-        let caller_balance: u128 = caller_balance_u256.low;
-        assert(caller_balance != 0_u128, 'CARM balance is zero');
+            }.balanceOf(caller_addr);
+            assert(caller_balance_u256.high == 0_u128, 'CARM balance > u128');
+            let caller_balance: u128 = caller_balance_u256.low;
+            assert(caller_balance != 0_u128, 'CARM balance is zero');
+            let caller_voting_power = caller_balance + 
+                                        delegated_voting_power::read(caller_addr);
+        //}
+
+        assert(caller_voting_power > 0_u128, 'No voting power');
 
         assert_voting_in_progress(prop_id);
 
@@ -203,12 +236,12 @@ mod Proposals {
         proposal_voted_by::write((prop_id, caller_addr), opinion);
         if opinion == constants::MINUS_ONE {
             let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
-            let new_votes: u128 = curr_votes + caller_balance;
+            let new_votes: u128 = curr_votes + caller_voting_power;
             assert(new_votes >= 0_u128, 'new_votes must be non-negative');
             proposal_total_nay::write(prop_id, new_votes.into());
         } else {
             let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
-            let new_votes: u128 = curr_votes + caller_balance;
+            let new_votes: u128 = curr_votes + caller_voting_power;
             assert(new_votes >= 0_u128, 'new_votes must be non-negative');
             proposal_total_yay::write(prop_id, new_votes.into());
         }
