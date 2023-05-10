@@ -21,7 +21,7 @@ mod Governance {
         proposal_total_nay: LegacyMap::<felt252, felt252>,
         delegated_pairs: LegacyMap::<ContractAddress, ContractAddress>,
         delegated_voting_power: LegacyMap::<ContractAddress, u128>,
-        delegated_voting_power_per_user: LegacyMap::<ContractAddress, LegacyMap::<ContractAddress, u128> >,
+        delegated_voting_power_per_user: LegacyMap::<(ContractAddress, ContractAddress), u128>,
         proposal_applied: LegacyMap::<felt252, felt252>, // should be Bool after migration
         investor_voting_power: LegacyMap::<ContractAddress, felt252>,
         total_investor_distributed_power: felt252,

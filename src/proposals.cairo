@@ -10,6 +10,7 @@ mod Proposals {
     use starknet::get_caller_address;
     use starknet::BlockInfo;
     use starknet::ContractAddress;
+    use starknet::contract_address_const;
 
     use governance::contract::Governance::proposal_total_yay;
     use governance::contract::Governance::proposal_total_nay;
@@ -193,7 +194,7 @@ mod Proposals {
 
         assert(
             curr_delegate == to_address | curr_delegate.is_zero(),
-            'You already delegate to another address'
+            'Already delegated to other'
         );
 
         let gov_token_addr = governance_token_address::read();
@@ -204,18 +205,17 @@ mod Proposals {
         let caller_balance: u128 = caller_balance_u256.low;
         assert(caller_balance != 0_u128, 'CARM balance is zero');
 
-        //if curr_delegate == to_address {
-        //  let already_delegated = delegated_voting_power_per_user::read((caller_addr, to_address));
-        //} else {
-        //  let already_delegated = 0;
-        //}
+        let mut already_delegated: u128 = 0_u128;
+        if curr_delegate == to_address {
+          already_delegated = delegated_voting_power_per_user::read((caller_addr, to_address));
+        }
 
         let power_to_delegate = caller_balance - already_delegated;
 
         delegated_pairs::write(caller_addr, to_address);
         let current_voting_power = delegated_voting_power::read(to_address);
         delegated_voting_power::write(to_address, current_voting_power + power_to_delegate);
-        delegated_voting_power::write(caller_addr, 0);
+        delegated_voting_power::write(caller_addr, 0_u128);
 
         delegated_voting_power_per_user::write((to_address, caller_addr), caller_balance);
     }
@@ -223,13 +223,13 @@ mod Proposals {
     fn withdraw_delegation() {
         let caller_addr = get_caller_address();
         let delegate_addr = delegated_pairs::read(caller_addr);
-        //assert(delegate_addr != 0, 'No delegate to withdraw');
+        assert(!delegate_addr.is_zero(), 'No delegate to withdraw');
 
         let power_to_withdraw = delegated_voting_power_per_user::read((delegate_addr, caller_addr));
         let current_delegate_voting_power = delegated_voting_power::read(delegate_addr);
 
-        //delegated_pairs::write(caller_addr, ContractAddress(null));
-        delegated_voting_power::write(delegate_addr, current_voting_power - power_to_withdraw);
+        delegated_pairs::write(caller_addr, contract_address_const::<0>());
+        delegated_voting_power::write(delegate_addr, current_delegate_voting_power - power_to_withdraw);
         delegated_voting_power_per_user::write((delegate_addr, caller_addr), 0_u128);
     }
 
@@ -243,11 +243,12 @@ mod Proposals {
         assert(curr_vote_status == 0, 'already voted');
 
         let delegate_addr = delegated_pairs::read(caller_addr);
-        let caller_voting_power: u128;
+        
+        //let caller_voting_power: u128; 
+        //is there a way to uncomment this without getting an error?
 
-        if delegate_addr != 0 {
-            let caller_voting_power = 0_u128;
-        } else {
+        let caller_voting_power = 0_u128;
+        if delegate_addr.is_zero() {
             let caller_balance_u256: u256 = IERC20Dispatcher {
                 contract_address: gov_token_addr
             }.balanceOf(caller_addr);
