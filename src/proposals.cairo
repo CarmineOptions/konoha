@@ -192,10 +192,7 @@ mod Proposals {
         let caller_addr = get_caller_address();
         let curr_delegate = delegated_pairs::read(caller_addr);
 
-        assert(
-            curr_delegate == to_address | curr_delegate.is_zero(),
-            'Already delegated to other'
-        );
+        assert(curr_delegate == to_address | curr_delegate.is_zero(), 'Already delegated to other');
 
         let gov_token_addr = governance_token_address::read();
         let caller_balance_u256: u256 = IERC20Dispatcher {
@@ -207,7 +204,7 @@ mod Proposals {
 
         let mut already_delegated: u128 = 0_u128;
         if curr_delegate == to_address {
-          already_delegated = delegated_voting_power_per_user::read((caller_addr, to_address));
+            already_delegated = delegated_voting_power_per_user::read((caller_addr, to_address));
         }
 
         let power_to_delegate = caller_balance - already_delegated;
@@ -229,7 +226,9 @@ mod Proposals {
         let current_delegate_voting_power = delegated_voting_power::read(delegate_addr);
 
         delegated_pairs::write(caller_addr, contract_address_const::<0>());
-        delegated_voting_power::write(delegate_addr, current_delegate_voting_power - power_to_withdraw);
+        delegated_voting_power::write(
+            delegate_addr, current_delegate_voting_power - power_to_withdraw
+        );
         delegated_voting_power_per_user::write((delegate_addr, caller_addr), 0_u128);
     }
 
@@ -243,8 +242,8 @@ mod Proposals {
         assert(curr_vote_status == 0, 'already voted');
 
         let delegate_addr = delegated_pairs::read(caller_addr);
-        
-        //let caller_voting_power: u128; 
+
+        //let mut caller_voting_power: u128; 
         //is there a way to uncomment this without getting an error?
 
         let mut caller_voting_power = 0_u128;
@@ -259,8 +258,6 @@ mod Proposals {
         }
 
         assert(caller_voting_power > 0_u128, 'No voting power');
-
-        
 
         assert_voting_in_progress(prop_id);
 
