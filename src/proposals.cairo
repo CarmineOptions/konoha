@@ -247,7 +247,7 @@ mod Proposals {
         //let caller_voting_power: u128; 
         //is there a way to uncomment this without getting an error?
 
-        let caller_voting_power = 0_u128;
+        let mut caller_voting_power = 0_u128;
         if delegate_addr.is_zero() {
             let caller_balance_u256: u256 = IERC20Dispatcher {
                 contract_address: gov_token_addr
@@ -255,10 +255,12 @@ mod Proposals {
             assert(caller_balance_u256.high == 0_u128, 'CARM balance > u128');
             let caller_balance: u128 = caller_balance_u256.low;
             assert(caller_balance != 0_u128, 'CARM balance is zero');
-            let caller_voting_power = caller_balance + delegated_voting_power::read(caller_addr);
+            caller_voting_power = caller_balance + delegated_voting_power::read(caller_addr);
         }
 
         assert(caller_voting_power > 0_u128, 'No voting power');
+
+        
 
         assert_voting_in_progress(prop_id);
 
