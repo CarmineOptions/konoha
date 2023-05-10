@@ -3,7 +3,9 @@ mod Proposals {
     use option::OptionTrait;
     use traits::Into;
     use box::BoxTrait;
+    use zeroable::Zeroable;
 
+    use starknet::contract_address::ContractAddressZeroable;
     use starknet::get_block_info;
     use starknet::get_caller_address;
     use starknet::BlockInfo;
@@ -189,8 +191,10 @@ mod Proposals {
         let caller_addr = get_caller_address();
         let curr_delegate = delegated_pairs::read(caller_addr);
 
-       // assert(curr_delegate == to_address || curr_delegate == ContractAddress(0), 
-         //       'You already delegate to another address');
+        assert(
+            curr_delegate == to_address | curr_delegate.is_zero(),
+            'You already delegate to another address'
+        );
 
         let gov_token_addr = governance_token_address::read();
         let caller_balance_u256: u256 = IERC20Dispatcher {
@@ -201,13 +205,13 @@ mod Proposals {
         assert(caller_balance != 0_u128, 'CARM balance is zero');
 
         //if curr_delegate == to_address {
-          //  let already_delegated = delegated_voting_power_per_user::read((caller_addr, to_address));
+        //  let already_delegated = delegated_voting_power_per_user::read((caller_addr, to_address));
         //} else {
-          //  let already_delegated = 0;
+        //  let already_delegated = 0;
         //}
 
         let power_to_delegate = caller_balance - already_delegated;
-        
+
         delegated_pairs::write(caller_addr, to_address);
         let current_voting_power = delegated_voting_power::read(to_address);
         delegated_voting_power::write(to_address, current_voting_power + power_to_delegate);
@@ -245,13 +249,12 @@ mod Proposals {
             let caller_voting_power = 0_u128;
         } else {
             let caller_balance_u256: u256 = IERC20Dispatcher {
-            contract_address: gov_token_addr
+                contract_address: gov_token_addr
             }.balanceOf(caller_addr);
             assert(caller_balance_u256.high == 0_u128, 'CARM balance > u128');
             let caller_balance: u128 = caller_balance_u256.low;
             assert(caller_balance != 0_u128, 'CARM balance is zero');
-            let caller_voting_power = caller_balance + 
-                                        delegated_voting_power::read(caller_addr);
+            let caller_voting_power = caller_balance + delegated_voting_power::read(caller_addr);
         }
 
         assert(caller_voting_power > 0_u128, 'No voting power');
