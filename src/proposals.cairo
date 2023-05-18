@@ -4,6 +4,7 @@ mod Proposals {
     use traits::Into;
     use box::BoxTrait;
     use zeroable::Zeroable;
+    use itertools::Itertools;
 
     use starknet::contract_address::ContractAddressZeroable;
     use starknet::get_block_info;
@@ -23,6 +24,8 @@ mod Proposals {
     use governance::contract::Governance::delegated_pairs;
     use governance::contract::Governance::delegated_voting_power;
     use governance::contract::Governance::delegated_voting_power_per_user;
+    use governance::contract::Governance::delegate_hash;
+    use governance::contract::Governance::total_delegated_to;
     use governance::contract::Governance;
     use governance::types::BlockNumber;
     use governance::types::ContractType;
@@ -188,12 +191,13 @@ mod Proposals {
         prop_id
     }
 
-    fn delegate_vote(to_address: ContractAddress) {
+    fn delegate_vote(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>, amount: u128 ) {
         let caller_addr = get_caller_address();
-        let curr_delegate = delegated_pairs::read(caller_addr);
+        let stored_hash = delegate_hash::read(caller_addr);
+        //assert(stored_hash == hash(calldata), 'incorrect delegate list');
 
-        assert(curr_delegate == to_address | curr_delegate.is_zero(), 'Already delegated to other');
-
+        let curr_total_delegated_to = total_delegated_to::read(to_addr);
+    
         let gov_token_addr = governance_token_address::read();
         let caller_balance_u256: u256 = IERC20Dispatcher {
             contract_address: gov_token_addr
@@ -202,34 +206,34 @@ mod Proposals {
         let caller_balance: u128 = caller_balance_u256.low;
         assert(caller_balance != 0_u128, 'CARM balance is zero');
 
-        let mut already_delegated: u128 = 0_u128;
-        if curr_delegate == to_address {
-            already_delegated = delegated_voting_power_per_user::read((caller_addr, to_address));
-        }
+        //i want to iterate over calldata to find the amount corresponding to the to_addr
+        let already_delegated: u128 = calldata.iter().find(|(addr,_)| *addr == to_address)
+                                        .map(|(_, amount)| *amount).unwrap_or(0);
 
-        let power_to_delegate = caller_balance - already_delegated;
+        //i want to iterate over calldata to update the value of the to_addr by the input amount
+        //then calculate the (updated) hash of the updated list
 
-        delegated_pairs::write(caller_addr, to_address);
-        let current_voting_power = delegated_voting_power::read(to_address);
-        delegated_voting_power::write(to_address, current_voting_power + power_to_delegate);
-        delegated_voting_power::write(caller_addr, 0_u128);
-
-        delegated_voting_power_per_user::write((to_address, caller_addr), caller_balance);
+        delegate_hash::write(caller_addr, updated_hash);
+        total_delegated_to::write(to_addr, curr_total_delegated_to + caller_balance - already_delegated);
     }
 
-    fn withdraw_delegation() {
+    fn withdraw_delegation(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>) {
         let caller_addr = get_caller_address();
-        let delegate_addr = delegated_pairs::read(caller_addr);
-        assert(!delegate_addr.is_zero(), 'No delegate to withdraw');
+        let stored_hash = delegate_hash::read(caller_addr);
+        //assert(stored_hash == hash(calldata), 'incorrect delegate list');
 
-        let power_to_withdraw = delegated_voting_power_per_user::read((delegate_addr, caller_addr));
-        let current_delegate_voting_power = delegated_voting_power::read(delegate_addr);
+        let power_to_withdraw: u128 = calldata.iter().find(|addr, _)| *addr = to_addr)  
+                                        .map(|(amount,_)| *amount).unwrap_or(0);
+        assert(power_to_withdraw > 0_u128, 'no amount to withdraw');
 
-        delegated_pairs::write(caller_addr, contract_address_const::<0>());
-        delegated_voting_power::write(
-            delegate_addr, current_delegate_voting_power - power_to_withdraw
-        );
-        delegated_voting_power_per_user::write((delegate_addr, caller_addr), 0_u128);
+        //update the calldata to update the value of to_addr by substracting power_to_withdraw
+        //compute the corresponding updated hash
+        delegate_hash::write(caller_addr, updated_hash);
+
+        let curr_total_delegated_to = total_delegated_to::read(to_addr);
+        total_delegated_to::write(to_addr, curr_total_delegated_to - power_to_withdraw);
+
+
     }
 
     fn vote(prop_id: felt252, opinion: felt252) {
@@ -241,22 +245,15 @@ mod Proposals {
         let curr_vote_status: felt252 = proposal_voted_by::read((prop_id, caller_addr));
         assert(curr_vote_status == 0, 'already voted');
 
-        let delegate_addr = delegated_pairs::read(caller_addr);
-
-        //let mut caller_voting_power: u128; 
-        //is there a way to uncomment this without getting an error?
-
-        let mut caller_voting_power = 0_u128;
-        if delegate_addr.is_zero() {
-            let caller_balance_u256: u256 = IERC20Dispatcher {
+        let caller_balance_u256: u256 = IERC20Dispatcher {
                 contract_address: gov_token_addr
             }.balanceOf(caller_addr);
-            assert(caller_balance_u256.high == 0_u128, 'CARM balance > u128');
-            let caller_balance: u128 = caller_balance_u256.low;
-            assert(caller_balance != 0_u128, 'CARM balance is zero');
-            caller_voting_power = caller_balance + delegated_voting_power::read(caller_addr);
-        }
+        assert(caller_balance_u256.high == 0_u128, 'CARM balance > u128');
+        let caller_balance: u128 = caller_balance_u256.low;
+        assert(caller_balance != 0_u128, 'CARM balance is zero');
 
+        let caller_voting_power = caller_balance + total_delegated_to::read(caller_addr);
+        
         assert(caller_voting_power > 0_u128, 'No voting power');
 
         assert_voting_in_progress(prop_id);
