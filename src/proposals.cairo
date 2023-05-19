@@ -4,7 +4,11 @@ mod Proposals {
     use traits::Into;
     use box::BoxTrait;
     use zeroable::Zeroable;
-    use itertools::Itertools;
+    //use itertools::Itertools;
+
+    extern type Pedersen;
+
+    extern fn pedersen(a: felt252, b: felt252) -> felt252 implicits(Pedersen) nopanic;
 
     use starknet::contract_address::ContractAddressZeroable;
     use starknet::get_block_info;
@@ -191,12 +195,26 @@ mod Proposals {
         prop_id
     }
 
+      fn hashing(hash: felt252, calldata: Array::<felt252>) -> felt252 {
+        let mut hash : felt252 = 0;
+        if calldata.len() == 0 {
+            return hash;
+        } else {
+            hash = pedersen(hash, calldata); // calldate[n] with n = calldata.len()
+            hashing(hash, calldata); //calldata[0...n-1]
+        }
+
+    }
+
+
     fn delegate_vote(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>, amount: u128 ) {
         let caller_addr = get_caller_address();
         let stored_hash = delegate_hash::read(caller_addr);
         //assert(stored_hash == hash(calldata), 'incorrect delegate list');
 
         let curr_total_delegated_to = total_delegated_to::read(to_addr);
+
+        
     
         let gov_token_addr = governance_token_address::read();
         let caller_balance_u256: u256 = IERC20Dispatcher {
@@ -207,8 +225,9 @@ mod Proposals {
         assert(caller_balance != 0_u128, 'CARM balance is zero');
 
         //i want to iterate over calldata to find the amount corresponding to the to_addr
-        let already_delegated: u128 = calldata.iter().find(|(addr,_)| *addr == to_address)
-                                        .map(|(_, amount)| *amount).unwrap_or(0);
+        
+        //let already_delegated: u128 = calldata.iter().find(|(addr,_)| *addr == to_address)
+        //                                .map(|(_, amount)| *amount).unwrap_or(0);
 
         //i want to iterate over calldata to update the value of the to_addr by the input amount
         //then calculate the (updated) hash of the updated list
@@ -222,8 +241,8 @@ mod Proposals {
         let stored_hash = delegate_hash::read(caller_addr);
         //assert(stored_hash == hash(calldata), 'incorrect delegate list');
 
-        let power_to_withdraw: u128 = calldata.iter().find(|addr, _)| *addr = to_addr)  
-                                        .map(|(amount,_)| *amount).unwrap_or(0);
+        //let power_to_withdraw: u128 = calldata.iter().find(|addr, _)| *addr = to_addr)  
+        //                                .map(|(amount,_)| *amount).unwrap_or(0);
         assert(power_to_withdraw > 0_u128, 'no amount to withdraw');
 
         //update the calldata to update the value of to_addr by substracting power_to_withdraw
