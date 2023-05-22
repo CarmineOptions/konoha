@@ -6,9 +6,12 @@ mod Proposals {
     use zeroable::Zeroable;
     //use itertools::Itertools;
 
-    extern type Pedersen;
+    use array::ArrayTrait;
 
-    extern fn pedersen(a: felt252, b: felt252) -> felt252 implicits(Pedersen) nopanic;
+    use hash::LegacyHash;
+    use quaireaux_data_structures::merkle_tree::MerkleTree;
+    use quaireaux_data_structures::merkle_tree::MerkleTreeTrait;
+    use array::SpanTrait;
 
     use starknet::contract_address::ContractAddressZeroable;
     use starknet::get_block_info;
@@ -195,13 +198,17 @@ mod Proposals {
         prop_id
     }
 
-      fn hashing(hash: felt252, calldata: Array::<felt252>) -> felt252 {
-        let mut hash : felt252 = 0;
-        if calldata.len() == 0 {
-            return hash;
+      fn hashing(mut hashed_data: felt252, mut calldata: Array::<felt252>) -> felt252 {
+        //let mut merkle_tree = MerkleTreeTrait::new();
+        if calldata.len() == 0_u32 {
+            return 0;
         } else {
-            hash = pedersen(hash, calldata); // calldate[n] with n = calldata.len()
-            hashing(hash, calldata); //calldata[0...n-1]
+            let calldata_span: Span<felt252> = calldata.span();
+
+
+            hashed_data = LegacyHash::hash(hashed_data, *calldata_span.at(0_usize) ); 
+            let test = calldata.pop_front().unwrap(); // this should remove first element
+            hashing(hashed_data, calldata); 
         }
 
     }
@@ -210,7 +217,7 @@ mod Proposals {
     fn delegate_vote(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>, amount: u128 ) {
         let caller_addr = get_caller_address();
         let stored_hash = delegate_hash::read(caller_addr);
-        //assert(stored_hash == hash(calldata), 'incorrect delegate list');
+        //assert(stored_hash == hashing(0, calldata), 'incorrect delegate list');
 
         let curr_total_delegated_to = total_delegated_to::read(to_addr);
 
