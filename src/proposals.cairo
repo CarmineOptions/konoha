@@ -207,17 +207,37 @@ mod Proposals {
         prop_id
     }
 
-    fn hashing_felt(mut hashed_data: felt252, mut calldata: Array::<(felt252, felt252)>) -> felt252 {
+    fn hashing(mut hashed_data: felt252, mut calldata: Array::<(ContractAddress, u128)>) -> felt252 {
         if calldata.len() == 0_u32 {
             return 0;
         } else {
-        
-            let calldata_span: Span<(felt252, felt252)> = calldata.span();
+            let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
             let (a, b) = *calldata_span.at(0_usize);
-            hashed_data = LegacyHash::hash(a, b); 
+            hashed_data = LegacyHash::hash(contract_address_to_felt252(a), b.into()); 
 
-            let test = calldata.pop_front().unwrap(); // this should remove first element
-            return hashing_felt(hashed_data, calldata); 
+            calldata.pop_front().unwrap(); // this should remove first element
+            return hashing(hashed_data, calldata); 
+        }
+    }
+
+    fn iterate(address : ContractAddress, mut calldata: Array<(ContractAddress, u128)> ) -> u128 {
+        if calldata.len() == 0_u32 {
+            return 0_u128;
+        }  else {
+
+            let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+            let (a, b) = *calldata_span.at(0_usize);
+            if a == address {
+                return b;
+            } else {
+                calldata.pop_front().unwrap(); // this should remove first element
+                return iterate(address, calldata); 
+
+            }
+
+            
+
+
         }
     }
 
