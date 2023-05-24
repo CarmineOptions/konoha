@@ -6,6 +6,10 @@ mod Proposals {
     use zeroable::Zeroable;
     //use itertools::Itertools;
 
+    //use std::collections::HashSet;
+
+
+
     use array::ArrayTrait;
 
     use hash::LegacyHash;
@@ -19,6 +23,9 @@ mod Proposals {
     use starknet::BlockInfo;
     use starknet::ContractAddress;
     use starknet::contract_address_const;
+
+    use starknet::class_hash::class_hash_try_from_felt252;
+
 
     use governance::contract::Governance::proposal_total_yay;
     use governance::contract::Governance::proposal_total_nay;
@@ -199,19 +206,42 @@ mod Proposals {
     }
 
       fn hashing(mut hashed_data: felt252, mut calldata: Array::<felt252>) -> felt252 {
-        //let mut merkle_tree = MerkleTreeTrait::new();
         if calldata.len() == 0_u32 {
             return 0;
         } else {
+        
             let calldata_span: Span<felt252> = calldata.span();
-
-
             hashed_data = LegacyHash::hash(hashed_data, *calldata_span.at(0_usize) ); 
+
             let test = calldata.pop_front().unwrap(); // this should remove first element
             hashing(hashed_data, calldata); 
         }
 
     }
+
+    fn hashing_bis(mut hashed_data: felt252, mut calldata: Array<(ContractAddress, u128)>, test: u128) -> felt252 {
+        if calldata.len() == 0_u32 {
+            return 0;
+        } else {
+            let test2 = test.try_into().unwrap();
+            let test2bis = test.into();
+            let test3 = get_caller_address().into();
+            let test4 = get_caller_address().try_into().unwrap();
+
+            let impl_hash_classhash: ClassHash = class_hash_try_from_felt252(
+                        get_caller_address()
+                    ).unwrap();
+
+            let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+
+
+            hashed_data = LegacyHash::hash(hashed_data, *calldata_span.at(0_usize).into() ); 
+            let test = calldata.pop_front().unwrap(); // this should remove first element
+            return hashing(hashed_data, calldata); 
+        }
+
+    }
+
 
 
     fn delegate_vote(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>, amount: u128 ) {
