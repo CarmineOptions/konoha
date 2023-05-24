@@ -214,30 +214,44 @@ mod Proposals {
             hashed_data = LegacyHash::hash(hashed_data, *calldata_span.at(0_usize) ); 
 
             let test = calldata.pop_front().unwrap(); // this should remove first element
-            hashing(hashed_data, calldata); 
+            return hashing(hashed_data, calldata); 
         }
+    }
 
+    fn hashing_felt(mut hashed_data: felt252, mut calldata: Array::<(felt252, felt252)>) -> felt252 {
+        if calldata.len() == 0_u32 {
+            return 0;
+        } else {
+        
+            let calldata_span: Span<(felt252, felt252)> = calldata.span();
+            let (a, b) = *calldata_span.at(0_usize);
+            hashed_data = LegacyHash::hash(a, b); 
+
+            let test = calldata.pop_front().unwrap(); // this should remove first element
+            return hashing_felt(hashed_data, calldata); 
+        }
     }
 
     fn hashing_bis(mut hashed_data: felt252, mut calldata: Array<(ContractAddress, u128)>, test: u128) -> felt252 {
         if calldata.len() == 0_u32 {
             return 0;
         } else {
-            let test2 = test.try_into().unwrap();
-            let test2bis = test.into();
-            let test3 = get_caller_address().into();
-            let test4 = get_caller_address().try_into().unwrap();
+            //let test2 = test.try_into().unwrap();
+            //let test2bis = test.into();
+            //let test3 = get_caller_address().into();
+            //let test4 = get_caller_address().try_into().unwrap();
 
-            let impl_hash_classhash: ClassHash = class_hash_try_from_felt252(
-                        get_caller_address()
-                    ).unwrap();
+            //let impl_hash_classhash: ClassHash = class_hash_try_from_felt252(
+              //          get_caller_address()
+                //    ).unwrap();
 
-            let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+            //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
 
 
-            hashed_data = LegacyHash::hash(hashed_data, *calldata_span.at(0_usize).into() ); 
-            let test = calldata.pop_front().unwrap(); // this should remove first element
-            return hashing(hashed_data, calldata); 
+            //hashed_data = LegacyHash::hash(hashed_data, *calldata_span.at(0_usize).into() ); 
+            //let test = calldata.pop_front().unwrap(); // this should remove first element
+            //return hashing(hashed_data, calldata); 
+            return 0;
         }
 
     }
@@ -269,8 +283,8 @@ mod Proposals {
         //i want to iterate over calldata to update the value of the to_addr by the input amount
         //then calculate the (updated) hash of the updated list
 
-        delegate_hash::write(caller_addr, updated_hash);
-        total_delegated_to::write(to_addr, curr_total_delegated_to + caller_balance - already_delegated);
+        //delegate_hash::write(caller_addr, updated_hash);
+        //total_delegated_to::write(to_addr, curr_total_delegated_to + caller_balance - already_delegated);
     }
 
     fn withdraw_delegation(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>) {
@@ -280,14 +294,14 @@ mod Proposals {
 
         //let power_to_withdraw: u128 = calldata.iter().find(|addr, _)| *addr = to_addr)  
         //                                .map(|(amount,_)| *amount).unwrap_or(0);
-        assert(power_to_withdraw > 0_u128, 'no amount to withdraw');
+        //assert(power_to_withdraw > 0_u128, 'no amount to withdraw');
 
         //update the calldata to update the value of to_addr by substracting power_to_withdraw
         //compute the corresponding updated hash
-        delegate_hash::write(caller_addr, updated_hash);
+        //delegate_hash::write(caller_addr, updated_hash);
 
-        let curr_total_delegated_to = total_delegated_to::read(to_addr);
-        total_delegated_to::write(to_addr, curr_total_delegated_to - power_to_withdraw);
+        //let curr_total_delegated_to = total_delegated_to::read(to_addr);
+        //total_delegated_to::write(to_addr, curr_total_delegated_to - power_to_withdraw);
 
 
     }
