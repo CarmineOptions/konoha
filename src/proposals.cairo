@@ -207,44 +207,44 @@ mod Proposals {
         prop_id
     }
 
-    fn hashing(hashed_data: felt252, calldata: Array<(ContractAddress, u128)>, index: u32) -> felt252 {
-        if index >= calldata.len() {
+    fn hashing(hashed_data: felt252, calldata_span: Span<(ContractAddress, u128)>, index: u32) -> felt252 {
+        if index >= calldata_span.len() {
             return hashed_data;
         } else {
-            let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+            //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
             let (a, b) = *calldata_span.at(index);
             let hashed_data = LegacyHash::hash(contract_address_to_felt252(a), b.into());
-            return hashing(hashed_data, calldata, index + 1_usize);
+            return hashing(hashed_data, calldata_span, index + 1_usize);
         }
     }
 
-    fn find_already_delegated(to_addr : ContractAddress, calldata: Array<(ContractAddress, u128)>, index: u32 ) -> u128 {
-        if index >= calldata.len() {
+    fn find_already_delegated(to_addr : ContractAddress, calldata_span: Span<(ContractAddress, u128)>, index: u32 ) -> u128 {
+        if index >= calldata_span.len() {
             return 0_u128;
         }  else {
-            let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+            //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
             let (a, b) = *calldata_span.at(index);
             if a == to_addr {
                 return b;
             } else {
-                return find_already_delegated(to_addr, calldata, index + 1_usize); 
+                return find_already_delegated(to_addr, calldata_span, index + 1_usize); 
             }
         }
     }
 
 
-    fn update_calldata(to_addr: ContractAddress, new_amount: u128, calldata: Array<(ContractAddress, u128)>, mut new_list: Array<(ContractAddress, u128)>, index: u32) -> Array<(ContractAddress, u128)>{
-        if index >= calldata.len() {
+    fn update_calldata(to_addr: ContractAddress, new_amount: u128, calldata_span: Span<(ContractAddress, u128)>, mut new_list: Array<(ContractAddress, u128)>, index: u32) -> Array<(ContractAddress, u128)>{
+        if index >= calldata_span.len() {
             return new_list;
         } else {
-            let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+            //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
             let (curr_addr, curr_amount) = *calldata_span.at(index);
             if curr_addr == to_addr {
                 new_list.append((curr_addr, new_amount));
             } else {
                 new_list.append((curr_addr, curr_amount));
             }
-            return update_calldata(to_addr, new_amount, calldata, new_list, index + 1_usize);
+            return update_calldata(to_addr, new_amount, calldata_span, new_list, index + 1_usize);
         }
     }
 
@@ -252,8 +252,8 @@ mod Proposals {
     fn delegate_vote(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>, amount: u128 ) {
         let caller_addr = get_caller_address();
         let stored_hash = delegate_hash::read(caller_addr);
-        //let calldata_copy = calldata
-        assert(stored_hash == hashing(0, calldata, 0_u32), 'incorrect delegate list');
+        let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+        assert(stored_hash == hashing(0, calldata_span, 0_u32), 'incorrect delegate list');
 
         let curr_total_delegated_to = total_delegated_to::read(to_addr);
         let converted_addr = contract_address_to_felt252(caller_addr); 
@@ -266,28 +266,32 @@ mod Proposals {
         let caller_balance: u128 = caller_balance_u256.low;
         assert(caller_balance > 0_u128, 'CARM balance is zero');
         
-        let already_delegated = find_already_delegated(to_addr, calldata, 0_u32);
+        let already_delegated = find_already_delegated(to_addr, calldata_span, 0_u32);
 
-        let updated_list = ArrayTrait::new();
-        update_calldata(to_addr, already_delegated + amount, calldata, updated_list, 0_u32);
+        let updated_list: Array<(ContractAddress, u128)> = ArrayTrait::new();
+        let updated_list_span = updated_list.span();
 
-        delegate_hash::write(caller_addr, hashing(0, updated_list, 0_u32));
+        update_calldata(to_addr, already_delegated + amount, calldata_span, updated_list, 0_u32);
+
+        delegate_hash::write(caller_addr, hashing(0, updated_list_span, 0_u32));
         total_delegated_to::write(to_addr, curr_total_delegated_to + amount);
     }
 
     fn withdraw_delegation(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>) {
         let caller_addr = get_caller_address();
         let stored_hash = delegate_hash::read(caller_addr);
-        assert(stored_hash == hashing(0, calldata, 0_u32), 'incorrect delegate list');
+        let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+        assert(stored_hash == hashing(0, calldata_span, 0_u32), 'incorrect delegate list');
 
-        let power_to_withdraw: u128 = find_already_delegated(to_addr, calldata, 0_u32);
+        let power_to_withdraw: u128 = find_already_delegated(to_addr, calldata_span, 0_u32);
         assert(power_to_withdraw > 0_u128, 'no amount to withdraw');
 
-        let updated_list = ArrayTrait::new();
+        let updated_list: Array<(ContractAddress, u128)> = ArrayTrait::new();
+        let updated_list_span = updated_list.span();
         let minus_power_to_withdraw = 0_u128 - power_to_withdraw;
-        update_calldata(to_addr, minus_power_to_withdraw, calldata, updated_list, 0_u32);
+        update_calldata(to_addr, minus_power_to_withdraw, calldata_span, updated_list, 0_u32);
         
-        delegate_hash::write(caller_addr, hashing(0, updated_list, 0_u32));
+        delegate_hash::write(caller_addr, hashing(0, updated_list_span, 0_u32));
 
         let curr_total_delegated_to = total_delegated_to::read(to_addr);
         total_delegated_to::write(to_addr, curr_total_delegated_to - power_to_withdraw);
