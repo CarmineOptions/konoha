@@ -3,10 +3,25 @@ mod Proposals {
     use option::OptionTrait;
     use traits::Into;
     use box::BoxTrait;
+    use zeroable::Zeroable;
 
+    use array::ArrayTrait;
+    use array::SpanTrait;
+    use clone::Clone;
+
+    use hash::LegacyHash;
+    use quaireaux_data_structures::merkle_tree::MerkleTree;
+    use quaireaux_data_structures::merkle_tree::MerkleTreeTrait;
+
+    use starknet::contract_address::ContractAddressZeroable;
     use starknet::get_block_info;
     use starknet::get_caller_address;
     use starknet::BlockInfo;
+    use starknet::ContractAddress;
+    use starknet::contract_address_const;
+
+    use starknet::class_hash::class_hash_try_from_felt252;
+    use starknet::contract_address::contract_address_to_felt252;
 
     use governance::contract::Governance::proposal_total_yay;
     use governance::contract::Governance::proposal_total_nay;
@@ -16,6 +31,8 @@ mod Proposals {
     use governance::contract::Governance::governance_token_address;
     use governance::contract::Governance::investor_voting_power;
     use governance::contract::Governance::total_investor_distributed_power;
+    use governance::contract::Governance::delegate_hash;
+    use governance::contract::Governance::total_delegated_to;
     use governance::contract::Governance;
     use governance::types::BlockNumber;
     use governance::types::ContractType;
@@ -181,6 +198,108 @@ mod Proposals {
         prop_id
     }
 
+    fn hashing(
+        hashed_data: felt252, calldata_span: Span<(ContractAddress, u128)>, index: u32
+    ) -> felt252 {
+        if index >= calldata_span.len() {
+            return hashed_data;
+        } else {
+            //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+            let (a, b) = *calldata_span.at(index);
+            let hashed_data = LegacyHash::hash(contract_address_to_felt252(a), b.into());
+            return hashing(hashed_data, calldata_span, index + 1_usize);
+        }
+    }
+
+    fn find_already_delegated(
+        to_addr: ContractAddress, calldata_span: Span<(ContractAddress, u128)>, index: u32
+    ) -> u128 {
+        if index >= calldata_span.len() {
+            return 0_u128;
+        } else {
+            //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+            let (a, b) = *calldata_span.at(index);
+            if a == to_addr {
+                return b;
+            } else {
+                return find_already_delegated(to_addr, calldata_span, index + 1_usize);
+            }
+        }
+    }
+
+
+    fn update_calldata(
+        to_addr: ContractAddress,
+        new_amount: u128,
+        calldata_span: Span<(ContractAddress, u128)>,
+        mut new_list: Array<(ContractAddress, u128)>,
+        index: u32
+    ) -> Array<(ContractAddress, u128)> {
+        if index >= calldata_span.len() {
+            return new_list;
+        } else {
+            //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+            let (curr_addr, curr_amount) = *calldata_span.at(index);
+            if curr_addr == to_addr {
+                new_list.append((curr_addr, new_amount));
+            } else {
+                new_list.append((curr_addr, curr_amount));
+            }
+            return update_calldata(to_addr, new_amount, calldata_span, new_list, index + 1_usize);
+        }
+    }
+
+
+    fn delegate_vote(
+        to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>, amount: u128
+    ) {
+        let caller_addr = get_caller_address();
+        let stored_hash = delegate_hash::read(caller_addr);
+        let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+        assert(stored_hash == hashing(0, calldata_span, 0_u32), 'incorrect delegate list');
+
+        let curr_total_delegated_to = total_delegated_to::read(to_addr);
+        let converted_addr = contract_address_to_felt252(caller_addr);
+
+        let gov_token_addr = governance_token_address::read();
+        let caller_balance_u256: u256 = IERC20Dispatcher {
+            contract_address: gov_token_addr
+        }.balanceOf(caller_addr);
+        assert(caller_balance_u256.high == 0_u128, 'CARM balance > u128');
+        let caller_balance: u128 = caller_balance_u256.low;
+        assert(caller_balance > 0_u128, 'CARM balance is zero');
+
+        let already_delegated = find_already_delegated(to_addr, calldata_span, 0_u32);
+
+        let updated_list: Array<(ContractAddress, u128)> = ArrayTrait::new();
+        let updated_list_span = updated_list.span();
+
+        update_calldata(to_addr, already_delegated + amount, calldata_span, updated_list, 0_u32);
+
+        delegate_hash::write(caller_addr, hashing(0, updated_list_span, 0_u32));
+        total_delegated_to::write(to_addr, curr_total_delegated_to + amount);
+    }
+
+    fn withdraw_delegation(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>) {
+        let caller_addr = get_caller_address();
+        let stored_hash = delegate_hash::read(caller_addr);
+        let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
+        assert(stored_hash == hashing(0, calldata_span, 0_u32), 'incorrect delegate list');
+
+        let power_to_withdraw: u128 = find_already_delegated(to_addr, calldata_span, 0_u32);
+        assert(power_to_withdraw > 0_u128, 'no amount to withdraw');
+
+        let updated_list: Array<(ContractAddress, u128)> = ArrayTrait::new();
+        let updated_list_span = updated_list.span();
+        let minus_power_to_withdraw = 0_u128 - power_to_withdraw;
+        update_calldata(to_addr, minus_power_to_withdraw, calldata_span, updated_list, 0_u32);
+
+        delegate_hash::write(caller_addr, hashing(0, updated_list_span, 0_u32));
+
+        let curr_total_delegated_to = total_delegated_to::read(to_addr);
+        total_delegated_to::write(to_addr, curr_total_delegated_to - power_to_withdraw);
+    }
+
     fn vote(prop_id: felt252, opinion: felt252) {
         // Checks
         assert(opinion == 1 | opinion == 2, 'opinion must be either 1 or 2');
@@ -202,18 +321,22 @@ mod Proposals {
         let caller_balance: u128 = caller_balance_u256.low;
         assert(caller_balance != 0_u128, 'CARM balance is zero');
 
+        let caller_voting_power = caller_balance + total_delegated_to::read(caller_addr);
+
+        assert(caller_voting_power > 0_u128, 'No voting power');
+
         assert_voting_in_progress(prop_id);
 
         // Cast vote
         proposal_voted_by::write((prop_id, caller_addr), actual_opinion);
         if actual_opinion == constants::MINUS_ONE {
             let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
-            let new_votes: u128 = curr_votes + caller_balance;
+            let new_votes: u128 = curr_votes + caller_voting_power;
             assert(new_votes >= 0_u128, 'new_votes must be non-negative');
             proposal_total_nay::write(prop_id, new_votes.into());
         } else {
             let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
-            let new_votes: u128 = curr_votes + caller_balance;
+            let new_votes: u128 = curr_votes + caller_voting_power;
             assert(new_votes >= 0_u128, 'new_votes must be non-negative');
             proposal_total_yay::write(prop_id, new_votes.into());
         }
