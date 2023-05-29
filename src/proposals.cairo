@@ -4,9 +4,6 @@ mod Proposals {
     use traits::Into;
     use box::BoxTrait;
     use zeroable::Zeroable;
-    //use itertools::Itertools;
-
-    //use std::collections::HashSet;
 
     use array::ArrayTrait;
     use array::SpanTrait;
@@ -24,8 +21,7 @@ mod Proposals {
     use starknet::contract_address_const;
 
     use starknet::class_hash::class_hash_try_from_felt252;
-
-    extern fn contract_address_to_felt252(address: ContractAddress) -> felt252 nopanic;
+    use starknet::contract_address::contract_address_to_felt252;
 
     use governance::contract::Governance::proposal_total_yay;
     use governance::contract::Governance::proposal_total_nay;
@@ -35,9 +31,6 @@ mod Proposals {
     use governance::contract::Governance::governance_token_address;
     use governance::contract::Governance::investor_voting_power;
     use governance::contract::Governance::total_investor_distributed_power;
-    use governance::contract::Governance::delegated_pairs;
-    use governance::contract::Governance::delegated_voting_power;
-    use governance::contract::Governance::delegated_voting_power_per_user;
     use governance::contract::Governance::delegate_hash;
     use governance::contract::Governance::total_delegated_to;
     use governance::contract::Governance;
