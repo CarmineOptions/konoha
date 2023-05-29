@@ -28,7 +28,6 @@ mod Governance {
         governance_token_address: ContractAddress,
         amm_address: ContractAddress,
         airdrop_claimed: LegacyMap::<ContractAddress, u128>,
-
         delegate_hash: LegacyMap::<ContractAddress, felt252>,
         total_delegated_to: LegacyMap::<ContractAddress, u128>
     }
