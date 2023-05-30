@@ -270,6 +270,7 @@ mod Proposals {
         assert(caller_balance > 0_u128, 'CARM balance is zero');
 
         let already_delegated = find_already_delegated(to_addr, calldata_span, 0_u32);
+        assert(caller_balance - already_delegated >= amount, 'Not enough funds');
 
         let updated_list: Array<(ContractAddress, u128)> = ArrayTrait::new();
         let updated_list_span = updated_list.span();
@@ -280,24 +281,24 @@ mod Proposals {
         total_delegated_to::write(to_addr, curr_total_delegated_to + amount);
     }
 
-    fn withdraw_delegation(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>) {
+    fn withdraw_delegation(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>, amount: u128 ) {
         let caller_addr = get_caller_address();
         let stored_hash = delegate_hash::read(caller_addr);
         let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
         assert(stored_hash == hashing(0, calldata_span, 0_u32), 'incorrect delegate list');
 
-        let power_to_withdraw: u128 = find_already_delegated(to_addr, calldata_span, 0_u32);
-        assert(power_to_withdraw > 0_u128, 'no amount to withdraw');
+        let max_power_to_withdraw: u128 = find_already_delegated(to_addr, calldata_span, 0_u32);
+        assert(max_power_to_withdraw >= amount, 'amount has to be lower');
 
         let updated_list: Array<(ContractAddress, u128)> = ArrayTrait::new();
         let updated_list_span = updated_list.span();
-        let minus_power_to_withdraw = 0_u128 - power_to_withdraw;
-        update_calldata(to_addr, minus_power_to_withdraw, calldata_span, updated_list, 0_u32);
-
+        let minus_amount = 0_u128 - amount;
+        update_calldata(to_addr, minus_amount, calldata_span, updated_list, 0_u32);
+        
         delegate_hash::write(caller_addr, hashing(0, updated_list_span, 0_u32));
 
         let curr_total_delegated_to = total_delegated_to::read(to_addr);
-        total_delegated_to::write(to_addr, curr_total_delegated_to - power_to_withdraw);
+        total_delegated_to::write(to_addr, curr_total_delegated_to - amount);
     }
 
     fn vote(prop_id: felt252, opinion: felt252) {
