@@ -22,9 +22,6 @@ jobs:
       - name: Make binaries available
         run: echo "./$NAME/bin" >> $GITHUB_PATH
       - name: Check formatting
-        with:
-          runCmd: scarb fmt --check
-
+        run: scarb fmt --check
       - name: Build with scarb
-        with:
-          runCmd: scarb build
+        run: scarb build
