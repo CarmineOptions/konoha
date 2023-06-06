@@ -29,7 +29,7 @@ impl StorageAccessPropDetails of StorageAccess<PropDetails> {
             PropDetails {
                 impl_hash: StorageAccess::<felt252>::read(address_domain, base)?,
                 to_upgrade: storage_read_syscall(
-                    address_domain, storage_address_from_base_and_offset(base, 1_u8)
+                    address_domain, storage_address_from_base_and_offset(base, 1)
                 )?
             }
         )
@@ -40,7 +40,7 @@ impl StorageAccessPropDetails of StorageAccess<PropDetails> {
     ) -> SyscallResult<()> {
         StorageAccess::<felt252>::write(address_domain, base, value.impl_hash)?;
         storage_write_syscall(
-            address_domain, storage_address_from_base_and_offset(base, 1_u8), value.to_upgrade
+            address_domain, storage_address_from_base_and_offset(base, 1), value.to_upgrade
         )
     }
 }

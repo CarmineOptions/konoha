@@ -38,7 +38,7 @@ mod Airdrop {
         let govtoken_addr = governance_token_address::read();
         IGovernanceTokenDispatcher {
             contract_address: govtoken_addr
-        }.mint(claimee, u256 { high: 0_u128, low: to_mint });
+        }.mint(claimee, u256 { high: 0, low: to_mint });
         // Emit event
         Governance::Claimed(claimee, to_mint);
         // Write new claimed amt

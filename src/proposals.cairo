@@ -50,55 +50,11 @@ mod Proposals {
         proposal_details::read(prop_id)
     }
 
-    //_get_free_prop_id(0)
     fn get_free_prop_id() -> felt252 {
-        if proposal_vote_ends::read(0) == 0 {
-            0
-        } else if proposal_vote_ends::read(1) == 0 {
-            1
-        } else if proposal_vote_ends::read(2) == 0 {
-            2
-        } else if proposal_vote_ends::read(3) == 0 {
-            3
-        } else if proposal_vote_ends::read(4) == 0 {
-            4
-        } else if proposal_vote_ends::read(5) == 0 {
-            5
-        } else if proposal_vote_ends::read(6) == 0 {
-            6
-        } else if proposal_vote_ends::read(7) == 0 {
-            7
-        } else if proposal_vote_ends::read(8) == 0 {
-            8
-        } else if proposal_vote_ends::read(9) == 0 {
-            9
-        } else if proposal_vote_ends::read(10) == 0 {
-            10
-        } else if proposal_vote_ends::read(11) == 0 {
-            11
-        } else if proposal_vote_ends::read(12) == 0 {
-            12
-        } else if proposal_vote_ends::read(13) == 0 {
-            13
-        } else if proposal_vote_ends::read(14) == 0 {
-            14
-        } else if proposal_vote_ends::read(15) == 0 {
-            15
-        } else if proposal_vote_ends::read(16) == 0 {
-            16
-        } else if proposal_vote_ends::read(17) == 0 {
-            17
-        } else if proposal_vote_ends::read(18) == 0 {
-            18
-        } else if proposal_vote_ends::read(19) == 0 {
-            19
-        } else {
-            20
-        }
+        _get_free_prop_id(0)
     }
 
     fn _get_free_prop_id(currid: felt252) -> felt252 {
-        gas::withdraw_gas_all(get_builtin_costs()).expect('Out of gas'); // remove after alpha7
         let res = proposal_vote_ends::read(currid);
 
         if res == 0 {
@@ -110,13 +66,13 @@ mod Proposals {
 
     fn assert_correct_contract_type(contract_type: ContractType) {
         let contract_type_u: u64 = contract_type.try_into().unwrap();
-        assert(contract_type_u <= 2_u64, 'invalid contract type')
+        assert(contract_type_u <= 2, 'invalid contract type')
     }
 
     fn assert_voting_in_progress(prop_id: felt252) {
         let end_block_number_felt: felt252 = proposal_vote_ends::read(prop_id);
         let end_block_number: u64 = end_block_number_felt.try_into().unwrap();
-        assert(end_block_number != 0_u64, 'prop_id not found');
+        assert(end_block_number != 0, 'prop_id not found');
 
         let current_block_number: u64 = get_block_info().unbox().block_number;
 
@@ -141,7 +97,7 @@ mod Proposals {
         }.balanceOf(caller).low;
         let total_supply = IERC20Dispatcher { contract_address: govtoken_addr }.totalSupply();
         let res: u256 = as_u256(
-            0_u128, caller_balance * constants::NEW_PROPOSAL_QUORUM
+            0, caller_balance * constants::NEW_PROPOSAL_QUORUM
         ); // TODO use such multiplication that u128 * u128 = u256
         assert(total_supply < res, 'not enough tokens to submit');
 
@@ -177,7 +133,7 @@ mod Proposals {
         to_addr: ContractAddress, calldata_span: Span<(ContractAddress, u128)>, index: u32
     ) -> u128 {
         if index >= calldata_span.len() {
-            return 0_u128;
+            return 0;
         } else {
             //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
             let (a, b) = *calldata_span.at(index);
@@ -218,7 +174,7 @@ mod Proposals {
         let caller_addr = get_caller_address();
         let stored_hash = delegate_hash::read(caller_addr);
         let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
-        assert(stored_hash == hashing(0, calldata_span, 0_u32), 'incorrect delegate list');
+        assert(stored_hash == hashing(0, calldata_span, 0), 'incorrect delegate list');
 
         let curr_total_delegated_to = total_delegated_to::read(to_addr);
         let converted_addr = contract_address_to_felt252(caller_addr);
@@ -227,19 +183,19 @@ mod Proposals {
         let caller_balance_u256: u256 = IERC20Dispatcher {
             contract_address: gov_token_addr
         }.balanceOf(caller_addr);
-        assert(caller_balance_u256.high == 0_u128, 'CARM balance > u128');
+        assert(caller_balance_u256.high == 0, 'CARM balance > u128');
         let caller_balance: u128 = caller_balance_u256.low;
-        assert(caller_balance > 0_u128, 'CARM balance is zero');
+        assert(caller_balance > 0, 'CARM balance is zero');
 
-        let already_delegated = find_already_delegated(to_addr, calldata_span, 0_u32);
+        let already_delegated = find_already_delegated(to_addr, calldata_span, 0);
         assert(caller_balance - already_delegated >= amount, 'Not enough funds');
 
         let updated_list: Array<(ContractAddress, u128)> = ArrayTrait::new();
         let updated_list_span = updated_list.span();
 
-        update_calldata(to_addr, already_delegated + amount, calldata_span, updated_list, 0_u32);
+        update_calldata(to_addr, already_delegated + amount, calldata_span, updated_list, 0);
 
-        delegate_hash::write(caller_addr, hashing(0, updated_list_span, 0_u32));
+        delegate_hash::write(caller_addr, hashing(0, updated_list_span, 0));
         total_delegated_to::write(to_addr, curr_total_delegated_to + amount);
     }
 
@@ -249,17 +205,17 @@ mod Proposals {
         let caller_addr = get_caller_address();
         let stored_hash = delegate_hash::read(caller_addr);
         let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
-        assert(stored_hash == hashing(0, calldata_span, 0_u32), 'incorrect delegate list');
+        assert(stored_hash == hashing(0, calldata_span, 0), 'incorrect delegate list');
 
-        let max_power_to_withdraw: u128 = find_already_delegated(to_addr, calldata_span, 0_u32);
+        let max_power_to_withdraw: u128 = find_already_delegated(to_addr, calldata_span, 0);
         assert(max_power_to_withdraw >= amount, 'amount has to be lower');
 
         let updated_list: Array<(ContractAddress, u128)> = ArrayTrait::new();
         let updated_list_span = updated_list.span();
-        let minus_amount = 0_u128 - amount;
-        update_calldata(to_addr, minus_amount, calldata_span, updated_list, 0_u32);
+        let minus_amount = 0 - amount;
+        update_calldata(to_addr, minus_amount, calldata_span, updated_list, 0);
 
-        delegate_hash::write(caller_addr, hashing(0, updated_list_span, 0_u32));
+        delegate_hash::write(caller_addr, hashing(0, updated_list_span, 0));
 
         let curr_total_delegated_to = total_delegated_to::read(to_addr);
         total_delegated_to::write(to_addr, curr_total_delegated_to - amount);
@@ -282,13 +238,13 @@ mod Proposals {
         let caller_balance_u256: u256 = IERC20Dispatcher {
             contract_address: gov_token_addr
         }.balanceOf(caller_addr);
-        assert(caller_balance_u256.high == 0_u128, 'CARM balance > u128');
+        assert(caller_balance_u256.high == 0, 'CARM balance > u128');
         let caller_balance: u128 = caller_balance_u256.low;
-        assert(caller_balance != 0_u128, 'CARM balance is zero');
+        assert(caller_balance != 0, 'CARM balance is zero');
 
         let caller_voting_power = caller_balance + total_delegated_to::read(caller_addr);
 
-        assert(caller_voting_power > 0_u128, 'No voting power');
+        assert(caller_voting_power > 0, 'No voting power');
 
         assert_voting_in_progress(prop_id);
 
@@ -297,12 +253,12 @@ mod Proposals {
         if actual_opinion == constants::MINUS_ONE {
             let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
             let new_votes: u128 = curr_votes + caller_voting_power;
-            assert(new_votes >= 0_u128, 'new_votes must be non-negative');
+            assert(new_votes >= 0, 'new_votes must be non-negative');
             proposal_total_nay::write(prop_id, new_votes.into());
         } else {
             let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
             let new_votes: u128 = curr_votes + caller_voting_power;
-            assert(new_votes >= 0_u128, 'new_votes must be non-negative');
+            assert(new_votes >= 0, 'new_votes must be non-negative');
             proposal_total_yay::write(prop_id, new_votes.into());
         }
         Governance::Voted(prop_id, caller_addr, opinion);
@@ -316,7 +272,7 @@ mod Proposals {
             contract_address: gov_token_addr
         }.totalSupply();
         assert(
-            total_eligible_votes_from_tokenholders_u256.high == 0_u128, 'totalSupply weirdly high'
+            total_eligible_votes_from_tokenholders_u256.high == 0, 'totalSupply weirdly high'
         );
         let total_eligible_votes_from_tokenholders: u128 =
             total_eligible_votes_from_tokenholders_u256
@@ -327,13 +283,13 @@ mod Proposals {
         // So we must calculate 4/3 of the total supply (additional supply will be 1/4th of new total)
         // and from that 1/2, because that's 50%, So (4/3) * (1/2) = 2/3 of the total supply
         // Multiply total votes by 2 and divide by 3
-        let minimum_for_express: u128 = total_eligible_votes_from_tokenholders * 2_u128 / 3_u128;
+        let minimum_for_express: u128 = total_eligible_votes_from_tokenholders * 2 / 3;
 
         // Check if yay_tally >= minimum_for_express
         if yay_tally >= minimum_for_express {
-            1_u8
+            1
         } else {
-            0_u8
+            0
         }
     }
 
@@ -356,7 +312,7 @@ mod Proposals {
         let total_eligible_votes_u256: u256 = IERC20Dispatcher {
             contract_address: gov_token_addr
         }.totalSupply();
-        assert(total_eligible_votes_u256.high == 0_u128, 'unable to check quorum');
+        assert(total_eligible_votes_u256.high == 0, 'unable to check quorum');
         let total_eligible_votes: u128 = total_eligible_votes_u256.low;
 
         let quorum_threshold: u128 = total_eligible_votes * constants::QUORUM;
@@ -383,7 +339,7 @@ mod Proposals {
         let investor_voting_power: u128 = investor_voting_power::read(caller_addr)
             .try_into()
             .unwrap();
-        assert(investor_voting_power != 0_u128, 'caller not whitelisted investor');
+        assert(investor_voting_power != 0, 'caller not whitelisted investor');
 
         let curr_vote_status: felt252 = proposal_voted_by::read((prop_id, caller_addr));
         assert(curr_vote_status == 0, 'already voted');
@@ -395,7 +351,7 @@ mod Proposals {
         let total_supply_u256: u256 = IERC20Dispatcher {
             contract_address: gov_token_addr
         }.totalSupply();
-        assert(total_supply_u256.high == 0_u128, 'totalSupply weirdly high');
+        assert(total_supply_u256.high == 0, 'totalSupply weirdly high');
         let total_supply: u128 = total_supply_u256.low;
         let real_investor_voting_power: u128 = total_supply - constants::TEAM_TOKEN_BALANCE;
         assert(total_supply >= constants::TEAM_TOKEN_BALANCE, 'total_supply<team token bal?');
@@ -404,19 +360,19 @@ mod Proposals {
             .unwrap();
         let vote_power = (real_investor_voting_power * investor_voting_power)
             / total_distributed_power;
-        assert(vote_power != 0_u128, 'vote_power is zero');
+        assert(vote_power != 0, 'vote_power is zero');
 
         // Cast vote
         proposal_voted_by::write((prop_id, caller_addr), opinion);
         if opinion == constants::MINUS_ONE {
             let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
             let new_votes: u128 = curr_votes + vote_power;
-            assert(new_votes >= 0_u128, 'new_votes negative');
+            assert(new_votes >= 0, 'new_votes negative');
             proposal_total_nay::write(prop_id, new_votes.into());
         } else {
             let curr_votes: u128 = proposal_total_yay::read(prop_id).try_into().unwrap();
             let new_votes: u128 = curr_votes + vote_power;
-            assert(new_votes >= 0_u128, 'new_votes negative');
+            assert(new_votes >= 0, 'new_votes negative');
             proposal_total_yay::write(prop_id, new_votes.into());
         }
     }
