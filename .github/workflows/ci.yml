@@ -22,11 +22,9 @@ jobs:
       - name: Make binaries available
         run: echo "./$NAME/bin" >> $GITHUB_PATH
       - name: Check formatting
-        uses: devcontainers/ci@v0.3
         with:
           runCmd: scarb fmt --check
 
       - name: Build with scarb
-        uses: devcontainers/ci@v0.3
         with:
           runCmd: scarb build
