@@ -116,7 +116,6 @@ mod Proposals {
         if index >= calldata_span.len() {
             return hashed_data;
         } else {
-            //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
             let (a, b) = *calldata_span.at(index);
             let b_felt: felt252 = b.into();
             let hashed_data = LegacyHash::hash(contract_address_to_felt252(a), b_felt);
@@ -130,7 +129,6 @@ mod Proposals {
         if index >= calldata_span.len() {
             return 0;
         } else {
-            //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
             let (a, b) = *calldata_span.at(index);
             if a == to_addr {
                 return b;
