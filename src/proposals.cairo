@@ -84,11 +84,6 @@ mod Proposals {
     }
 
     fn submit_proposal(impl_hash: felt252, to_upgrade: ContractType) -> felt252 {
-        // let IMPL_HASH_MIN_VALUE: felt252 =
-        //    0x200000000000000000000000000000000000000000000000000000000000;
-        // assert(IMPL_HASH_MIN_VALUE < impl_hash, 'impl_hash weirdly small'); < Trait has no implementation in context: core::traits::PartialOrd::<core::felt252>
-        // so skipping this check for now, FIXME
-        // so this check is actually inside Cairo now. Very cool, ClassHash has its own type.
         assert_correct_contract_type(to_upgrade);
         let govtoken_addr = governance_token_address::read();
         let caller = get_caller_address();
