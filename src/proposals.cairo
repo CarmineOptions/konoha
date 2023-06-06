@@ -281,7 +281,9 @@ mod Proposals {
         total_delegated_to::write(to_addr, curr_total_delegated_to + amount);
     }
 
-    fn withdraw_delegation(to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>, amount: u128 ) {
+    fn withdraw_delegation(
+        to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>, amount: u128
+    ) {
         let caller_addr = get_caller_address();
         let stored_hash = delegate_hash::read(caller_addr);
         let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
@@ -294,7 +296,7 @@ mod Proposals {
         let updated_list_span = updated_list.span();
         let minus_amount = 0_u128 - amount;
         update_calldata(to_addr, minus_amount, calldata_span, updated_list, 0_u32);
-        
+
         delegate_hash::write(caller_addr, hashing(0, updated_list_span, 0_u32));
 
         let curr_total_delegated_to = total_delegated_to::read(to_addr);
