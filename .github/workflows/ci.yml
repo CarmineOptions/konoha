@@ -18,7 +18,7 @@ jobs:
       - name: Download binaries
         run: curl -L -o $NAME.tar.gz $LINK
       - name: Prepare binaries
-        run: tar -xvf $ARCHIVE_NAME
+        run: tar -xvf $NAME
       - name: Make binaries available
         run: echo "./$NAME/bin" >> $GITHUB_PATH
       - name: Check formatting
