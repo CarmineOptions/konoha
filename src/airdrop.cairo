@@ -24,7 +24,8 @@ mod Airdrop {
     // Lets claimee claim from merkle tree the amount - claimed_so_far
     fn claim(claimee: ContractAddress, amount: u128, proof: Array::<felt252>) {
         let mut merkle_tree = MerkleTreeTrait::new();
-        let leaf = LegacyHash::hash(claimee.into(), amount.into());
+        let amount_felt: felt252 = amount.into();
+        let leaf = LegacyHash::hash(claimee.into(), amount_felt);
 
         let root = merkle_tree.compute_root(leaf, proof.span());
         assert(root == MERKLE_ROOT, 'invalid proof');

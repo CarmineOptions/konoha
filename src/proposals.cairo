@@ -204,7 +204,8 @@ mod Proposals {
         } else {
             //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
             let (a, b) = *calldata_span.at(index);
-            let hashed_data = LegacyHash::hash(contract_address_to_felt252(a), b.into());
+            let b_felt: felt252 = b.into();
+            let hashed_data = LegacyHash::hash(contract_address_to_felt252(a), b_felt);
             return hashing(hashed_data, calldata_span, index + 1_usize);
         }
     }

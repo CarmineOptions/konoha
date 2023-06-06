@@ -4,6 +4,7 @@ use starknet::storage_access::StorageBaseAddress;
 use starknet::syscalls::storage_read_syscall;
 use starknet::syscalls::storage_write_syscall;
 use starknet::storage_address_from_base_and_offset;
+use core::serde::Serde;
 
 #[derive(Copy, Drop)]
 struct PropDetails {
@@ -22,7 +23,7 @@ type ContractType = felt252; // for Carmine 0 = amm, 1 = governance, 2 = CARM to
 type OptionSide = felt252;
 type OptionType = felt252;
 
-impl StorageAccessPropDetails of StorageAccess::<PropDetails> {
+impl StorageAccessPropDetails of StorageAccess<PropDetails> {
     fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult<PropDetails> {
         Result::Ok(
             PropDetails {
@@ -44,10 +45,10 @@ impl StorageAccessPropDetails of StorageAccess::<PropDetails> {
     }
 }
 
-impl PropDetailsSerde of serde::Serde::<PropDetails> {
-    fn serialize(ref output: array::Array<felt252>, input: PropDetails) {
-        serde::Serde::serialize(ref output, input.impl_hash);
-        serde::Serde::serialize(ref output, input.to_upgrade)
+impl PropDetailsSerde of serde::Serde<PropDetails> {
+    fn serialize(self: @PropDetails, ref output: array::Array<felt252>) {
+        self.impl_hash.serialize(ref output);
+        self.to_upgrade.serialize(ref output);
     }
     fn deserialize(ref serialized: array::Span<felt252>) -> Option<PropDetails> {
         Option::Some(

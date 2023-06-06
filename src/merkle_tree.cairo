@@ -54,7 +54,9 @@ impl MerkleTreeImpl of MerkleTreeTrait {
                     // Compute the hash of the current node and the current element of the proof.
                     // We need to check if the current node is smaller than the current element of the proof.
                     // If it is, we need to swap the order of the hash.
-                    if current_node.into() < (*proof_element).into() {
+                    let a: u256 = current_node.into();
+                    let b: u256 = (*proof_element).into();
+                    if b < a {
                         current_node = LegacyHash::hash(current_node, *proof_element);
                     } else {
                         current_node = LegacyHash::hash(*proof_element, current_node);
