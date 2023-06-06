@@ -52,81 +52,43 @@ mod Proposals {
 
     //_get_free_prop_id(0)
     fn get_free_prop_id() -> felt252 {
-        if proposal_vote_ends::read(
+        if proposal_vote_ends::read(0) == 0 {
             0
-        ) == 0 {
-            0
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(1) == 0 {
             1
-        ) == 0 {
-            1
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(2) == 0 {
             2
-        ) == 0 {
-            2
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(3) == 0 {
             3
-        ) == 0 {
-            3
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(4) == 0 {
             4
-        ) == 0 {
-            4
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(5) == 0 {
             5
-        ) == 0 {
-            5
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(6) == 0 {
             6
-        ) == 0 {
-            6
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(7) == 0 {
             7
-        ) == 0 {
-            7
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(8) == 0 {
             8
-        ) == 0 {
-            8
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(9) == 0 {
             9
-        ) == 0 {
-            9
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(10) == 0 {
             10
-        ) == 0 {
-            10
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(11) == 0 {
             11
-        ) == 0 {
-            11
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(12) == 0 {
             12
-        ) == 0 {
-            12
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(13) == 0 {
             13
-        ) == 0 {
-            13
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(14) == 0 {
             14
-        ) == 0 {
-            14
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(15) == 0 {
             15
-        ) == 0 {
-            15
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(16) == 0 {
             16
-        ) == 0 {
-            16
-        } else if proposal_vote_ends::read(
+        } else if proposal_vote_ends::read(17) == 0 {
             17
-        ) == 0 {
-            17
-        } else if proposal_vote_ends::read(
-            18
-        ) == 0 {
+        } else if proposal_vote_ends::read(18) == 0 {
             18
         } else if proposal_vote_ends::read(19) == 0 {
             19
@@ -189,7 +151,8 @@ mod Proposals {
 
         let current_block_number: u64 = get_block_info().unbox().block_number;
         let end_block_number: BlockNumber = (current_block_number
-            + constants::PROPOSAL_VOTING_TIME_BLOCKS).into();
+            + constants::PROPOSAL_VOTING_TIME_BLOCKS)
+            .into();
         proposal_vote_ends::write(prop_id, end_block_number);
 
         Governance::Proposed(prop_id, impl_hash, to_upgrade);
@@ -356,7 +319,8 @@ mod Proposals {
             total_eligible_votes_from_tokenholders_u256.high == 0_u128, 'totalSupply weirdly high'
         );
         let total_eligible_votes_from_tokenholders: u128 =
-            total_eligible_votes_from_tokenholders_u256.low;
+            total_eligible_votes_from_tokenholders_u256
+            .low;
 
         // Not only tokenholders are eligible, but investors as well, they hold 1/4th of the voting power
         // However, their votes are currently stored in storage_var, not tokens
@@ -416,9 +380,9 @@ mod Proposals {
         assert(opinion == constants::MINUS_ONE | opinion == 1, 'opinion must be either 1 or -1');
 
         let caller_addr = get_caller_address();
-        let investor_voting_power: u128 = investor_voting_power::read(
-            caller_addr
-        ).try_into().unwrap();
+        let investor_voting_power: u128 = investor_voting_power::read(caller_addr)
+            .try_into()
+            .unwrap();
         assert(investor_voting_power != 0_u128, 'caller not whitelisted investor');
 
         let curr_vote_status: felt252 = proposal_voted_by::read((prop_id, caller_addr));
@@ -435,8 +399,9 @@ mod Proposals {
         let total_supply: u128 = total_supply_u256.low;
         let real_investor_voting_power: u128 = total_supply - constants::TEAM_TOKEN_BALANCE;
         assert(total_supply >= constants::TEAM_TOKEN_BALANCE, 'total_supply<team token bal?');
-        let total_distributed_power: u128 =
-            total_investor_distributed_power::read().try_into().unwrap();
+        let total_distributed_power: u128 = total_investor_distributed_power::read()
+            .try_into()
+            .unwrap();
         let vote_power = (real_investor_voting_power * investor_voting_power)
             / total_distributed_power;
         assert(vote_power != 0_u128, 'vote_power is zero');

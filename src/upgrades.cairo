@@ -49,9 +49,8 @@ mod Upgrades {
             _ => {
                 if (contract_type == 1) {
                     // let impl_hash_classhash: ClassHash = impl_hash.try_into().unwrap(); <- why doesn't this work?
-                    let impl_hash_classhash: ClassHash = class_hash_try_from_felt252(
-                        impl_hash
-                    ).unwrap();
+                    let impl_hash_classhash: ClassHash = class_hash_try_from_felt252(impl_hash)
+                        .unwrap();
                     syscalls::replace_class_syscall(impl_hash_classhash);
                 } else {
                     assert(contract_type == 2, 'invalid contract_type');
