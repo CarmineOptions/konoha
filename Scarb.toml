@@ -1,6 +1,6 @@
 [package]
 name = "governance"
-version = "0.1.0"
+version = "0.2.0"
 
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest
 
@@ -10,5 +10,5 @@ version = "0.1.0"
 [[target.starknet-contract]]
 
 [dependencies]
-quaireaux_data_structures = { git = "https://github.com/tensojka/quaireaux.git", branch = "fix-merkle-tree-alpha6" }
-#quaireaux_data_structures = { path = "vendor/quaireaux/quaireaux/data_structures" }
+alexandria_data_structures = { git = "https://github.com/keep-starknet-strange/alexandria"}
+

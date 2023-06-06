@@ -10,8 +10,6 @@ mod Proposals {
     use clone::Clone;
 
     use hash::LegacyHash;
-    use quaireaux_data_structures::merkle_tree::MerkleTree;
-    use quaireaux_data_structures::merkle_tree::MerkleTreeTrait;
 
     use starknet::contract_address::ContractAddressZeroable;
     use starknet::get_block_info;

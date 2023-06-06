@@ -9,8 +9,8 @@ mod Airdrop {
     use traits::TryInto;
     use option::OptionTrait;
 
-    use quaireaux_data_structures::merkle_tree::MerkleTree;
-    use quaireaux_data_structures::merkle_tree::MerkleTreeTrait;
+    use alexandria_data_structures::merkle_tree::MerkleTree;
+    use alexandria_data_structures::merkle_tree::MerkleTreeTrait;
 
     use governance::contract::Governance;
     use governance::traits::IGovernanceTokenDispatcher;
