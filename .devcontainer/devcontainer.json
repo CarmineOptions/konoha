@@ -2,8 +2,9 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/rust
 {
 	"name": "Cairo 1.0",
+	"image": "mcr.microsoft.com/devcontainers/rust:0-1-bullseye",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"build": { "dockerfile": "Dockerfile", "cacheFrom": "ghcr.io/carmineoptions/governance"}
+	//"build": { "dockerfile": "Dockerfile", "cacheFrom": "ghcr.io/carmineoptions/governance"},
 	// Use 'mounts' to make the cargo cache persistent in a Docker Volume.
 	// "mounts": [
 	// 	{
@@ -20,7 +21,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	//   "postCreateCommand": "curl -L https://github.com/franalgaba/cairo-installer/raw/main/bin/cairo-installer | bash"
+	"postCreateCommand": "curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v 0.4.0"
 
 	// Configure tool-specific properties.
 	// "customizations": {},

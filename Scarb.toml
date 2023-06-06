@@ -4,11 +4,8 @@ version = "0.2.0"
 
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest
 
-#[dependencies]
-# foo = { path = "vendor/foo" }
+[dependencies]
+#alexandria_data_structures = { git = "https://github.com/keep-starknet-strange/alexandria"}
+starknet = ">=1.0.0"
 
 [[target.starknet-contract]]
-
-[dependencies]
-alexandria_data_structures = { git = "https://github.com/keep-starknet-strange/alexandria"}
-

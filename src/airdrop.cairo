@@ -9,8 +9,8 @@ mod Airdrop {
     use traits::TryInto;
     use option::OptionTrait;
 
-    use alexandria_data_structures::merkle_tree::MerkleTree;
-    use alexandria_data_structures::merkle_tree::MerkleTreeTrait;
+    use governance::merkle_tree::MerkleTree;
+    use governance::merkle_tree::MerkleTreeTrait;
 
     use governance::contract::Governance;
     use governance::traits::IGovernanceTokenDispatcher;
@@ -26,7 +26,7 @@ mod Airdrop {
         let mut merkle_tree = MerkleTreeTrait::new();
         let leaf = LegacyHash::hash(claimee.into(), amount.into());
 
-        let root = merkle_tree.compute_root(leaf, proof);
+        let root = merkle_tree.compute_root(leaf, proof.span());
         assert(root == MERKLE_ROOT, 'invalid proof');
 
         let claimed_so_far: u128 = airdrop_claimed::read(claimee);
