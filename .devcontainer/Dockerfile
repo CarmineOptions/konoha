@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/devcontainers/rust:0-1-bullseye
 
-ENV CAIRO_GIT_TAG=v1.0.0
+ENV CAIRO_GIT_TAG=v1.0.0-alpha.6
 ENV HOME=/home/vscode/
 USER vscode
 RUN curl -L https://github.com/franalgaba/cairo-installer/raw/main/bin/cairo-installer | bash
