@@ -271,9 +271,7 @@ mod Proposals {
         let total_eligible_votes_from_tokenholders_u256: u256 = IERC20Dispatcher {
             contract_address: gov_token_addr
         }.totalSupply();
-        assert(
-            total_eligible_votes_from_tokenholders_u256.high == 0, 'totalSupply weirdly high'
-        );
+        assert(total_eligible_votes_from_tokenholders_u256.high == 0, 'totalSupply weirdly high');
         let total_eligible_votes_from_tokenholders: u128 =
             total_eligible_votes_from_tokenholders_u256
             .low;
