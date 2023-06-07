@@ -4,7 +4,11 @@ on:
   push:
     paths:
       - '**.cairo'
-      - 'devcontainer.json'
+      - '.github/'
+
+env:
+  LINK: https://github.com/software-mansion/scarb/releases/download/v0.4.0/scarb-v0.4.0-x86_64-unknown-linux-gnu.tar.gz
+  NAME: scarb-v0.4.0-x86_64-unknown-linux-gnu
 
 jobs:
   build:
@@ -12,28 +16,13 @@ jobs:
     steps:
       - name: Checkout (GitHub)
         uses: actions/checkout@v3
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2 
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pre-build dev container image
-        uses: devcontainers/ci@v0.3
-        with:
-          imageName: ghcr.io/carmineoptions/governance
-          cacheFrom: ghcr.io/carmineoptions/governance
-          push: always
-          runCmd: cairo-format -cr
-
-      - name: Run cairo-format
-        uses: devcontainers/ci@v0.3
-        with:
-          runCmd: cairo-format -cr
-
+      - name: Download binaries
+        run: curl -L -o $NAME.tar.gz $LINK
+      - name: Prepare binaries
+        run: tar -xvf $NAME.tar.gz
+      - name: Make binaries available
+        run: echo "./$NAME/bin" >> $GITHUB_PATH
+      - name: Check formatting
+        run: scarb fmt --check
       - name: Build with scarb
-        uses: devcontainers/ci@v0.3
-        with:
-          runCmd: scarb build
+        run: scarb build

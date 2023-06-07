@@ -9,8 +9,8 @@ mod Airdrop {
     use traits::TryInto;
     use option::OptionTrait;
 
-    use quaireaux_data_structures::merkle_tree::MerkleTree;
-    use quaireaux_data_structures::merkle_tree::MerkleTreeTrait;
+    use governance::merkle_tree::MerkleTree;
+    use governance::merkle_tree::MerkleTreeTrait;
 
     use governance::contract::Governance;
     use governance::traits::IGovernanceTokenDispatcher;
@@ -24,9 +24,10 @@ mod Airdrop {
     // Lets claimee claim from merkle tree the amount - claimed_so_far
     fn claim(claimee: ContractAddress, amount: u128, proof: Array::<felt252>) {
         let mut merkle_tree = MerkleTreeTrait::new();
-        let leaf = LegacyHash::hash(claimee.into(), amount.into());
+        let amount_felt: felt252 = amount.into();
+        let leaf = LegacyHash::hash(claimee.into(), amount_felt);
 
-        let root = merkle_tree.compute_root(leaf, proof);
+        let root = merkle_tree.compute_root(leaf, proof.span());
         assert(root == MERKLE_ROOT, 'invalid proof');
 
         let claimed_so_far: u128 = airdrop_claimed::read(claimee);
@@ -37,7 +38,7 @@ mod Airdrop {
         let govtoken_addr = governance_token_address::read();
         IGovernanceTokenDispatcher {
             contract_address: govtoken_addr
-        }.mint(claimee, u256 { high: 0_u128, low: to_mint });
+        }.mint(claimee, u256 { high: 0, low: to_mint });
         // Emit event
         Governance::Claimed(claimee, to_mint);
         // Write new claimed amt

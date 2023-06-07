@@ -9,7 +9,7 @@ mod Upgrades {
     use starknet::syscalls;
     use starknet::ClassHash;
     use starknet::ContractAddress;
-    use starknet::class_hash::class_hash_try_from_felt252;
+    use starknet::class_hash;
     use governance::proposals::Proposals;
     use governance::contract::Governance::proposal_applied;
     use governance::contract::Governance::amm_address;
@@ -48,10 +48,7 @@ mod Upgrades {
             },
             _ => {
                 if (contract_type == 1) {
-                    // let impl_hash_classhash: ClassHash = impl_hash.try_into().unwrap(); <- why doesn't this work?
-                    let impl_hash_classhash: ClassHash = class_hash_try_from_felt252(
-                        impl_hash
-                    ).unwrap();
+                    let impl_hash_classhash: ClassHash = impl_hash.try_into().unwrap();
                     syscalls::replace_class_syscall(impl_hash_classhash);
                 } else {
                     assert(contract_type == 2, 'invalid contract_type');
