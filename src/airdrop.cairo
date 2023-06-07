@@ -19,7 +19,7 @@ mod Airdrop {
     use governance::contract::Governance::airdrop_claimed;
 
     const MERKLE_ROOT: felt252 =
-        0x6a8fef16fb1de78980fb73c46ee5a0899a3aa3a95d9f6deae73b545919bc704; // First test from David
+        0x6d5f4866e61240e8f14de3d5c994153b1bcbf58603f64fa1a0500074b8c8d38; // airdrop week5-week8, from round_2_composed.csv
 
     // Lets claimee claim from merkle tree the amount - claimed_so_far
     fn claim(claimee: ContractAddress, amount: u128, proof: Array::<felt252>) {
