@@ -39,11 +39,11 @@ mod Proposals {
     use governance::traits::IERC20DispatcherTrait;
     use governance::constants;
 
-    fn get_vote_counts(prop_id: felt252) -> (felt252, felt252) {
+    fn get_vote_counts(prop_id: felt252) -> (u128, u128) {
         let yay = proposal_total_yay::read(prop_id);
         let nay = proposal_total_nay::read(prop_id);
 
-        (yay, nay)
+        (yay.try_into().unwrap(), nay.try_into().unwrap())
     }
 
     fn get_proposal_details(prop_id: felt252) -> PropDetails {
@@ -248,7 +248,7 @@ mod Proposals {
             assert(new_votes >= 0, 'new_votes must be non-negative');
             proposal_total_nay::write(prop_id, new_votes.into());
         } else {
-            let curr_votes: u128 = proposal_total_nay::read(prop_id).try_into().unwrap();
+            let curr_votes: u128 = proposal_total_yay::read(prop_id).try_into().unwrap();
             let new_votes: u128 = curr_votes + caller_voting_power;
             assert(new_votes >= 0, 'new_votes must be non-negative');
             proposal_total_yay::write(prop_id, new_votes.into());

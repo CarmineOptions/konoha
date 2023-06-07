@@ -46,7 +46,7 @@ mod Governance {
     // C1.0 external fns as they can't be serialized
     // Actually it can, TODO do the same as I did with PropDetails for this
     #[view]
-    fn get_vote_counts(prop_id: felt252) -> (felt252, felt252) {
+    fn get_vote_counts(prop_id: felt252) -> (u128, u128) {
         Proposals::get_vote_counts(prop_id)
     }
 
