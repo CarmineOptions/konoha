@@ -117,8 +117,7 @@ mod Proposals {
             return hashed_data;
         } else {
             let (a, b) = *calldata_span.at(index);
-            let b_felt: felt252 = b.into();
-            let hashed_data = LegacyHash::hash(contract_address_to_felt252(a), b_felt);
+            let hashed_data = LegacyHash::hash(contract_address_to_felt252(a), b);
             return hashing(hashed_data, calldata_span, index + 1_usize);
         }
     }
