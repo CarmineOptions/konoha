@@ -56,7 +56,7 @@ impl MerkleTreeImpl of MerkleTreeTrait {
                     // If it is, we need to swap the order of the hash.
                     let a: u256 = current_node.into();
                     let b: u256 = (*proof_element).into();
-                    if b < a {
+                    if b > a {
                         current_node = LegacyHash::hash(current_node, *proof_element);
                     } else {
                         current_node = LegacyHash::hash(*proof_element, current_node);

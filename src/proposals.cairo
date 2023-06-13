@@ -273,7 +273,7 @@ mod Proposals {
         // So we must calculate 4/3 of the total supply (additional supply will be 1/4th of new total)
         // and from that 1/2, because that's 50%, So (4/3) * (1/2) = 2/3 of the total supply
         // Multiply total votes by 2 and divide by 3
-        let minimum_for_express: u128 = total_eligible_votes_from_tokenholders * 2 / 3;
+        let minimum_for_express: u128 = total_eligible_votes_from_tokenholders / 2;
 
         // Check if yay_tally >= minimum_for_express
         if yay_tally >= minimum_for_express {
@@ -298,6 +298,7 @@ mod Proposals {
         let nay_tally: u128 = nay_tally_felt.try_into().unwrap();
         let yay_tally: u128 = yay_tally_felt.try_into().unwrap();
         let total_tally: u128 = yay_tally + nay_tally;
+        let total_tally_multiplied = total_tally * 100;
 
         let total_eligible_votes_u256: u256 = IERC20Dispatcher {
             contract_address: gov_token_addr
@@ -306,7 +307,7 @@ mod Proposals {
         let total_eligible_votes: u128 = total_eligible_votes_u256.low;
 
         let quorum_threshold: u128 = total_eligible_votes * constants::QUORUM;
-        if total_tally < quorum_threshold {
+        if total_tally_multiplied < quorum_threshold {
             return constants::MINUS_ONE; // didn't meet quorum
         }
 
