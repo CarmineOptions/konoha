@@ -273,6 +273,7 @@ mod Proposals {
         // So we must calculate 4/3 of the total supply (additional supply will be 1/4th of new total)
         // and from that 1/2, because that's 50%, So (4/3) * (1/2) = 2/3 of the total supply
         // Multiply total votes by 2 and divide by 3
+        // Currently, there are not investors because they haven't yet set up their wallets. For this reason, the minimum is now simply half.
         let minimum_for_express: u128 = total_eligible_votes_from_tokenholders / 2;
 
         // Check if yay_tally >= minimum_for_express
@@ -298,6 +299,8 @@ mod Proposals {
         let nay_tally: u128 = nay_tally_felt.try_into().unwrap();
         let yay_tally: u128 = yay_tally_felt.try_into().unwrap();
         let total_tally: u128 = yay_tally + nay_tally;
+        // Here we multiply by 100 as the constant QUORUM is in percent.
+        // If QUORUM = 10, quorum was not met if (total_tally*100) < (total_eligible * 10).
         let total_tally_multiplied = total_tally * 100;
 
         let total_eligible_votes_u256: u256 = IERC20Dispatcher {
