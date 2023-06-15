@@ -210,3 +210,43 @@ trait IGovernanceToken {
         proxy_admin: ContractAddress
     );
 }
+
+#[abi]
+trait IOptionToken {
+    fn initializer(
+        name: felt252,
+        symbol: felt252,
+        proxy_admin: ContractAddress,
+        owner: ContractAddress,
+        quote_token_address: ContractAddress,
+        base_token_address: ContractAddress,
+        option_type: OptionType,
+        strike_price: Math64x61_,
+        maturity: felt252,
+        side: OptionSide
+    );
+    fn _set_owner_admin(owner: ContractAddress);
+    fn upgrade(new_implementation: felt252);
+    fn name() -> felt252;
+    fn symbol() -> felt252;
+    fn decimals() -> felt252;
+    fn totalSupply() -> u256;
+    fn balanceOf(account: ContractAddress) -> u256;
+    fn allowance(owner: ContractAddress, spender: ContractAddress) -> u256;
+    fn owner() -> ContractAddress;
+    fn quote_token_address() -> ContractAddress;
+    fn base_token_address() -> ContractAddress;
+    fn option_type() -> OptionType;
+    fn strike_price() -> Math64x61_;
+    fn maturity() -> felt252;
+    fn side() -> OptionSide;
+    fn transfer(recipient: ContractAddress, amount: u256) -> felt252;
+    fn transferFrom(sender: ContractAddress, recipient: ContractAddress, amount: u256) -> felt252;
+    fn approve(spender: ContractAddress, amount: u256) -> felt252;
+    fn increaseAllowance(spender: ContractAddress, added_value: u256) -> felt252;
+    fn decreaseAllowance(spender: ContractAddress, subtracted_value: u256) -> felt252;
+    fn mint(to: ContractAddress, amount: u256);
+    fn burn(account: ContractAddress, amount: u256);
+    fn transferOwnership(newOwner: ContractAddress);
+    fn renounceOwnership();
+}

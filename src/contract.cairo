@@ -9,6 +9,7 @@ mod Governance {
     use governance::proposals::Proposals;
     use governance::upgrades::Upgrades;
     use governance::airdrop::Airdrop;
+    use governance::options::Options;
 
     use starknet::ContractAddress;
 
@@ -20,6 +21,7 @@ mod Governance {
         proposal_total_yay: LegacyMap::<felt252, felt252>,
         proposal_total_nay: LegacyMap::<felt252, felt252>,
         proposal_applied: LegacyMap::<felt252, felt252>, // should be Bool after migration
+        proposal_initializer_run: LegacyMap::<u64, bool>,
         investor_voting_power: LegacyMap::<ContractAddress, felt252>,
         total_investor_distributed_power: felt252,
         governance_token_address: ContractAddress,
@@ -95,5 +97,10 @@ mod Governance {
     #[external]
     fn claim(address: ContractAddress, amount: u128, proof: Array::<felt252>) {
         Airdrop::claim(address, amount, proof)
+    }
+
+    #[external]
+    fn add_2206_options(){
+        Options::add_2206_options()
     }
 }
