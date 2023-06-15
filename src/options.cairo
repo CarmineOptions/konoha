@@ -138,10 +138,15 @@ mod Options {
 
         let MATURITY: felt252 = 1687478399; // Thu Jun 22 2023 23:59:59 GMT+0000
 
+        let STRIKE_PRICE_1500 = 3458764513820540928000;
+        let STRIKE_PRICE_1600 = 3689348814741910323200;
         let STRIKE_PRICE_1700 = 3919933115663279718400;
         let STRIKE_PRICE_1800 = 4150517416584649113600;
 
-        let VOLATILITY_42 = 96845406386975145984;
+        let VOLATILITY_42 = 96845406386975145984; // = 42 * 2^61
+        let VOLATILITY_44 = 101457092405402533888;
+        let VOLATILITY_46 = 106068778423829921792;
+        let VOLATILITY_60 = 138350580552821637120;
 
         let eth_lpt_addr: ContractAddress =
             0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024
@@ -163,6 +168,90 @@ mod Options {
                     option_type: OPTION_CALL,
                     lptoken_address: eth_lpt_addr,
                     initial_volatility: VOLATILITY_42
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-22JUN23-1800-LONG-CALL',
+                    option_side: TRADE_SIDE_LONG,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1800,
+                    option_type: OPTION_CALL,
+                    lptoken_address: eth_lpt_addr,
+                    initial_volatility: VOLATILITY_44
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-22JUN23-1700-SHORT-CALL',
+                    option_side: TRADE_SIDE_SHORT,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1700,
+                    option_type: OPTION_CALL,
+                    lptoken_address: eth_lpt_addr,
+                    initial_volatility: VOLATILITY_42
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-22JUN23-1800-SHORT-CALL',
+                    option_side: TRADE_SIDE_SHORT,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1800,
+                    option_type: OPTION_CALL,
+                    lptoken_address: eth_lpt_addr,
+                    initial_volatility: VOLATILITY_44
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-22JUN23-1600-LONG-PUT',
+                    option_side: TRADE_SIDE_LONG,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1600,
+                    option_type: OPTION_PUT,
+                    lptoken_address: usdc_lpt_addr,
+                    initial_volatility: VOLATILITY_46
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-22JUN23-1500-LONG-PUT',
+                    option_side: TRADE_SIDE_LONG,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1500,
+                    option_type: OPTION_PUT,
+                    lptoken_address: usdc_lpt_addr,
+                    initial_volatility: VOLATILITY_60
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-22JUN23-1600-SHORT-PUT',
+                    option_side: TRADE_SIDE_SHORT,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1600,
+                    option_type: OPTION_PUT,
+                    lptoken_address: usdc_lpt_addr,
+                    initial_volatility: VOLATILITY_46
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-22JUN23-1500-SHORT-PUT',
+                    option_side: TRADE_SIDE_SHORT,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1500,
+                    option_type: OPTION_PUT,
+                    lptoken_address: usdc_lpt_addr,
+                    initial_volatility: VOLATILITY_60
                 }
             );
 
