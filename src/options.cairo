@@ -11,7 +11,9 @@ mod Options {
     use starknet::SyscallResult;
     use starknet::class_hash;
     use starknet::ClassHash;
-    use starknet::contract_address::{ContractAddress, Felt252TryIntoContractAddress, ContractAddressIntoFelt252};
+    use starknet::contract_address::{
+        ContractAddress, Felt252TryIntoContractAddress, ContractAddressIntoFelt252
+    };
     use starknet::syscalls::deploy_syscall;
     use starknet::info::get_contract_address;
 
@@ -24,18 +26,18 @@ mod Options {
     use governance::types::OptionType;
     use governance::traits::Math64x61_;
 
-    fn add_options(
-        salt: felt252,
-        mut options: Span<FutureOption>
-    ) {
+    fn add_options(salt: felt252, mut options: Span<FutureOption>) {
         let governance_address = get_contract_address();
         let amm_address = amm_address::read();
-        let proxy_class: felt252 = 0x00eafb0413e759430def79539db681f8a4eb98cf4196fe457077d694c6aeeb82;
+        let proxy_class: felt252 =
+            0x00eafb0413e759430def79539db681f8a4eb98cf4196fe457077d694c6aeeb82;
         let opt_class: felt252 = 0x5ce3a80daeb5b7a766df9b41ca8d9e52b6b0a045a0d2ced72f43d4dd2f93b10;
         loop {
             match options.pop_front() {
                 Option::Some(option) => {
-                    add_option(proxy_class, opt_class, governance_address, amm_address, salt, option);
+                    add_option(
+                        proxy_class, opt_class, governance_address, amm_address, salt, option
+                    );
                 },
                 Option::None(()) => {
                     break ();
@@ -141,19 +143,28 @@ mod Options {
 
         let VOLATILITY_42 = 96845406386975145984;
 
-        let eth_lpt_addr: ContractAddress = 0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024.try_into().unwrap();
-        let usdc_lpt_addr: ContractAddress = 0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a.try_into().unwrap();
+        let eth_lpt_addr: ContractAddress =
+            0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024
+            .try_into()
+            .unwrap();
+        let usdc_lpt_addr: ContractAddress =
+            0x18a6abca394bd5f822cfa5f88783c01b13e593d1603e7b41b00d31d2ea4827a
+            .try_into()
+            .unwrap();
 
         let mut to_add = ArrayTrait::<FutureOption>::new();
-        to_add.append(FutureOption {
-            name: 'ETHUSDC-22JUN23-1700-LONG-CALL',
-            option_side: TRADE_SIDE_LONG,
-            maturity: MATURITY,
-            strike_price: STRIKE_PRICE_1700,
-            option_type: OPTION_CALL,
-            lptoken_address: eth_lpt_addr,
-            initial_volatility: VOLATILITY_42
-        });
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-22JUN23-1700-LONG-CALL',
+                    option_side: TRADE_SIDE_LONG,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1700,
+                    option_type: OPTION_CALL,
+                    lptoken_address: eth_lpt_addr,
+                    initial_volatility: VOLATILITY_42
+                }
+            );
 
         add_options(2206235894263284012, to_add.span())
     }
