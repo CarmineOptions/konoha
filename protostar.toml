@@ -2,4 +2,4 @@
 protostar-version = '0.13.0'
 
 [contracts]
-governance = ["governance"]
+governance = ["src"]
