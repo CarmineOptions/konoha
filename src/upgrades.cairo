@@ -11,9 +11,7 @@ mod Upgrades {
     use starknet::ContractAddress;
     use starknet::class_hash;
     use governance::proposals::Proposals;
-    use governance::contract::Governance::proposal_applied;
-    use governance::contract::Governance::amm_address;
-    use governance::contract::Governance::governance_token_address;
+    use governance::contract::Governance::{proposal_applied, amm_address, governance_token_address, merkle_root};
 
     use governance::types::PropDetails;
 
@@ -33,14 +31,10 @@ mod Upgrades {
 
         Proposals::assert_correct_contract_type(contract_type);
 
-        let impl_hash = prop_details.impl_hash;
-
-        // TODO check if the new contract has the right type
-        // let new_contract_type = IContract(addr).contract_type();
-        // assert(new_contract_type == contract_type, 'Wrong contract type');
+        let impl_hash = prop_details.payload;
 
         // Apply the upgrade
-        // TODO use match/switch
+        // TODO use full match/switch when supported
         match contract_type {
             0 => {
                 let amm_addr: ContractAddress = amm_address::read();
@@ -50,12 +44,15 @@ mod Upgrades {
                 if (contract_type == 1) {
                     let impl_hash_classhash: ClassHash = impl_hash.try_into().unwrap();
                     syscalls::replace_class_syscall(impl_hash_classhash);
-                } else {
-                    assert(contract_type == 2, 'invalid contract_type');
+                } else if (contract_type == 2){
                     let govtoken_addr = governance_token_address::read();
                     IGovernanceTokenDispatcher {
                         contract_address: govtoken_addr
                     }.upgrade(impl_hash);
+                } else if (contract_type == 3){
+                    merkle_root::write(impl_hash);
+                } else {
+                    assert(contract_type == 4, 'invalid contract_type'); // type 4 is no-op, signal vote
                 }
             }
         }

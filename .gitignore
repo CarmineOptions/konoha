@@ -13,3 +13,4 @@ Cargo.lock
 .env
 
 vendor/
+.DS_Store

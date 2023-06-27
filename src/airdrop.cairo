@@ -15,11 +15,17 @@ mod Airdrop {
     use governance::contract::Governance;
     use governance::traits::IGovernanceTokenDispatcher;
     use governance::traits::IGovernanceTokenDispatcherTrait;
-    use governance::contract::Governance::governance_token_address;
-    use governance::contract::Governance::airdrop_claimed;
+    use governance::contract::Governance::{governance_token_address,airdrop_claimed, merkle_root};
 
-    const MERKLE_ROOT: felt252 =
-        0x6d5f4866e61240e8f14de3d5c994153b1bcbf58603f64fa1a0500074b8c8d38; // airdrop week5-week8, from round_2_composed.csv
+    fn get_merkle_root() -> felt252 {
+        let root = merkle_root::read();
+        if (root == 0) {
+            // part of migration, to be removed later
+            0x6d5f4866e61240e8f14de3d5c994153b1bcbf58603f64fa1a0500074b8c8d38 // airdrop week5-week8, from round_2_composed.csv
+        } else {
+            root
+        }
+    }
 
     // Lets claimee claim from merkle tree the amount - claimed_so_far
     fn claim(claimee: ContractAddress, amount: u128, proof: Array::<felt252>) {
@@ -28,7 +34,7 @@ mod Airdrop {
         let leaf = LegacyHash::hash(claimee.into(), amount_felt);
 
         let root = merkle_tree.compute_root(leaf, proof.span());
-        assert(root == MERKLE_ROOT, 'invalid proof');
+        assert(root == get_merkle_root(), 'invalid proof');
 
         let claimed_so_far: u128 = airdrop_claimed::read(claimee);
         assert(claimed_so_far < amount, 'claiming more than eligible for');
