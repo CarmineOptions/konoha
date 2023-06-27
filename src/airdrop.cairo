@@ -15,7 +15,7 @@ mod Airdrop {
     use governance::contract::Governance;
     use governance::traits::IGovernanceTokenDispatcher;
     use governance::traits::IGovernanceTokenDispatcherTrait;
-    use governance::contract::Governance::{governance_token_address,airdrop_claimed, merkle_root};
+    use governance::contract::Governance::{governance_token_address, airdrop_claimed, merkle_root};
 
     fn get_merkle_root() -> felt252 {
         let root = merkle_root::read();
