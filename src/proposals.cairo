@@ -66,7 +66,7 @@ mod Proposals {
 
     fn assert_correct_contract_type(contract_type: ContractType) {
         let contract_type_u: u64 = contract_type.try_into().unwrap();
-        assert(contract_type_u <= 2, 'invalid contract type')
+        assert(contract_type_u <= 4, 'invalid contract type')
     }
 
     fn assert_voting_in_progress(prop_id: felt252) {
@@ -83,7 +83,7 @@ mod Proposals {
         u256 { low, high }
     }
 
-    fn submit_proposal(impl_hash: felt252, to_upgrade: ContractType) -> felt252 {
+    fn submit_proposal(payload: felt252, to_upgrade: ContractType) -> felt252 {
         assert_correct_contract_type(to_upgrade);
         let govtoken_addr = governance_token_address::read();
         let caller = get_caller_address();
@@ -97,7 +97,7 @@ mod Proposals {
         assert(total_supply < res, 'not enough tokens to submit');
 
         let prop_id = get_free_prop_id();
-        let prop_details = PropDetails { impl_hash: impl_hash, to_upgrade: to_upgrade };
+        let prop_details = PropDetails { payload: payload, to_upgrade: to_upgrade };
         proposal_details::write(prop_id, prop_details);
 
         let current_block_number: u64 = get_block_info().unbox().block_number;
@@ -106,7 +106,7 @@ mod Proposals {
             .into();
         proposal_vote_ends::write(prop_id, end_block_number);
 
-        Governance::Proposed(prop_id, impl_hash, to_upgrade);
+        Governance::Proposed(prop_id, payload, to_upgrade);
         prop_id
     }
 
