@@ -1,9 +1,4 @@
-mod airdrop;
 mod constants;
 mod contract;
-mod merkle_tree;
-mod options;
-mod proposals;
 mod traits;
 mod types;
-mod upgrades;
