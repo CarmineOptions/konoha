@@ -129,7 +129,6 @@ mod Proposals {
             ref state.proposal_vote_ends, prop_id, end_block_number
         );
 
-        state.emit(Governance::Proposed { prop_id, payload, to_upgrade });
         prop_id
     }
 
@@ -323,7 +322,6 @@ mod Proposals {
                 ref state.proposal_total_yay, prop_id, new_votes.into()
             );
         }
-        state.emit(Governance::Voted { prop_id: prop_id, voter: caller_addr, opinion: opinion });
     }
 
 
