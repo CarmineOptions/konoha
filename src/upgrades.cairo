@@ -63,7 +63,9 @@ mod Upgrades {
                         contract_address: govtoken_addr
                     }.upgrade(impl_hash);
                 } else if (contract_type == 3) {
-                    merkle_root::InternalContractStateTrait::write(ref state.merkle_root, impl_hash);
+                    merkle_root::InternalContractStateTrait::write(
+                        ref state.merkle_root, impl_hash
+                    );
                 } else {
                     assert(
                         contract_type == 4, 'invalid contract_type'

@@ -149,8 +149,15 @@ mod Options {
 
     fn add_0607_1307_options() {
         let mut state = Governance::unsafe_new_contract_state();
-        assert(!proposal_initializer_run::InternalContractStateTrait::read(@state.proposal_initializer_run, 16), 'prop16 initializer called again');
-        proposal_initializer_run::InternalContractStateTrait::write(ref state.proposal_initializer_run, 16, true);
+        assert(
+            !proposal_initializer_run::InternalContractStateTrait::read(
+                @state.proposal_initializer_run, 16
+            ),
+            'prop16 initializer called again'
+        );
+        proposal_initializer_run::InternalContractStateTrait::write(
+            ref state.proposal_initializer_run, 16, true
+        );
 
         add_0607_options();
         add_1307_options();

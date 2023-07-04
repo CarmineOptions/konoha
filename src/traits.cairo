@@ -282,7 +282,9 @@ trait IOptionToken<TContractState> {
     fn maturity(self: @TContractState) -> felt252;
     fn side(self: @TContractState) -> OptionSide;
     fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256) -> felt252;
-    fn transferFrom(ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256) -> felt252;
+    fn transferFrom(
+        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256
+    ) -> felt252;
     fn approve(ref self: TContractState, spender: ContractAddress, amount: u256) -> felt252;
     fn mint(ref self: TContractState, to: ContractAddress, amount: u256);
     fn burn(ref self: TContractState, account: ContractAddress, amount: u256);
