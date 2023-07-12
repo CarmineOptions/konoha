@@ -68,6 +68,34 @@ mod Governance {
 
     // PROPOSALS
 
+    #[derive(starknet::Event, Drop)]
+    struct Proposed {
+        prop_id: felt252,
+        payload: felt252,
+        to_upgrade: ContractType
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct Voted {
+        prop_id: felt252,
+        voter: ContractAddress,
+        opinion: VoteStatus
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct Claimed {
+        address: ContractAddress,
+        received: u128
+    }
+
+    #[derive(starknet::Event, Drop)]
+    #[event]
+    enum Event {
+        Proposed: Proposed,
+        Voted: Voted,
+        Claimed: Claimed
+    }
+
     #[constructor]
     fn constructor(ref self: ContractState, govtoken_address: ContractAddress) {
         // This is not used in production on mainnet, because the governance token is already deployed (and distributed).

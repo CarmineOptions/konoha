@@ -54,6 +54,9 @@ mod Airdrop {
             contract_address: govtoken_addr
         }.mint(claimee, u256 { high: 0, low: to_mint });
 
+        // Emit event
+        state.emit(Governance::Claimed{address: claimee, received: to_mint});
+
         // Write new claimed amt
         airdrop_claimed::InternalContractStateTrait::write(
             ref state.airdrop_claimed, claimee, to_mint + claimed_so_far
