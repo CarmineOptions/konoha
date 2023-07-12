@@ -23,6 +23,7 @@ mod Options {
         IAMMDispatcher, IAMMDispatcherTrait, IOptionTokenDispatcher, IOptionTokenDispatcherTrait
     };
     use governance::types::OptionSide;
+    use governance::contract::Governance;
     use governance::types::OptionType;
     use governance::traits::Math64x61_;
 
@@ -39,9 +40,10 @@ mod Options {
     const VOLATILITY_60: Math64x61_ = 138350580552821637120;
 
     fn add_options(salt: felt252, mut options: Span<FutureOption>) {
-        // TODO use block hash from block_hash syscall as salt
+        // TODO use block hash from block_hash syscall as salt // actually doable with the new syscall
         let governance_address = get_contract_address();
-        let amm_address = amm_address::read();
+        let state = Governance::unsafe_new_contract_state();
+        let amm_address = amm_address::InternalContractStateTrait::read(@state.amm_address);
         let proxy_class: felt252 =
             0x00eafb0413e759430def79539db681f8a4eb98cf4196fe457077d694c6aeeb82;
         let opt_class: felt252 = 0x5ce3a80daeb5b7a766df9b41ca8d9e52b6b0a045a0d2ced72f43d4dd2f93b10;
@@ -146,8 +148,16 @@ mod Options {
     }
 
     fn add_0607_1307_options() {
-        assert(!proposal_initializer_run::read(16), 'prop16 initializer called again');
-        proposal_initializer_run::write(16, true);
+        let mut state = Governance::unsafe_new_contract_state();
+        assert(
+            !proposal_initializer_run::InternalContractStateTrait::read(
+                @state.proposal_initializer_run, 16
+            ),
+            'prop16 initializer called again'
+        );
+        proposal_initializer_run::InternalContractStateTrait::write(
+            ref state.proposal_initializer_run, 16, true
+        );
 
         add_0607_options();
         add_1307_options();
