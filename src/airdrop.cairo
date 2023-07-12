@@ -55,7 +55,7 @@ mod Airdrop {
         }.mint(claimee, u256 { high: 0, low: to_mint });
 
         // Emit event
-        state.emit(Governance::Claimed{address: claimee, received: to_mint});
+        state.emit(Governance::Claimed { address: claimee, received: to_mint });
 
         // Write new claimed amt
         airdrop_claimed::InternalContractStateTrait::write(
