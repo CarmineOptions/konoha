@@ -101,7 +101,7 @@ mod Governance {
     }
 
     #[external]
-    fn add_0607_1307_options() {
-        Options::add_0607_1307_options()
+    fn add_0308_1008_options() {
+        Options::add_0308_1008_options()
     }
 }
