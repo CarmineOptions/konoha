@@ -157,8 +157,11 @@ mod Options {
         proposal_initializer_run::write(19, true);
 
         let amm_address = amm_address::read();
-        let max_put_pool_balance = u256 { low: 50000000000, high: 0};
-        let USDC_addr: ContractAddress = 0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8.try_into().unwrap();
+        let max_put_pool_balance = u256 { low: 50000000000, high: 0 };
+        let USDC_addr: ContractAddress =
+            0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
+            .try_into()
+            .unwrap();
         IAMMDispatcher {
             contract_address: amm_address
         }.set_max_lpool_balance(USDC_addr, max_put_pool_balance);
