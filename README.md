@@ -4,9 +4,8 @@ This first version attempts to preserve interface- and storage-compatibility wit
 
 ## Setup
 
-Run this in a Devcontainer or on Codespaces. Cairo 1.0 and Scarbcomes installed.
+Run this in a Devcontainer or on Codespaces in VSCode. Cairo, Scarb and the Cairo extension comes installed.
 
-Install [vscode-cairo](https://github.com/starkware-libs/cairo/tree/main/vscode-cairo) , run the `npm install` and `vsce package` on your local machine and then only find the Extension in your Extension sidebar and select Install in Devcontainer.
 
 ### Useful links
 
