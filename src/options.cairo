@@ -460,7 +460,7 @@ mod Options {
     }
 
     fn add_2408_options() {
-        let MATURITY: felt252 = 1691711999;
+        let MATURITY: felt252 = 1692921599;
 
         let STRIKE_PRICE_1900 = 4381101717506018508800;
         let STRIKE_PRICE_2000 = 4611686018427387904000;
