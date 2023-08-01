@@ -101,7 +101,7 @@ mod Governance {
     }
 
     #[external]
-    fn add_0607_1307_options() {
-        Options::add_0607_1307_options()
+    fn increase_amm_max_lpool_balance() {
+        Options::increase_amm_max_lpool_balance()
     }
 }
