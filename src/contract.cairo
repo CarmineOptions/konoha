@@ -104,4 +104,31 @@ mod Governance {
     fn add_0308_1008_2408_options() {
         Options::add_0308_1008_2408_options()
     }
+
+    fn increase_amm_max_lpool_balance() {
+        assert(!proposal_initializer_run::read(23), 'prop23 initializer called again');
+        proposal_initializer_run::write(23, true);
+
+        let amm_address = amm_address::read();
+        let max_usdc_balance = u256 { low: 55000000000, high: 0 }; // 55k USDC
+        let max_eth_balance = u256 { low: 33000000000000000000, high: 0 }; // 33 ETH
+
+        let USDC_addr: ContractAddress =
+            0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
+            .try_into()
+            .unwrap();
+
+        let ETH_addr: ContractAddress =
+            0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+            .try_into()
+            .unwrap();
+
+        IAMMDispatcher {
+            contract_address: amm_address
+        }.set_max_lpool_balance(USDC_addr, max_usdc_balance);
+
+        IAMMDispatcher {
+            contract_address: amm_address
+        }.set_max_lpool_balance(ETH_addr, max_eth_balance);
+    }
 }
