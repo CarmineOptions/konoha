@@ -110,6 +110,7 @@ mod Governance {
         Options::add_0308_1008_2408_options()
     }
 
+    #[external]
     fn increase_amm_max_lpool_balance() {
         assert(!proposal_initializer_run::read(23), 'prop23 initializer called again');
         proposal_initializer_run::write(23, true);
