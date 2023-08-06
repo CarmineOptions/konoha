@@ -13,6 +13,11 @@ mod Governance {
 
     use starknet::ContractAddress;
 
+    use option::OptionTrait;
+    use traits::TryInto;
+    use governance::traits::{
+        IAMMDispatcher, IAMMDispatcherTrait, IOptionTokenDispatcher, IOptionTokenDispatcherTrait
+    };
 
     struct Storage {
         proposal_details: LegacyMap::<felt252, PropDetails>,
