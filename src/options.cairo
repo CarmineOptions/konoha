@@ -154,15 +154,14 @@ mod Options {
 
     fn add_1708_3108_options() {
         let mut state = Governance::unsafe_new_contract_state();
-        // 23 was already used in initializer for prop 22 :)
         assert(
             !proposal_initializer_run::InternalContractStateTrait::read(
-                @state.proposal_initializer_run, 22
+                @state.proposal_initializer_run, 23
             ),
             'prop23 initializer called again'
         );
         proposal_initializer_run::InternalContractStateTrait::write(
-            ref state.proposal_initializer_run, 22, true
+            ref state.proposal_initializer_run, 23, true
         );
 
         add_1708_options();
