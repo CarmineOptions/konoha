@@ -1,5 +1,5 @@
 // This file if possible calls out to Proposals or Upgrades or other files where actual logic resides.
-// When Components arrive in Cairo 2.?, it will be refactored to take advantage of them.
+// When Components arrive in Cairo 2.?, it will be refactored to take advantage of them. Random change to rerun CI
 
 use starknet::ContractAddress;
 use governance::types::{ContractType, PropDetails};
