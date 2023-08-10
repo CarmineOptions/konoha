@@ -173,7 +173,8 @@ mod Governance {
             let max_eth_balance = u256 { low: 36000000000000000000, high: 0 }; // 36 ETH
 
             let USDC_addr: ContractAddress =
-                0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8.try_into()
+                0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
+                .try_into()
                 .unwrap();
 
             let ETH_addr: ContractAddress =
