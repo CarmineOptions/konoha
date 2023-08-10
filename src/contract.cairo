@@ -32,6 +32,7 @@ trait IGovernance<TContractState> {
 
     fn add_1708_3108_options(ref self: TContractState);
 
+    fn increase_amm_max_lpool_balance(ref self: TContractState);
 }
 
 
@@ -47,6 +48,13 @@ mod Governance {
     use governance::options::Options;
 
     use starknet::ContractAddress;
+
+    // Only for increase of lpool balance
+    use option::OptionTrait;
+    use traits::TryInto;
+    use governance::traits::{
+        IAMMDispatcher, IAMMDispatcherTrait, IOptionTokenDispatcher, IOptionTokenDispatcherTrait
+    };
 
     #[storage]
     struct Storage {
@@ -158,6 +166,28 @@ mod Governance {
             Options::add_1708_3108_options()
         }
 
+        fn increase_amm_max_lpool_balance(ref self: ContractState) {
+            let state = unsafe_new_contract_state();
+            let amm_address = amm_address::InternalContractStateTrait::read(@state.amm_address);
+            let max_usdc_balance = u256 { low: 60000000000, high: 0 }; // 60k USDC
+            let max_eth_balance = u256 { low: 36000000000000000000, high: 0 }; // 36 ETH
+
+            let USDC_addr: ContractAddress =
+                0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8.try_into()
+                .unwrap();
+
+            let ETH_addr: ContractAddress =
+                0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+                .try_into()
+                .unwrap();
+
+            IAMMDispatcher {
+                contract_address: amm_address
+            }.set_max_lpool_balance(USDC_addr, max_usdc_balance);
+
+            IAMMDispatcher {
+                contract_address: amm_address
+            }.set_max_lpool_balance(ETH_addr, max_eth_balance);
         }
     }
 }
