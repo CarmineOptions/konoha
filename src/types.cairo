@@ -4,7 +4,7 @@ use starknet::syscalls::storage_write_syscall;
 use starknet::storage_address_from_base_and_offset;
 use core::serde::Serde;
 
-#[derive(Copy, Drop, Serde, starknet::Store)]
+#[derive(Copy, Drop, Serde, storage_access::StorageAccess)]
 struct PropDetails {
     payload: felt252,
     to_upgrade: felt252,
