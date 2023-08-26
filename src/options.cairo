@@ -366,25 +366,25 @@ mod Options {
         to_add
             .append(
                 FutureOption {
-                    name: 'ETHUSDC-14SEP23-1800-LONG-PUT',
+                    name: 'ETHUSDC-14SEP23-1500-LONG-PUT',
                     option_side: TRADE_SIDE_LONG,
                     maturity: MATURITY,
-                    strike_price: STRIKE_PRICE_1800,
+                    strike_price: STRIKE_PRICE_1500,
                     option_type: OPTION_PUT,
                     lptoken_address: usdc_lpt_addr,
-                    initial_volatility: VOLATILITY_41
+                    initial_volatility: VOLATILITY_41_5
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name: 'ETHUSDC-14SEP23-1900-LONG-PUT',
+                    name: 'ETHUSDC-14SEP23-1600-LONG-PUT',
                     option_side: TRADE_SIDE_LONG,
                     maturity: MATURITY,
-                    strike_price: STRIKE_PRICE_1900,
+                    strike_price: STRIKE_PRICE_1600,
                     option_type: OPTION_PUT,
                     lptoken_address: usdc_lpt_addr,
-                    initial_volatility: VOLATILITY_41_5
+                    initial_volatility: VOLATILITY_32
                 }
             );
         to_add
@@ -426,25 +426,25 @@ mod Options {
         to_add
             .append(
                 FutureOption {
-                    name: 'ETHUSDC-14SEP23-1800-SHORT-PUT',
+                    name: 'ETHUSDC-14SEP23-1500-SHORT-PUT',
                     option_side: TRADE_SIDE_SHORT,
                     maturity: MATURITY,
                     strike_price: STRIKE_PRICE_1800,
                     option_type: OPTION_PUT,
                     lptoken_address: usdc_lpt_addr,
-                    initial_volatility: VOLATILITY_41
+                    initial_volatility: VOLATILITY_41_5
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name: 'ETHUSDC-14SEP23-1900-SHORT-PUT',
+                    name: 'ETHUSDC-14SEP23-1600-SHORT-PUT',
                     option_side: TRADE_SIDE_SHORT,
                     maturity: MATURITY,
                     strike_price: STRIKE_PRICE_1900,
                     option_type: OPTION_PUT,
                     lptoken_address: usdc_lpt_addr,
-                    initial_volatility: VOLATILITY_41_5
+                    initial_volatility: VOLATILITY_32
                 }
             );
         add_options(140963284012, to_add.span())
