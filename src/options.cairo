@@ -258,7 +258,7 @@ mod Options {
                     strike_price: STRIKE_PRICE_1700,
                     option_type: OPTION_CALL,
                     lptoken_address: eth_lpt_addr,
-                    initial_volatility: VOLATILITY_28 
+                    initial_volatility: VOLATILITY_28
                 }
             );
         to_add
@@ -270,7 +270,7 @@ mod Options {
                     strike_price: STRIKE_PRICE_1800,
                     option_type: OPTION_CALL,
                     lptoken_address: eth_lpt_addr,
-                    initial_volatility: VOLATILITY_34 
+                    initial_volatility: VOLATILITY_34
                 }
             );
         to_add
@@ -282,7 +282,7 @@ mod Options {
                     strike_price: STRIKE_PRICE_1900,
                     option_type: OPTION_CALL,
                     lptoken_address: eth_lpt_addr,
-                    initial_volatility: VOLATILITY_42 
+                    initial_volatility: VOLATILITY_42
                 }
             );
         to_add
