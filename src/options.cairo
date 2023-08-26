@@ -27,6 +27,7 @@ mod Options {
     use governance::types::OptionType;
     use governance::traits::Math64x61_;
 
+    // 2**61 = 2305843009213693952
     const VOLATILITY_28: Math64x61_ = consteval_int!(28 * 2305843009213693952);
     const VOLATILITY_32: Math64x61_ = consteval_int!(32 * 2305843009213693952);
     const VOLATILITY_32_5: Math64x61_ = 74939897799445053440;
@@ -45,7 +46,6 @@ mod Options {
     const VOLATILITY_55: Math64x61_ = 126821365506753167360;
     const VOLATILITY_60: Math64x61_ = 138350580552821637120;
 
-    // 2**61 = 2305843009213693952
     const STRIKE_PRICE_1500: Math64x61_ = consteval_int!(1500 * 2305843009213693952);
     const STRIKE_PRICE_1600: Math64x61_ = consteval_int!(1600 * 2305843009213693952);
     const STRIKE_PRICE_1700: Math64x61_ = consteval_int!(1700 * 2305843009213693952);
