@@ -164,12 +164,12 @@ mod Options {
         let mut state = Governance::unsafe_new_contract_state();
         assert(
             !proposal_initializer_run::InternalContractStateTrait::read(
-                @state.proposal_initializer_run, 16
+                @state.proposal_initializer_run, 26
             ),
-            'prop16 initializer called again'
+            'prop26 initializer called again'
         );
         proposal_initializer_run::InternalContractStateTrait::write(
-            ref state.proposal_initializer_run, 16, true
+            ref state.proposal_initializer_run, 26, true
         );
 
         add_0709_options();
