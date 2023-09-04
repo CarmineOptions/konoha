@@ -7,8 +7,8 @@ on:
       - '.github/'
 
 env:
-  LINK: https://github.com/software-mansion/scarb/releases/download/v0.6.0/scarb-v0.6.0-x86_64-unknown-linux-gnu.tar.gz
-  NAME: scarb-v0.6.0-x86_64-unknown-linux-gnu
+  LINK: https://github.com/software-mansion/scarb/releases/download/v0.6.2/scarb-v0.6.2-x86_64-unknown-linux-gnu.tar.gz
+  NAME: scarb-v0.6.2-x86_64-unknown-linux-gnu
 
 jobs:
   build:
