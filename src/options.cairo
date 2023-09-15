@@ -31,10 +31,12 @@ mod Options {
     const VOLATILITY_28: Math64x61_ = consteval_int!(28 * 2305843009213693952);
     const VOLATILITY_30: Math64x61_ = consteval_int!(30 * 2305843009213693952);
     const VOLATILITY_30_5: Math64x61_ = 70328211781017665536;
+    const VOLATILITY_31_5: Math64x61_ = 72634054790231359488;
     const VOLATILITY_32: Math64x61_ = consteval_int!(32 * 2305843009213693952);
     const VOLATILITY_32_5: Math64x61_ = 74939897799445053440;
     const VOLATILITY_34: Math64x61_ = consteval_int!(34 * 2305843009213693952);
     const VOLATILITY_35: Math64x61_ = consteval_int!(35 * 2305843009213693952);
+    const VOLATILITY_35_5: Math64x61_ = 81857426827086135296;
     const VOLATILITY_38: Math64x61_ = 87622034350120370176;
     const VOLATILITY_38_5: Math64x61_ = 88774955854727217152;
     const VOLATILITY_39: Math64x61_ = consteval_int!(39 * 2305843009213693952);
@@ -46,6 +48,7 @@ mod Options {
     const VOLATILITY_44: Math64x61_ = 101457092405402533888;
     const VOLATILITY_45: Math64x61_ = 124515522497539473408;
     const VOLATILITY_46: Math64x61_ = 106068778423829921792;
+    const VOLATILITY_46_5: Math64x61_ = 107221699928436768768;
     const VOLATILITY_48_5: Math64x61_ = 111833385946864156672;
     const VOLATILITY_55: Math64x61_ = 126821365506753167360;
     const VOLATILITY_60: Math64x61_ = 138350580552821637120;
@@ -164,23 +167,23 @@ mod Options {
         res
     }
 
-    fn run_add_2809_options() {
+    fn run_add_0510_options() {
         let mut state = Governance::unsafe_new_contract_state();
         assert(
             !proposal_initializer_run::InternalContractStateTrait::read(
-                @state.proposal_initializer_run, 29
+                @state.proposal_initializer_run, 30
             ),
-            'prop29 initializer called again'
+            'prop30 initializer called again'
         );
         proposal_initializer_run::InternalContractStateTrait::write(
-            ref state.proposal_initializer_run, 29, true
+            ref state.proposal_initializer_run, 30, true
         );
 
-        add_2809_options();
+        add_0510_options();
     }
 
-    fn add_2809_options() {
-        let MATURITY: felt252 = 1695945599;
+    fn add_0510_options() {
+        let MATURITY: felt252 = 1696550399;
 
         let eth_lpt_addr: ContractAddress =
             0x7aba50fdb4e024c1ba63e2c60565d0fd32566ff4b18aa5818fc80c30e749024
@@ -195,55 +198,55 @@ mod Options {
         to_add
             .append(
                 FutureOption {
-                    name: 'ETHUSDC-28SEP23-1700-LONG-CALL',
+                    name: 'ETHUSDC-05OCT23-1700-LONG-CALL',
                     option_side: TRADE_SIDE_LONG,
                     maturity: MATURITY,
                     strike_price: STRIKE_PRICE_1700,
                     option_type: OPTION_CALL,
                     lptoken_address: eth_lpt_addr,
-                    initial_volatility: VOLATILITY_30_5
+                    initial_volatility: VOLATILITY_31_5
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name: 'ETHUSDC-28SEP23-1800-LONG-CALL',
+                    name: 'ETHUSDC-05OCT23-1800-LONG-CALL',
                     option_side: TRADE_SIDE_LONG,
                     maturity: MATURITY,
                     strike_price: STRIKE_PRICE_1800,
                     option_type: OPTION_CALL,
                     lptoken_address: eth_lpt_addr,
-                    initial_volatility: VOLATILITY_35
-                }
-            );
-        to_add
-            .append(
-                FutureOption {
-                    name: 'ETHUSDC-28SEP23-1900-LONG-CALL',
-                    option_side: TRADE_SIDE_LONG,
-                    maturity: MATURITY,
-                    strike_price: STRIKE_PRICE_1900,
-                    option_type: OPTION_CALL,
-                    lptoken_address: eth_lpt_addr,
-                    initial_volatility: VOLATILITY_44
-                }
-            );
-        to_add
-            .append(
-                FutureOption {
-                    name: 'ETHUSDC-28SEP23-1500-LONG-PUT',
-                    option_side: TRADE_SIDE_LONG,
-                    maturity: MATURITY,
-                    strike_price: STRIKE_PRICE_1500,
-                    option_type: OPTION_PUT,
-                    lptoken_address: usdc_lpt_addr,
                     initial_volatility: VOLATILITY_38
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name: 'ETHUSDC-28SEP23-1600-LONG-PUT',
+                    name: 'ETHUSDC-05OCT23-1900-LONG-CALL',
+                    option_side: TRADE_SIDE_LONG,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1900,
+                    option_type: OPTION_CALL,
+                    lptoken_address: eth_lpt_addr,
+                    initial_volatility: VOLATILITY_46_5
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-05OCT23-1500-LONG-PUT',
+                    option_side: TRADE_SIDE_LONG,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1500,
+                    option_type: OPTION_PUT,
+                    lptoken_address: usdc_lpt_addr,
+                    initial_volatility: VOLATILITY_35_5
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-05OCT23-1600-LONG-PUT',
                     option_side: TRADE_SIDE_LONG,
                     maturity: MATURITY,
                     strike_price: STRIKE_PRICE_1600,
@@ -255,55 +258,55 @@ mod Options {
         to_add
             .append(
                 FutureOption {
-                    name: 'ETHUSDC-28SEP23-1700-SHORT-CALL',
+                    name: 'ETHUSDC-05OCT23-1700-SHORT-CALL',
                     option_side: TRADE_SIDE_SHORT,
                     maturity: MATURITY,
                     strike_price: STRIKE_PRICE_1700,
                     option_type: OPTION_CALL,
                     lptoken_address: eth_lpt_addr,
-                    initial_volatility: VOLATILITY_30_5
+                    initial_volatility: VOLATILITY_31_5
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name: 'ETHUSDC-28SEP23-1800-SHORT-CALL',
+                    name: 'ETHUSDC-05OCT23-1800-SHORT-CALL',
                     option_side: TRADE_SIDE_SHORT,
                     maturity: MATURITY,
                     strike_price: STRIKE_PRICE_1800,
                     option_type: OPTION_CALL,
                     lptoken_address: eth_lpt_addr,
-                    initial_volatility: VOLATILITY_35
-                }
-            );
-        to_add
-            .append(
-                FutureOption {
-                    name: 'ETHUSDC-28SEP23-1900-SHORT-CALL',
-                    option_side: TRADE_SIDE_SHORT,
-                    maturity: MATURITY,
-                    strike_price: STRIKE_PRICE_1900,
-                    option_type: OPTION_CALL,
-                    lptoken_address: eth_lpt_addr,
-                    initial_volatility: VOLATILITY_44
-                }
-            );
-        to_add
-            .append(
-                FutureOption {
-                    name: 'ETHUSDC-28SEP23-1500-SHORT-PUT',
-                    option_side: TRADE_SIDE_SHORT,
-                    maturity: MATURITY,
-                    strike_price: STRIKE_PRICE_1500,
-                    option_type: OPTION_PUT,
-                    lptoken_address: usdc_lpt_addr,
                     initial_volatility: VOLATILITY_38
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name: 'ETHUSDC-28SEP23-1600-SHORT-PUT',
+                    name: 'ETHUSDC-05OCT23-1900-SHORT-CALL',
+                    option_side: TRADE_SIDE_SHORT,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1900,
+                    option_type: OPTION_CALL,
+                    lptoken_address: eth_lpt_addr,
+                    initial_volatility: VOLATILITY_46_5
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-05OCT23-1500-SHORT-PUT',
+                    option_side: TRADE_SIDE_SHORT,
+                    maturity: MATURITY,
+                    strike_price: STRIKE_PRICE_1500,
+                    option_type: OPTION_PUT,
+                    lptoken_address: usdc_lpt_addr,
+                    initial_volatility: VOLATILITY_35_5
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name: 'ETHUSDC-05OCT23-1600-SHORT-PUT',
                     option_side: TRADE_SIDE_SHORT,
                     maturity: MATURITY,
                     strike_price: STRIKE_PRICE_1600,
@@ -313,6 +316,6 @@ mod Options {
                 }
             );
 
-        add_options(28092383684012, to_add.span())
+        add_options(05102383684012, to_add.span())
     }
 }
