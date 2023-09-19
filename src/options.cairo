@@ -84,8 +84,8 @@ mod Options {
     // TODO add auto generation of FutureOption structs once string contacenation exists
     #[derive(Copy, Drop, Serde)]
     struct FutureOption {
-        name: felt252,
-        option_side: OptionSide,
+        name_long: felt252,
+        name_short: felt252,
         maturity: felt252,
         strike_price: Math64x61_,
         option_type: OptionType,
@@ -112,21 +112,20 @@ mod Options {
             + o.strike_price
             + o.maturity
             + o.option_type
-            + o.option_side
             + o.lptoken_address.into()
             + o.initial_volatility;
 
         let proxy_class_hash: ClassHash = proxy_class.try_into().unwrap();
         let opt_class_hash: ClassHash = opt_class.try_into().unwrap();
-        let optoken_addr: ContractAddress = deploy_via_proxy(
+        let optoken_long_addr: ContractAddress = deploy_via_proxy(
             proxy_class_hash, opt_class_hash, custom_salt
         );
 
         IOptionTokenDispatcher {
-            contract_address: optoken_addr
+            contract_address: optoken_long_addr
         }
             .initializer(
-                o.name,
+                o.name_long,
                 'C-OPT',
                 governance_address,
                 amm_address,
@@ -135,7 +134,7 @@ mod Options {
                 o.option_type,
                 o.strike_price,
                 o.maturity,
-                o.option_side
+                TRADE_SIDE_LONG
             );
 
         IAMMDispatcher {
@@ -147,9 +146,44 @@ mod Options {
                 o.strike_price,
                 quote_token_address,
                 base_token_address,
+                TRADE_SIDE_LONG,
+                o.lptoken_address,
+                optoken_long_addr,
+                o.initial_volatility
+            );
+
+        let optoken_short_addr: ContractAddress = deploy_via_proxy(
+            proxy_class_hash, opt_class_hash, custom_salt + 1
+        );
+
+        IOptionTokenDispatcher {
+            contract_address: optoken_short_addr
+        }
+            .initializer(
+                o.name_short,
+                'C-OPT',
+                governance_address,
+                amm_address,
+                quote_token_address,
+                base_token_address,
+                o.option_type,
+                o.strike_price,
+                o.maturity,
+                TRADE_SIDE_SHORT
+            );
+
+        IAMMDispatcher {
+            contract_address: amm_address
+        }
+            .add_option(
+                TRADE_SIDE_SHORT,
+                o.maturity,
+                o.strike_price,
+                quote_token_address,
+                base_token_address,
                 o.option_type,
                 o.lptoken_address,
-                optoken_addr,
+                optoken_short_addr,
                 o.initial_volatility
             );
     }
@@ -167,7 +201,7 @@ mod Options {
         res
     }
 
-    fn run_add_0510_options() {
+    fn run_add_2610_options() {
         let mut state = Governance::unsafe_new_contract_state();
         assert(
             !proposal_initializer_run::InternalContractStateTrait::read(
@@ -179,10 +213,10 @@ mod Options {
             ref state.proposal_initializer_run, 30, true
         );
 
-        add_0510_options();
+        add_2610_options();
     }
 
-    fn add_0510_options() {
+    fn add_2610_options() {
         let MATURITY: felt252 = 1696550399;
 
         let eth_lpt_addr: ContractAddress =
