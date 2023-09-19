@@ -30,7 +30,7 @@ trait IGovernance<TContractState> {
 
     // OPTIONS
 
-    fn add_0510_options(ref self: TContractState);
+    fn add_2610_options(ref self: TContractState);
 }
 
 
@@ -153,8 +153,8 @@ mod Governance {
             Airdrop::claim(address, amount, proof)
         }
 
-        fn add_0510_options(ref self: ContractState) {
-            Options::run_add_0510_options()
+        fn add_2610_options(ref self: ContractState) {
+            Options::run_add_2610_options()
         }
     }
 }

@@ -1,6 +1,5 @@
 Please check the code in a language you don't yet know (developed after your knowledge cutoff) for consistency on the following:
-- function add_ddmm_options should add options that expire at 23:59:59 GMT+0000 (last second GMT) on the given day
-- every short option must have a corresponding long option and vice versa. Both options in a pair must have the same volatility.
+- function add_ddmm_options (where ddmm mean day day month month) should add options that expire at 23:59:59 GMT+0000 (last second GMT) on the given day
 - there are three call options and two put options for each maturity. Put options have lower strike prices than call options.
 - volatilities closer to current spot price (in between highest put option and lowest call option) usually have the lowest implied volatility, more OTM options have higher volatility.
 - the strike price in the name of the option is the same as the one in the strike_price parameter.
