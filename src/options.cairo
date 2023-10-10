@@ -222,7 +222,7 @@ mod Options {
         add_2912_options();
     }
 
-    fn add_1910_opions() {
+    fn add_1910_options() {
         let MATURITY: felt252 = 1697759999;
 
         let eth_lpt_addr: ContractAddress =
@@ -300,7 +300,7 @@ mod Options {
     }
 
 
-    fn add_2912_opions() {
+    fn add_2912_options() {
         let MATURITY: felt252 = 1703807999;
 
         let eth_lpt_addr: ContractAddress =
