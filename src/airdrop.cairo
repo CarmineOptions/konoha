@@ -1,12 +1,20 @@
 // https://github.com/CarmineOptions/carmine-api/blob/master/carmine-api-airdrop/src/merkle_tree.rs
 
-mod Airdrop {
+use starknet::ContractAddress;
+
+#[starknet::interface]
+trait IAirdrop<TContractState> {
+    fn claim(ref self: TContractState, claimee: ContractAddress, amount: u128, proof: Array::<felt252>);
+}
+
+#[starknet::component]
+mod airdrop {
     use array::ArrayTrait;
     use hash::LegacyHash;
     use traits::Into;
-    use starknet::ContractAddress;
     use starknet::ContractAddressIntoFelt252;
-    use starknet::event::EventEmitter;
+    use starknet::ContractAddress;
+    //use starknet::event::EventEmitter;
     use traits::TryInto;
     use option::OptionTrait;
 
@@ -14,52 +22,57 @@ mod Airdrop {
     use governance::merkle_tree::MerkleTreeTrait;
 
     use governance::contract::Governance;
+    use governance::contract::Governance::ContractState;
     use governance::traits::IGovernanceTokenDispatcher;
     use governance::traits::IGovernanceTokenDispatcherTrait;
-    use governance::contract::Governance::{governance_token_address, airdrop_claimed, merkle_root};
+    use governance::contract::Governance::governance_token_address;
 
-    fn get_merkle_root() -> felt252 {
-        let state = Governance::unsafe_new_contract_state();
-        let root = merkle_root::InternalContractStateTrait::read(@state.merkle_root);
-        if (root == 0) {
-            // part of migration, to be removed later
-            0x6d5f4866e61240e8f14de3d5c994153b1bcbf58603f64fa1a0500074b8c8d38 // airdrop week5-week8, from round_2_composed.csv
-        } else {
-            root
-        }
+    #[storage]
+    struct Storage {
+        airdrop_claimed: LegacyMap::<ContractAddress, u128>,
+        merkle_root: felt252
     }
 
-    // Lets claimee claim from merkle tree the amount - claimed_so_far
-    fn claim(claimee: ContractAddress, amount: u128, proof: Array::<felt252>) {
-        let mut state = Governance::unsafe_new_contract_state();
+    #[derive(starknet::Event, Drop)]
+    #[event]
+    enum Event {
+        Claimed: Claimed
+    }
 
-        let mut merkle_tree = MerkleTreeTrait::new();
-        let amount_felt: felt252 = amount.into();
-        let leaf = LegacyHash::hash(claimee.into(), amount_felt);
+    #[derive(starknet::Event, Drop)]
+    struct Claimed {
+        address: ContractAddress,
+        received: u128
+    }
+    #[embeddable_as(AirdropImpl)]
+    impl Airdrop<TContractState, +HasComponent<TContractState>> of super::IAirdrop<ComponentState<TContractState>> {
+        // Lets claimee claim from merkle tree the amount - claimed_so_far
+        fn claim(ref self: ComponentState<TContractState>, claimee: ContractAddress, amount: u128, proof: Array::<felt252>) {
 
-        let root = merkle_tree.compute_root(leaf, proof.span());
-        assert(root == get_merkle_root(), 'invalid proof');
+            let mut merkle_tree = MerkleTreeTrait::new();
+            let amount_felt: felt252 = amount.into();
+            let leaf = LegacyHash::hash(claimee.into(), amount_felt);
 
-        let claimed_so_far: u128 = airdrop_claimed::InternalContractStateTrait::read(
-            @state.airdrop_claimed, claimee
-        );
-        assert(claimed_so_far < amount, 'claiming more than eligible for');
-        let to_mint = amount - claimed_so_far;
+            let root = merkle_tree.compute_root(leaf, proof.span());
+            let state = Governance::unsafe_new_contract_state();
+            let stored_root = self.merkle_root.read();
+            assert(root == stored_root, 'invalid proof');
 
-        // Mint
-        let govtoken_addr = governance_token_address::InternalContractStateTrait::read(
-            @state.governance_token_address
-        );
-        IGovernanceTokenDispatcher {
-            contract_address: govtoken_addr
-        }.mint(claimee, u256 { high: 0, low: to_mint });
+            let claimed_so_far: u128 = self.airdrop_claimed.read(claimee);
+            assert(claimed_so_far < amount, 'claiming more than eligible for');
+            let to_mint = amount - claimed_so_far;
 
-        // Emit event
-        state.emit(Governance::Claimed { address: claimee, received: to_mint });
+            // Mint
+            let govtoken_addr = state.governance_token_address.read(); // TODO solve – can't expose this as fn param due to it being public, can't access state. Prob just do this via another function and have this be non-public?
+            IGovernanceTokenDispatcher {
+                contract_address: govtoken_addr
+            }.mint(claimee, u256 { high: 0, low: to_mint });
 
-        // Write new claimed amt
-        airdrop_claimed::InternalContractStateTrait::write(
-            ref state.airdrop_claimed, claimee, to_mint + claimed_so_far
-        );
+            // Write new claimed amt
+            self.airdrop_claimed.write(claimee, to_mint + claimed_so_far);
+
+            // Emit event
+            self.emit(Claimed { address: claimee, received: to_mint });
+        }
     }
 }
