@@ -194,10 +194,7 @@ mod Options {
         proxy_class: ClassHash, impl_class: ClassHash, salt: felt252
     ) -> ContractAddress {
         let curr_salt = salt + impl_class.into();
-        let mut calldata = ArrayTrait::<felt252>::new();
-        calldata.append(impl_class.into());
-        calldata.append(0);
-        calldata.append(0);
+        let mut calldata = array![impl_class.into(), 0, 0];
         let syscall_res = deploy_syscall(proxy_class, curr_salt, calldata.span(), false);
         let (res, _) = syscall_res.unwrap_syscall();
         res

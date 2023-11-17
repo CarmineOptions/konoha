@@ -190,7 +190,7 @@ mod Proposals {
         let already_delegated = find_already_delegated(to_addr, calldata_span, 0);
         assert(caller_balance - already_delegated >= amount, 'Not enough funds');
 
-        let updated_list: Array<(ContractAddress, u128)> = ArrayTrait::new();
+        let updated_list: Array<(ContractAddress, u128)> = array![];
         let updated_list_span = updated_list.span();
 
         update_calldata(to_addr, already_delegated + amount, calldata_span, updated_list, 0);

@@ -1,5 +1,4 @@
 use starknet::ContractAddress;
-use array::ArrayTrait;
 
 use governance::types::OptionSide;
 use governance::types::OptionType;
