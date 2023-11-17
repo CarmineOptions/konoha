@@ -5,11 +5,13 @@ use starknet::ContractAddress;
 #[starknet::interface]
 trait IAirdrop<TContractState> {
     fn claim(ref self: TContractState, claimee: ContractAddress, amount: u128, proof: Array::<felt252>);
+    fn set_root(ref self: TContractState, merkle_root: felt252);
 }
 
 #[starknet::component]
 mod airdrop {
-    use array::ArrayTrait;
+    use governance::contract::IGovernance;
+use array::ArrayTrait;
     use hash::LegacyHash;
     use traits::Into;
     use starknet::ContractAddressIntoFelt252;
@@ -25,7 +27,6 @@ mod airdrop {
     use governance::contract::Governance::ContractState;
     use governance::traits::IGovernanceTokenDispatcher;
     use governance::traits::IGovernanceTokenDispatcherTrait;
-    use governance::contract::Governance::governance_token_address;
 
     #[storage]
     struct Storage {
@@ -63,7 +64,7 @@ mod airdrop {
             let to_mint = amount - claimed_so_far;
 
             // Mint
-            let govtoken_addr = state.governance_token_address.read(); // TODO solve – can't expose this as fn param due to it being public, can't access state. Prob just do this via another function and have this be non-public?
+            let govtoken_addr = state.get_governance_token_address();
             IGovernanceTokenDispatcher {
                 contract_address: govtoken_addr
             }.mint(claimee, u256 { high: 0, low: to_mint });
@@ -73,6 +74,10 @@ mod airdrop {
 
             // Emit event
             self.emit(Claimed { address: claimee, received: to_mint });
+        }
+
+        fn set_root(ref self: ComponentState<TContractState>, merkle_root: felt252) {
+            self.merkle_root.write(merkle_root);
         }
     }
 }

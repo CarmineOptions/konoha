@@ -73,7 +73,7 @@ mod Options {
         // TODO use block hash from block_hash syscall as salt // actually doable with the new syscall
         let governance_address = get_contract_address();
         let state = Governance::unsafe_new_contract_state();
-        let amm_address = amm_address::InternalContractStateTrait::read(@state.amm_address);
+        let amm_address = state.amm_address.read();
         let proxy_class: felt252 =
             0x00eafb0413e759430def79539db681f8a4eb98cf4196fe457077d694c6aeeb82;
         let opt_class: felt252 = 0x5ce3a80daeb5b7a766df9b41ca8d9e52b6b0a045a0d2ced72f43d4dd2f93b10;
@@ -214,14 +214,8 @@ mod Options {
     fn run_add_0911_1611_options() {
         let mut state = Governance::unsafe_new_contract_state();
         assert(
-            !proposal_initializer_run::InternalContractStateTrait::read(
-                @state.proposal_initializer_run, 36
-            ),
-            'prop36 initializer called again'
-        );
-        proposal_initializer_run::InternalContractStateTrait::write(
-            ref state.proposal_initializer_run, 36, true
-        );
+            !read.@state.proposal_initializer_run;
+        state.proposal_initializer_run.write(36, true);
 
         add_0911_options();
         add_1611_options();
