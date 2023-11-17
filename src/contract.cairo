@@ -42,12 +42,12 @@ mod Governance {
     use governance::types::ContractType;
     use governance::types::PropDetails;
     use governance::upgrades::Upgrades;
-    use governance::airdrop::Airdrop::{AirdropImpl, AirdropTrait};
     use governance::options::Options;
     use governance::airdrop::airdrop as airdrop_component;
 
     use starknet::ContractAddress;
 
+    
     component!(path:airdrop_component, storage:airdrop, event: AirdropEvent);
 
     #[abi(embed_v0)]
@@ -67,7 +67,9 @@ mod Governance {
         governance_token_address: ContractAddress,
         amm_address: ContractAddress,
         delegate_hash: LegacyMap::<ContractAddress, felt252>,
-        total_delegated_to: LegacyMap::<ContractAddress, u128>
+        total_delegated_to: LegacyMap::<ContractAddress, u128>,
+        #[substorage(v0)]
+        airdrop: airdrop_component::Storage
     }
 
     // PROPOSALS
@@ -148,7 +150,7 @@ mod Governance {
         fn claim(
             ref self: ContractState, address: ContractAddress, amount: u128, proof: Array::<felt252>
         ) {
-            AirdropTrait::claim(ref self, address, amount, proof)
+            Airdrop::claim(ref self, address, amount, proof)
         }
 
         fn add_0911_1611_options(ref self: ContractState) {
