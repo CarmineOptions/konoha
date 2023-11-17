@@ -1,5 +1,6 @@
 mod Upgrades {
-    use governance::contract::IGovernance;
+    use core::starknet::storage::StorageMemberAccessTrait;
+use governance::contract::IGovernance;
 use traits::TryInto;
     use option::OptionTrait;
     use traits::Into;
@@ -22,6 +23,9 @@ use traits::TryInto;
     use governance::contract::Governance::proposal_appliedContractMemberStateTrait;
     use governance::contract::Governance::proposal_detailsContractMemberStateTrait;
     use governance::contract::Governance::airdrop_component::UnsafeNewContractStateTraitForAirdropImpl;
+    use governance::contract::Governance::airdrop_component;
+    use governance::contract::Governance::airdrop_component::ComponentState;
+    use governance::contract::Governance::ContractState;
 
 
     use governance::traits::IAMMDispatcher;
@@ -62,7 +66,8 @@ use traits::TryInto;
                         contract_address: govtoken_addr
                     }.upgrade(impl_hash);
                 } else if (contract_type == 3) {
-                    let airdrop_component_state: governance::airdrop::airdrop::ComponentState = Governance::airdrop_component::unsafe_new_component_state();
+                    let mut airdrop_component_state: ComponentState<ContractState> = Governance::airdrop_component::unsafe_new_component_state();
+                    airdrop_component_state.merkle_root.write(impl_hash);
                 } else {
                     assert(
                         contract_type == 4, 'invalid contract_type'
@@ -70,9 +75,7 @@ use traits::TryInto;
                 }
             }
         }
-        proposal_applied::InternalContractStateTrait::write(
-            ref state.proposal_applied, prop_id, 1
-        ); // Mark the proposal as applied
+        state.proposal_applied.write(prop_id, 1); // Mark the proposal as applied
     // TODO emit event
     }
 }

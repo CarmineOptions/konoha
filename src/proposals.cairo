@@ -1,4 +1,5 @@
 mod Proposals {
+    use governance::contract::IGovernance;
     use traits::TryInto;
     use option::OptionTrait;
     use traits::Into;
@@ -22,18 +23,15 @@ mod Proposals {
     use starknet::class_hash::class_hash_try_from_felt252;
     use starknet::contract_address::contract_address_to_felt252;
 
-    use governance::contract::Governance::proposal_total_yay;
-    use governance::contract::Governance::proposal_total_nay;
-    use governance::contract::Governance::proposal_vote_ends;
-    use governance::contract::Governance::proposal_details;
-    use governance::contract::Governance::proposal_voted_by;
-    use governance::contract::Governance::governance_token_address;
-    use governance::contract::Governance::investor_voting_power;
-    use governance::contract::Governance::total_investor_distributed_power;
-    use governance::contract::Governance::delegate_hash;
-    use governance::contract::Governance::total_delegated_to;
+    use governance::contract::Governance::proposal_total_yayContractMemberStateTrait;
+    use governance::contract::Governance::proposal_total_nayContractMemberStateTrait;
+    use governance::contract::Governance::proposal_vote_endsContractMemberStateTrait;
+    use governance::contract::Governance::delegate_hashContractMemberStateTrait;
+    use governance::contract::Governance::total_delegated_toContractMemberStateTrait;
+    use governance::contract::Governance::proposal_voted_byContractMemberStateTrait;
+    use governance::contract::Governance::proposal_detailsContractMemberStateTrait;
     use governance::contract::Governance::ContractState;
-    use governance::contract::Governance::unsafe_new_contract_state; // To be removed once Components arrive
+    use governance::contract::Governance::unsafe_new_contract_state;
     use governance::contract::Governance;
     use governance::types::BlockNumber;
     use governance::types::ContractType;
@@ -55,15 +53,7 @@ mod Proposals {
 
     fn get_proposal_details(prop_id: felt252) -> PropDetails {
         let state = Governance::unsafe_new_contract_state();
-        read.@state.proposal_details;
-        let res = state.proposal_vote_ends.read(currid
-        );
-
-        if res == 0 {
-            currid
-        } else {
-            _get_free_prop_id(currid + 1)
-        }
+        state.proposal_details.read(prop_id)
     }
 
     fn assert_correct_contract_type(contract_type: ContractType) {
@@ -87,10 +77,24 @@ mod Proposals {
         u256 { low, high }
     }
 
+    fn get_free_prop_id() -> felt252 {
+        _get_free_prop_id(0)
+    }
+
+    fn _get_free_prop_id(currid: felt252) -> felt252 {
+        let state = Governance::unsafe_new_contract_state();
+        let res = state.proposal_vote_ends.read(currid);
+        if res == 0 {
+            currid
+        } else {
+            _get_free_prop_id(currid + 1)
+        }
+    }
+
     fn submit_proposal(payload: felt252, to_upgrade: ContractType) -> felt252 {
         assert_correct_contract_type(to_upgrade);
         let mut state = Governance::unsafe_new_contract_state();
-        let govtoken_addr = state.governance_token_address.read();
+        let govtoken_addr = state.get_governance_token_address();
         let caller = get_caller_address();
         let caller_balance: u128 = IERC20Dispatcher {
             contract_address: govtoken_addr
@@ -181,7 +185,7 @@ mod Proposals {
         );
         let converted_addr = contract_address_to_felt252(caller_addr);
 
-        let gov_token_addr = state.governance_token_address.read();
+        let gov_token_addr = state.get_governance_token_address();
         let caller_balance_u256: u256 = IERC20Dispatcher {
             contract_address: gov_token_addr
         }.balanceOf(caller_addr);
@@ -239,9 +243,9 @@ mod Proposals {
 
         let mut state = Governance::unsafe_new_contract_state();
 
-        let gov_token_addr = state.governance_token_address.read();
+        let gov_token_addr = state.get_governance_token_address();
         let caller_addr = get_caller_address();
-        let curr_vote_status: felt252 = read.@state.proposal_voted_by;
+        let curr_vote_status: felt252 = state.proposal_voted_by.read((prop_id, caller_addr));
         assert(curr_vote_status == 0, 'already voted');
 
         let caller_balance_u256: u256 = IERC20Dispatcher {
@@ -262,12 +266,12 @@ mod Proposals {
         // Cast vote
         state.proposal_voted_by.write((prop_id, caller_addr), actual_opinion);
         if actual_opinion == constants::MINUS_ONE {
-            let curr_votes: u128 = read.@state.proposal_total_nay;
+            let curr_votes: u128 = state.proposal_total_nay.read(prop_id).try_into().unwrap();
             let new_votes: u128 = curr_votes + caller_voting_power;
             assert(new_votes >= 0, 'new_votes must be non-negative');
             state.proposal_total_nay.write(prop_id, new_votes.into());
         } else {
-            let curr_votes: u128 = read.@state.proposal_total_yay;
+            let curr_votes: u128 = state.proposal_total_yay.read(prop_id).try_into().unwrap();
             let new_votes: u128 = curr_votes + caller_voting_power;
             assert(new_votes >= 0, 'new_votes must be non-negative');
             state.proposal_total_yay.write(prop_id, new_votes.into());
@@ -278,7 +282,7 @@ mod Proposals {
 
     fn check_proposal_passed_express(prop_id: felt252) -> u8 {
         let state = Governance::unsafe_new_contract_state();
-        let gov_token_addr = state.governance_token_address.read();
+        let gov_token_addr = state.get_governance_token_address();
         let yay_tally_felt: felt252 = state.proposal_total_yay.read(prop_id
         );
         let yay_tally: u128 = yay_tally_felt.try_into().unwrap();
@@ -318,7 +322,7 @@ mod Proposals {
             return check_proposal_passed_express(prop_id).into();
         }
 
-        let gov_token_addr = state.governance_token_address.read();
+        let gov_token_addr = state.get_governance_token_address();
         let nay_tally_felt: felt252 = state.proposal_total_nay.read(prop_id
         );
         let yay_tally_felt: felt252 = state.proposal_total_yay.read(prop_id
@@ -362,7 +366,7 @@ mod Proposals {
         let mut state = Governance::unsafe_new_contract_state();
 
         let caller_addr = get_caller_address();
-        let investor_voting_power: u128 = read.@state.investor_voting_power;
+        let investor_voting_power: u128 = state.investor_voting_power.read(prop_id);
         assert(investor_voting_power != 0, 'caller not whitelisted investor');
 
         let curr_vote_status: felt252 = read.@state.proposal_voted_by;
