@@ -1,4 +1,6 @@
 mod Upgrades {
+    use core::starknet::storage::StorageMemberAccessTrait;
+    use governance::contract::IGovernance;
     use traits::TryInto;
     use option::OptionTrait;
     use traits::Into;
@@ -12,12 +14,19 @@ mod Upgrades {
     use starknet::class_hash;
     use governance::proposals::Proposals;
     use governance::contract::Governance::{
-        proposal_applied, amm_address, governance_token_address, merkle_root, proposal_details
+        proposal_applied, amm_address, governance_token_address, proposal_details
     };
 
     use governance::types::PropDetails;
     use governance::contract::Governance;
     use governance::contract::Governance::unsafe_new_contract_state;
+    use governance::contract::Governance::proposal_appliedContractMemberStateTrait;
+    use governance::contract::Governance::proposal_detailsContractMemberStateTrait;
+    use governance::contract::Governance::airdrop_component::UnsafeNewContractStateTraitForAirdropImpl;
+    use governance::contract::Governance::airdrop_component;
+    use governance::contract::Governance::airdrop_component::ComponentState;
+    use governance::contract::Governance::ContractState;
+
 
     use governance::traits::IAMMDispatcher;
     use governance::traits::IAMMDispatcherTrait;
@@ -28,14 +37,10 @@ mod Upgrades {
         let mut state = Governance::unsafe_new_contract_state();
         let status = Proposals::get_proposal_status(prop_id);
         assert(status == 1, 'prop not passed');
-        let applied: felt252 = proposal_applied::InternalContractStateTrait::read(
-            @state.proposal_applied, prop_id
-        );
+        let applied: felt252 = state.proposal_applied.read(prop_id);
         assert(applied == 0, 'Proposal already applied');
 
-        let prop_details: PropDetails = proposal_details::InternalContractStateTrait::read(
-            @state.proposal_details, prop_id
-        );
+        let prop_details: PropDetails = state.proposal_details.read(prop_id);
         let contract_type = prop_details.to_upgrade;
 
         Proposals::assert_correct_contract_type(contract_type);
@@ -46,9 +51,7 @@ mod Upgrades {
         // TODO use full match/switch when supported
         match contract_type {
             0 => {
-                let amm_addr: ContractAddress = amm_address::InternalContractStateTrait::read(
-                    @state.amm_address
-                );
+                let amm_addr: ContractAddress = state.get_amm_address();
                 IAMMDispatcher { contract_address: amm_addr }.upgrade(impl_hash);
             },
             _ => {
@@ -56,16 +59,13 @@ mod Upgrades {
                     let impl_hash_classhash: ClassHash = impl_hash.try_into().unwrap();
                     syscalls::replace_class_syscall(impl_hash_classhash);
                 } else if (contract_type == 2) {
-                    let govtoken_addr = governance_token_address::InternalContractStateTrait::read(
-                        @state.governance_token_address
-                    );
-                    IGovernanceTokenDispatcher {
-                        contract_address: govtoken_addr
-                    }.upgrade(impl_hash);
+                    let govtoken_addr = state.get_governance_token_address();
+                    IGovernanceTokenDispatcher { contract_address: govtoken_addr }
+                        .upgrade(impl_hash);
                 } else if (contract_type == 3) {
-                    merkle_root::InternalContractStateTrait::write(
-                        ref state.merkle_root, impl_hash
-                    );
+                    let mut airdrop_component_state: ComponentState<ContractState> =
+                        Governance::airdrop_component::unsafe_new_component_state();
+                    airdrop_component_state.merkle_root.write(impl_hash);
                 } else {
                     assert(
                         contract_type == 4, 'invalid contract_type'
@@ -73,9 +73,7 @@ mod Upgrades {
                 }
             }
         }
-        proposal_applied::InternalContractStateTrait::write(
-            ref state.proposal_applied, prop_id, 1
-        ); // Mark the proposal as applied
+        state.proposal_applied.write(prop_id, 1); // Mark the proposal as applied
     // TODO emit event
     }
 }

@@ -24,9 +24,7 @@ trait IGovernance<TContractState> {
 
     // AIRDROPS
 
-    fn claim(
-        ref self: TContractState, address: ContractAddress, amount: u128, proof: Array::<felt252>
-    );
+    // in component
 
     // OPTIONS
 
@@ -42,10 +40,16 @@ mod Governance {
     use governance::types::ContractType;
     use governance::types::PropDetails;
     use governance::upgrades::Upgrades;
-    use governance::airdrop::Airdrop;
     use governance::options::Options;
+    use governance::airdrop::airdrop as airdrop_component;
 
     use starknet::ContractAddress;
+
+
+    component!(path: airdrop_component, storage: airdrop, event: AirdropEvent);
+
+    #[abi(embed_v0)]
+    impl Airdrop = airdrop_component::AirdropImpl<ContractState>;
 
     #[storage]
     struct Storage {
@@ -60,10 +64,10 @@ mod Governance {
         total_investor_distributed_power: felt252,
         governance_token_address: ContractAddress,
         amm_address: ContractAddress,
-        airdrop_claimed: LegacyMap::<ContractAddress, u128>,
         delegate_hash: LegacyMap::<ContractAddress, felt252>,
         total_delegated_to: LegacyMap::<ContractAddress, u128>,
-        merkle_root: felt252
+        #[substorage(v0)]
+        airdrop: airdrop_component::Storage
     }
 
     // PROPOSALS
@@ -83,17 +87,11 @@ mod Governance {
     }
 
     #[derive(starknet::Event, Drop)]
-    struct Claimed {
-        address: ContractAddress,
-        received: u128
-    }
-
-    #[derive(starknet::Event, Drop)]
     #[event]
     enum Event {
         Proposed: Proposed,
         Voted: Voted,
-        Claimed: Claimed
+        AirdropEvent: airdrop_component::Event
     }
 
     #[constructor]
@@ -143,14 +141,6 @@ mod Governance {
 
         fn apply_passed_proposal(ref self: ContractState, prop_id: felt252) {
             Upgrades::apply_passed_proposal(prop_id)
-        }
-
-        // AIRDROPS
-
-        fn claim(
-            ref self: ContractState, address: ContractAddress, amount: u128, proof: Array::<felt252>
-        ) {
-            Airdrop::claim(address, amount, proof)
         }
 
         fn add_0911_1611_options(ref self: ContractState) {

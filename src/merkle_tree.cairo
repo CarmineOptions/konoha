@@ -62,9 +62,7 @@ impl MerkleTreeImpl of MerkleTreeTrait {
                         current_node = LegacyHash::hash(*proof_element, current_node);
                     }
                 },
-                Option::None(()) => {
-                    break current_node;
-                },
+                Option::None(()) => { break current_node; },
             };
         }
     }
