@@ -4,13 +4,15 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 trait IAirdrop<TContractState> {
-    fn claim(ref self: TContractState, claimee: ContractAddress, amount: u128, proof: Array::<felt252>);
+    fn claim(
+        ref self: TContractState, claimee: ContractAddress, amount: u128, proof: Array::<felt252>
+    );
 }
 
 #[starknet::component]
 mod airdrop {
     use governance::contract::IGovernance;
-use array::ArrayTrait;
+    use array::ArrayTrait;
     use hash::LegacyHash;
     use traits::Into;
     use starknet::ContractAddressIntoFelt252;
@@ -45,10 +47,16 @@ use array::ArrayTrait;
         received: u128
     }
     #[embeddable_as(AirdropImpl)]
-    impl Airdrop<TContractState, +HasComponent<TContractState>> of super::IAirdrop<ComponentState<TContractState>> {
+    impl Airdrop<
+        TContractState, +HasComponent<TContractState>
+    > of super::IAirdrop<ComponentState<TContractState>> {
         // Lets claimee claim from merkle tree the amount - claimed_so_far
-        fn claim(ref self: ComponentState<TContractState>, claimee: ContractAddress, amount: u128, proof: Array::<felt252>) {
-
+        fn claim(
+            ref self: ComponentState<TContractState>,
+            claimee: ContractAddress,
+            amount: u128,
+            proof: Array::<felt252>
+        ) {
             let mut merkle_tree = MerkleTreeTrait::new();
             let amount_felt: felt252 = amount.into();
             let leaf = LegacyHash::hash(claimee.into(), amount_felt);
@@ -64,9 +72,8 @@ use array::ArrayTrait;
 
             // Mint
             let govtoken_addr = state.get_governance_token_address();
-            IGovernanceTokenDispatcher {
-                contract_address: govtoken_addr
-            }.mint(claimee, u256 { high: 0, low: to_mint });
+            IGovernanceTokenDispatcher { contract_address: govtoken_addr }
+                .mint(claimee, u256 { high: 0, low: to_mint });
 
             // Write new claimed amt
             self.airdrop_claimed.write(claimee, to_mint + claimed_so_far);

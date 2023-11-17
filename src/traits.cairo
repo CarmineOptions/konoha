@@ -96,7 +96,7 @@ trait IAMM<TContractState> {
         strike_price: Math64x61_,
     ) -> ContractAddress;
     fn get_lptokens_for_underlying(
-        ref self: TContractState, pooled_token_addr: ContractAddress, underlying_amt: u256, 
+        ref self: TContractState, pooled_token_addr: ContractAddress, underlying_amt: u256,
     ) -> u256;
     fn get_underlying_for_lptokens(
         self: @TContractState, pooled_token_addr: ContractAddress, lpt_amt: u256
@@ -109,7 +109,7 @@ trait IAMM<TContractState> {
     fn get_option_with_position_of_user(
         self: @TContractState, user_address: ContractAddress
     ) -> Array<felt252>;
-    fn get_all_lptoken_addresses(self: @TContractState, ) -> Array<ContractAddress>;
+    fn get_all_lptoken_addresses(self: @TContractState,) -> Array<ContractAddress>;
     fn get_value_of_pool_position(
         self: @TContractState, lptoken_address: ContractAddress
     ) -> Math64x61_;
@@ -187,7 +187,7 @@ trait IAMM<TContractState> {
         self: @TContractState, lptoken_address: ContractAddress
     ) -> Math64x61_;
     fn set_pool_volatility_adjustment_speed_external(
-        ref self: TContractState, lptoken_address: ContractAddress, new_speed: Math64x61_, 
+        ref self: TContractState, lptoken_address: ContractAddress, new_speed: Math64x61_,
     );
     fn get_pool_volatility(
         self: @TContractState, lptoken_address: ContractAddress, maturity: felt252
@@ -222,7 +222,7 @@ trait IAMM<TContractState> {
     fn initializer(ref self: TContractState, proxy_admin: ContractAddress);
     fn upgrade(ref self: TContractState, new_implementation: felt252);
     fn setAdmin(ref self: TContractState, address: felt252);
-    fn getImplementationHash(self: @TContractState, ) -> felt252;
+    fn getImplementationHash(self: @TContractState,) -> felt252;
 }
 
 #[starknet::interface]

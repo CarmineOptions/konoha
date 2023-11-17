@@ -43,10 +43,8 @@ mod Proposals {
     fn get_vote_counts(prop_id: felt252) -> (u128, u128) {
         let state: ContractState = Governance::unsafe_new_contract_state();
 
-        let yay = state.proposal_total_yay.read(prop_id
-        );
-        let nay = state.proposal_total_nay.read(prop_id
-        );
+        let yay = state.proposal_total_yay.read(prop_id);
+        let nay = state.proposal_total_nay.read(prop_id);
 
         (yay.try_into().unwrap(), nay.try_into().unwrap())
     }
@@ -63,8 +61,7 @@ mod Proposals {
 
     fn assert_voting_in_progress(prop_id: felt252) {
         let state = Governance::unsafe_new_contract_state();
-        let end_block_number_felt: felt252 = state.proposal_vote_ends.read(prop_id
-        );
+        let end_block_number_felt: felt252 = state.proposal_vote_ends.read(prop_id);
         let end_block_number: u64 = end_block_number_felt.try_into().unwrap();
         assert(end_block_number != 0, 'prop_id not found');
 
@@ -96,9 +93,9 @@ mod Proposals {
         let mut state = Governance::unsafe_new_contract_state();
         let govtoken_addr = state.get_governance_token_address();
         let caller = get_caller_address();
-        let caller_balance: u128 = IERC20Dispatcher {
-            contract_address: govtoken_addr
-        }.balanceOf(caller).low;
+        let caller_balance: u128 = IERC20Dispatcher { contract_address: govtoken_addr }
+            .balanceOf(caller)
+            .low;
         let total_supply = IERC20Dispatcher { contract_address: govtoken_addr }.totalSupply();
         let res: u256 = as_u256(
             0, caller_balance * constants::NEW_PROPOSAL_QUORUM
@@ -176,19 +173,16 @@ mod Proposals {
         let mut state = Governance::unsafe_new_contract_state();
 
         let caller_addr = get_caller_address();
-        let stored_hash = state.delegate_hash.read(caller_addr
-        );
+        let stored_hash = state.delegate_hash.read(caller_addr);
         let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
         assert(stored_hash == hashing(0, calldata_span, 0), 'incorrect delegate list');
 
-        let curr_total_delegated_to = state.total_delegated_to.read(to_addr
-        );
+        let curr_total_delegated_to = state.total_delegated_to.read(to_addr);
         let converted_addr = contract_address_to_felt252(caller_addr);
 
         let gov_token_addr = state.get_governance_token_address();
-        let caller_balance_u256: u256 = IERC20Dispatcher {
-            contract_address: gov_token_addr
-        }.balanceOf(caller_addr);
+        let caller_balance_u256: u256 = IERC20Dispatcher { contract_address: gov_token_addr }
+            .balanceOf(caller_addr);
         assert(caller_balance_u256.high == 0, 'CARM balance > u128');
         let caller_balance: u128 = caller_balance_u256.low;
         assert(caller_balance > 0, 'CARM balance is zero');
@@ -210,8 +204,7 @@ mod Proposals {
     ) {
         let mut state = Governance::unsafe_new_contract_state();
         let caller_addr = get_caller_address();
-        let stored_hash = state.delegate_hash.read(caller_addr
-        );
+        let stored_hash = state.delegate_hash.read(caller_addr);
         let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
         assert(stored_hash == hashing(0, calldata_span, 0), 'incorrect delegate list');
 
@@ -225,8 +218,7 @@ mod Proposals {
 
         state.delegate_hash.write(caller_addr, hashing(0, updated_list_span, 0));
 
-        let curr_total_delegated_to = state.total_delegated_to.read(to_addr
-        );
+        let curr_total_delegated_to = state.total_delegated_to.read(to_addr);
         state.total_delegated_to.write(to_addr, curr_total_delegated_to - amount);
     }
 
@@ -248,16 +240,13 @@ mod Proposals {
         let curr_vote_status: felt252 = state.proposal_voted_by.read((prop_id, caller_addr));
         assert(curr_vote_status == 0, 'already voted');
 
-        let caller_balance_u256: u256 = IERC20Dispatcher {
-            contract_address: gov_token_addr
-        }.balanceOf(caller_addr);
+        let caller_balance_u256: u256 = IERC20Dispatcher { contract_address: gov_token_addr }
+            .balanceOf(caller_addr);
         assert(caller_balance_u256.high == 0, 'CARM balance > u128');
         let caller_balance: u128 = caller_balance_u256.low;
         assert(caller_balance != 0, 'CARM balance is zero');
 
-        let caller_voting_power = caller_balance
-            + state.total_delegated_to.read(caller_addr
-            );
+        let caller_voting_power = caller_balance + state.total_delegated_to.read(caller_addr);
 
         assert(caller_voting_power > 0, 'No voting power');
 
@@ -283,12 +272,12 @@ mod Proposals {
     fn check_proposal_passed_express(prop_id: felt252) -> u8 {
         let state = Governance::unsafe_new_contract_state();
         let gov_token_addr = state.get_governance_token_address();
-        let yay_tally_felt: felt252 = state.proposal_total_yay.read(prop_id
-        );
+        let yay_tally_felt: felt252 = state.proposal_total_yay.read(prop_id);
         let yay_tally: u128 = yay_tally_felt.try_into().unwrap();
         let total_eligible_votes_from_tokenholders_u256: u256 = IERC20Dispatcher {
             contract_address: gov_token_addr
-        }.totalSupply();
+        }
+            .totalSupply();
         assert(total_eligible_votes_from_tokenholders_u256.high == 0, 'totalSupply weirdly high');
         let total_eligible_votes_from_tokenholders: u128 =
             total_eligible_votes_from_tokenholders_u256
@@ -313,8 +302,7 @@ mod Proposals {
     fn get_proposal_status(prop_id: felt252) -> felt252 {
         let state = Governance::unsafe_new_contract_state();
 
-        let end_block_number_felt: felt252 = state.proposal_vote_ends.read(prop_id
-        );
+        let end_block_number_felt: felt252 = state.proposal_vote_ends.read(prop_id);
         let end_block_number: u64 = end_block_number_felt.try_into().unwrap();
         let current_block_number: u64 = get_block_info().unbox().block_number;
 
@@ -323,10 +311,8 @@ mod Proposals {
         }
 
         let gov_token_addr = state.get_governance_token_address();
-        let nay_tally_felt: felt252 = state.proposal_total_nay.read(prop_id
-        );
-        let yay_tally_felt: felt252 = state.proposal_total_yay.read(prop_id
-        );
+        let nay_tally_felt: felt252 = state.proposal_total_nay.read(prop_id);
+        let yay_tally_felt: felt252 = state.proposal_total_yay.read(prop_id);
         let nay_tally: u128 = nay_tally_felt.try_into().unwrap();
         let yay_tally: u128 = yay_tally_felt.try_into().unwrap();
         let total_tally: u128 = yay_tally + nay_tally;
@@ -334,9 +320,8 @@ mod Proposals {
         // If QUORUM = 10, quorum was not met if (total_tally*100) < (total_eligible * 10).
         let total_tally_multiplied = total_tally * 100;
 
-        let total_eligible_votes_u256: u256 = IERC20Dispatcher {
-            contract_address: gov_token_addr
-        }.totalSupply();
+        let total_eligible_votes_u256: u256 = IERC20Dispatcher { contract_address: gov_token_addr }
+            .totalSupply();
         assert(total_eligible_votes_u256.high == 0, 'unable to check quorum');
         let total_eligible_votes: u128 = total_eligible_votes_u256.low;
 

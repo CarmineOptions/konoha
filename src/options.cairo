@@ -4,7 +4,7 @@
 
 mod Options {
     use governance::contract::IGovernance;
-use traits::{Into, TryInto};
+    use traits::{Into, TryInto};
     use array::{ArrayTrait, SpanTrait};
     use option::OptionTrait;
 
@@ -86,9 +86,7 @@ use traits::{Into, TryInto};
                         proxy_class, opt_class, governance_address, amm_address, salt, option
                     );
                 },
-                Option::None(()) => {
-                    break ();
-                },
+                Option::None(()) => { break (); },
             };
         }
     }
@@ -133,9 +131,7 @@ use traits::{Into, TryInto};
             proxy_class_hash, opt_class_hash, custom_salt
         );
 
-        IOptionTokenDispatcher {
-            contract_address: optoken_long_addr
-        }
+        IOptionTokenDispatcher { contract_address: optoken_long_addr }
             .initializer(
                 o.name_long,
                 'C-OPT',
@@ -149,9 +145,7 @@ use traits::{Into, TryInto};
                 TRADE_SIDE_LONG
             );
 
-        IAMMDispatcher {
-            contract_address: amm_address
-        }
+        IAMMDispatcher { contract_address: amm_address }
             .add_option(
                 TRADE_SIDE_LONG,
                 o.maturity,
@@ -168,9 +162,7 @@ use traits::{Into, TryInto};
             proxy_class_hash, opt_class_hash, custom_salt + 1
         );
 
-        IOptionTokenDispatcher {
-            contract_address: optoken_short_addr
-        }
+        IOptionTokenDispatcher { contract_address: optoken_short_addr }
             .initializer(
                 o.name_short,
                 'C-OPT',
@@ -184,9 +176,7 @@ use traits::{Into, TryInto};
                 TRADE_SIDE_SHORT
             );
 
-        IAMMDispatcher {
-            contract_address: amm_address
-        }
+        IAMMDispatcher { contract_address: amm_address }
             .add_option(
                 TRADE_SIDE_SHORT,
                 o.maturity,
@@ -215,8 +205,7 @@ use traits::{Into, TryInto};
 
     fn run_add_0911_1611_options() {
         let mut state = Governance::unsafe_new_contract_state();
-        assert(!state.proposal_initializer_run.read(36) , 'prop already initialized');
-
+        assert(!state.proposal_initializer_run.read(36), 'prop already initialized');
 
         state.proposal_initializer_run.write(36, true);
 

@@ -45,8 +45,8 @@ mod Governance {
 
     use starknet::ContractAddress;
 
-    
-    component!(path:airdrop_component, storage:airdrop, event: AirdropEvent);
+
+    component!(path: airdrop_component, storage: airdrop, event: AirdropEvent);
 
     #[abi(embed_v0)]
     impl Airdrop = airdrop_component::AirdropImpl<ContractState>;

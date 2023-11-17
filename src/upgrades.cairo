@@ -1,7 +1,7 @@
 mod Upgrades {
     use core::starknet::storage::StorageMemberAccessTrait;
-use governance::contract::IGovernance;
-use traits::TryInto;
+    use governance::contract::IGovernance;
+    use traits::TryInto;
     use option::OptionTrait;
     use traits::Into;
     use box::BoxTrait;
@@ -37,12 +37,10 @@ use traits::TryInto;
         let mut state = Governance::unsafe_new_contract_state();
         let status = Proposals::get_proposal_status(prop_id);
         assert(status == 1, 'prop not passed');
-        let applied: felt252 = state.proposal_applied.read(prop_id
-        );
+        let applied: felt252 = state.proposal_applied.read(prop_id);
         assert(applied == 0, 'Proposal already applied');
 
-        let prop_details: PropDetails = state.proposal_details.read(prop_id
-        );
+        let prop_details: PropDetails = state.proposal_details.read(prop_id);
         let contract_type = prop_details.to_upgrade;
 
         Proposals::assert_correct_contract_type(contract_type);
@@ -62,11 +60,11 @@ use traits::TryInto;
                     syscalls::replace_class_syscall(impl_hash_classhash);
                 } else if (contract_type == 2) {
                     let govtoken_addr = state.get_governance_token_address();
-                    IGovernanceTokenDispatcher {
-                        contract_address: govtoken_addr
-                    }.upgrade(impl_hash);
+                    IGovernanceTokenDispatcher { contract_address: govtoken_addr }
+                        .upgrade(impl_hash);
                 } else if (contract_type == 3) {
-                    let mut airdrop_component_state: ComponentState<ContractState> = Governance::airdrop_component::unsafe_new_component_state();
+                    let mut airdrop_component_state: ComponentState<ContractState> =
+                        Governance::airdrop_component::unsafe_new_component_state();
                     airdrop_component_state.merkle_root.write(impl_hash);
                 } else {
                     assert(
