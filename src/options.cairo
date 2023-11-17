@@ -3,7 +3,8 @@
 // – first generating FutureOption, then generating everything from Pragma data
 
 mod Options {
-    use traits::{Into, TryInto};
+    use governance::contract::IGovernance;
+use traits::{Into, TryInto};
     use array::{ArrayTrait, SpanTrait};
     use option::OptionTrait;
 
@@ -26,6 +27,7 @@ mod Options {
     use governance::contract::Governance;
     use governance::types::OptionType;
     use governance::traits::Math64x61_;
+    use governance::contract::Governance::proposal_initializer_runContractMemberStateTrait;
 
     // 2**61 = 2305843009213693952
     const VOLATILITY_28: Math64x61_ = consteval_int!(28 * 2305843009213693952);
@@ -73,7 +75,7 @@ mod Options {
         // TODO use block hash from block_hash syscall as salt // actually doable with the new syscall
         let governance_address = get_contract_address();
         let state = Governance::unsafe_new_contract_state();
-        let amm_address = state.amm_address.read();
+        let amm_address = state.get_amm_address();
         let proxy_class: felt252 =
             0x00eafb0413e759430def79539db681f8a4eb98cf4196fe457077d694c6aeeb82;
         let opt_class: felt252 = 0x5ce3a80daeb5b7a766df9b41ca8d9e52b6b0a045a0d2ced72f43d4dd2f93b10;
@@ -213,8 +215,9 @@ mod Options {
 
     fn run_add_0911_1611_options() {
         let mut state = Governance::unsafe_new_contract_state();
-        assert(
-            !read.@state.proposal_initializer_run;
+        assert(!state.proposal_initializer_run.read(36) , 'prop already initialized');
+
+
         state.proposal_initializer_run.write(36, true);
 
         add_0911_options();

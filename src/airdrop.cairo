@@ -5,7 +5,6 @@ use starknet::ContractAddress;
 #[starknet::interface]
 trait IAirdrop<TContractState> {
     fn claim(ref self: TContractState, claimee: ContractAddress, amount: u128, proof: Array::<felt252>);
-    fn set_root(ref self: TContractState, merkle_root: felt252);
 }
 
 #[starknet::component]
@@ -74,10 +73,6 @@ use array::ArrayTrait;
 
             // Emit event
             self.emit(Claimed { address: claimee, received: to_mint });
-        }
-
-        fn set_root(ref self: ComponentState<TContractState>, merkle_root: felt252) {
-            self.merkle_root.write(merkle_root);
         }
     }
 }

@@ -24,9 +24,7 @@ trait IGovernance<TContractState> {
 
     // AIRDROPS
 
-    fn claim(
-        ref self: TContractState, address: ContractAddress, amount: u128, proof: Array::<felt252>
-    );
+    // in component
 
     // OPTIONS
 
@@ -143,14 +141,6 @@ mod Governance {
 
         fn apply_passed_proposal(ref self: ContractState, prop_id: felt252) {
             Upgrades::apply_passed_proposal(prop_id)
-        }
-
-        // AIRDROPS
-
-        fn claim(
-            ref self: ContractState, address: ContractAddress, amount: u128, proof: Array::<felt252>
-        ) {
-            Airdrop::claim(ref self, address, amount, proof)
         }
 
         fn add_0911_1611_options(ref self: ContractState) {
