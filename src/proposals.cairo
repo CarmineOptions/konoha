@@ -238,6 +238,7 @@ mod Proposals {
         let gov_token_addr = state.get_governance_token_address();
         let caller_addr = get_caller_address();
         let curr_vote_status: felt252 = state.proposal_voted_by.read((prop_id, caller_addr));
+        // TODO allow override of previous vote
         assert(curr_vote_status == 0, 'already voted');
 
         let caller_balance_u256: u256 = IERC20Dispatcher { contract_address: gov_token_addr }
