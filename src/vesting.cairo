@@ -55,7 +55,12 @@ mod vesting {
         ) {
             // TODO: check if caller is eligible to add vesting milestone or if this is part of a proposal
             self.milestone.write((vested_timestamp, grantee), amount);
-            self.emit(VestingMilestoneAdded { grantee: grantee, timestamp: vesting_timestamp, amount: u128})
+            self
+                .emit(
+                    VestingMilestoneAdded {
+                        grantee: grantee, timestamp: vesting_timestamp, amount: u128
+                    }
+                )
         }
     }
 }
