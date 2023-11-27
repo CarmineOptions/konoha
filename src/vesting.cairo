@@ -15,6 +15,11 @@ trait IVesting<TContractState> {
 
 #[starknet::component]
 mod vesting {
+    use starknet::syscalls::get_block_timestamp;
+
+    use governance::traits::IGovernanceTokenDispatcher;
+    use governance::traits::IGovernanceTokenDispatcherTrait;
+
     // TODO: must depend on Ownable or Proposals to clarify who has the right to add vesting milestones
     #[storage]
     struct Storage {
@@ -24,11 +29,19 @@ mod vesting {
     #[derive(starknet::Event, Drop)]
     #[event]
     enum Event {
-        VestingMilestoneAdded: VestingMilestoneAdded
+        VestingMilestoneAdded: VestingMilestoneAdded,
+        Vested: Vested
     }
 
     #[derive(starknet::Event, Drop)]
     struct VestingMilestoneAdded {
+        grantee: ContractAddress,
+        timestamp: u64,
+        amount: u128
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct Vested {
         grantee: ContractAddress,
         timestamp: u64,
         amount: u128
@@ -44,7 +57,15 @@ mod vesting {
             vested_timestamp: u64
         ) {
             let amt_to_vest = self.milestone.read((vested_timestamp, grantee));
-            assert(amt_to_vest != 0, 'no vesting milestone found');
+            assert(amt_to_vest != 0, 'no vesting milestone found, or already vested');
+            assert(get_block_timestamp() > vested_timestamp, 'not yet eligible');
+            IGovernanceTokenDispatcher { contract_address: govtoken_addr }
+                .mint(claimee, u256 { high: 0, low: amt_to_vest });
+            self.milestone.write((vested_timestamp, grantee), 0);
+            self
+                .emit(
+                    Vested { grantee: grantee, timestamp: vested_timestamp, amount: amt_to_vest }
+                );
         }
 
         fn add_vesting_milestone(
