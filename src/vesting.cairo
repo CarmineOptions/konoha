@@ -7,6 +7,14 @@ trait IVesting<TContractState> {
     fn add_vesting_milestone(
         ref self: TContractState, vesting_timestamp: u64, grantee: ContractAddress, amount: u128
     );
+
+    fn add_linear_vesting_schedule(
+        ref self: TContractState,
+        first_vest: u64,
+        period: u64,
+        increments_count: u64,
+        total_amount: u128
+    );
 // add_linear_vesting_schedule
 // add_cliff_linear_vesting_schedule
 // MAYBE – streaming?
@@ -82,6 +90,29 @@ mod vesting {
                         grantee: grantee, timestamp: vesting_timestamp, amount: u128
                     }
                 )
+        }
+
+        fn add_linear_vesting_schedule(
+            ref self: TContractState,
+            first_vest: u64,
+            period: u64,
+            increments_count: u16,
+            total_amount: u128,
+            grantee: ContractAddress
+        ) {
+            let mut i: u16 = 0;
+            let mut curr_timestamp = first_vest;
+            assert(increments_count > 1, 'schedule must have more than one milestone');
+            assert(get_block_timestamp() < first_vest, 'first vest cannot be in the past');
+            assert()
+            let per_vest_amount = total_amount / increments_count; // check behavior for low/high increments_count, check rounding, increase last vest so total_amount holds.
+            loop {
+                if i == increments_count {
+                    break;
+                }
+                self.add_vesting_milestone(curr_timestamp, grantee, per_vest_amount);
+                curr_timestamp = curr_timestamp + period;
+            }
         }
     }
 }
