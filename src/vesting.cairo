@@ -105,14 +105,24 @@ mod vesting {
             assert(increments_count > 1, 'schedule must have more than one milestone');
             assert(get_block_timestamp() < first_vest, 'first vest cannot be in the past');
             assert()
-            let per_vest_amount = total_amount
-                / increments_count; // check behavior for low/high increments_count, check rounding, increase last vest so total_amount holds.
+            let per_vest_amount = total_amount / increments_count;
+            let mut total_scheduled = 0;
             loop {
                 if i == increments_count {
                     break;
                 }
-                self.add_vesting_milestone(curr_timestamp, grantee, per_vest_amount);
+                total_scheduled += per_vest_amount;
+                if i + 1 == increments_count {
+                    let left_to_get_to_total = total_amount - total_scheduled;
+                    self
+                        .add_vesting_milestone(
+                            curr_timestamp, grantee, per_vest_amount + left_to_get_to_total
+                        );
+                } else {
+                    self.add_vesting_milestone(curr_timestamp, grantee, per_vest_amount);
+                }
                 curr_timestamp = curr_timestamp + period;
+                i += 1;
             }
         }
     }
