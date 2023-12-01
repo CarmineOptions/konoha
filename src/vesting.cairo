@@ -105,7 +105,8 @@ mod vesting {
             assert(increments_count > 1, 'schedule must have more than one milestone');
             assert(get_block_timestamp() < first_vest, 'first vest cannot be in the past');
             assert()
-            let per_vest_amount = total_amount / increments_count; // check behavior for low/high increments_count, check rounding, increase last vest so total_amount holds.
+            let per_vest_amount = total_amount
+                / increments_count; // check behavior for low/high increments_count, check rounding, increase last vest so total_amount holds.
             loop {
                 if i == increments_count {
                     break;
