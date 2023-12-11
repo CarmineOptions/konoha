@@ -8,3 +8,4 @@ const OPTION_CALL: felt252 = 0;
 const OPTION_PUT: felt252 = 1;
 const TRADE_SIDE_LONG: felt252 = 0;
 const TRADE_SIDE_SHORT: felt252 = 1;
+const ONE_WEEK_SECONDS: u64 = 604800;
