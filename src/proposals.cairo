@@ -14,6 +14,7 @@ mod Proposals {
 
     use starknet::contract_address::ContractAddressZeroable;
     use starknet::get_block_info;
+    use starknet::get_block_timestamp;
     use starknet::get_caller_address;
     use starknet::BlockInfo;
     use starknet::ContractAddress;
@@ -65,7 +66,7 @@ mod Proposals {
         let end_timestamp: u64 = state.proposal_vote_end_timestamp.read(prop_id);
         assert(end_timestamp != 0, 'prop_id not found');
 
-        let current_timestamp: u64 = get_block_info().unbox().block_timestamp;
+        let current_timestamp: u64 = get_block_timestamp();
 
         assert(end_timestamp > current_timestamp, 'voting concluded');
     }
@@ -120,7 +121,7 @@ mod Proposals {
         let prop_details = PropDetails { payload: payload, to_upgrade: to_upgrade };
         state.proposal_details.write(prop_id, prop_details);
 
-        let current_timestamp: u64 = get_block_info().unbox().block_timestamp;
+        let current_timestamp: u64 = get_block_timestamp();
         let end_timestamp: u64 = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
         state.proposal_vote_end_timestamp.write(prop_id, end_timestamp);
 
@@ -316,7 +317,7 @@ mod Proposals {
         let state = Governance::unsafe_new_contract_state();
 
         let end_timestamp: u64 = state.proposal_vote_end_timestamp.read(prop_id);
-        let current_timestamp: u64 = get_block_info().unbox().block_timestamp;
+        let current_timestamp: u64 = get_block_timestamp();
 
         if current_timestamp <= end_timestamp {
             return check_proposal_passed_express(prop_id).into();
