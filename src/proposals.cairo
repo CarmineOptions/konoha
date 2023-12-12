@@ -14,6 +14,7 @@ mod Proposals {
 
     use starknet::contract_address::ContractAddressZeroable;
     use starknet::get_block_info;
+    use starknet::get_block_timestamp;
     use starknet::get_caller_address;
     use starknet::BlockInfo;
     use starknet::ContractAddress;
@@ -26,6 +27,7 @@ mod Proposals {
     use governance::contract::Governance::proposal_total_yayContractMemberStateTrait;
     use governance::contract::Governance::proposal_total_nayContractMemberStateTrait;
     use governance::contract::Governance::proposal_vote_endsContractMemberStateTrait;
+    use governance::contract::Governance::proposal_vote_end_timestampContractMemberStateTrait;
     use governance::contract::Governance::delegate_hashContractMemberStateTrait;
     use governance::contract::Governance::total_delegated_toContractMemberStateTrait;
     use governance::contract::Governance::proposal_voted_byContractMemberStateTrait;
@@ -61,13 +63,12 @@ mod Proposals {
 
     fn assert_voting_in_progress(prop_id: felt252) {
         let state = Governance::unsafe_new_contract_state();
-        let end_block_number_felt: felt252 = state.proposal_vote_ends.read(prop_id);
-        let end_block_number: u64 = end_block_number_felt.try_into().unwrap();
-        assert(end_block_number != 0, 'prop_id not found');
+        let end_timestamp: u64 = state.proposal_vote_end_timestamp.read(prop_id);
+        assert(end_timestamp != 0, 'prop_id not found');
 
-        let current_block_number: u64 = get_block_info().unbox().block_number;
+        let current_timestamp: u64 = get_block_timestamp();
 
-        assert(end_block_number > current_block_number, 'voting concluded');
+        assert(end_timestamp > current_timestamp, 'voting concluded');
     }
 
     fn as_u256(high: u128, low: u128) -> u256 {
@@ -88,6 +89,20 @@ mod Proposals {
         }
     }
 
+    fn get_free_prop_id_timestamp() -> felt252 {
+        _get_free_prop_id_timestamp(0)
+    }
+
+    fn _get_free_prop_id_timestamp(currid: felt252) -> felt252 {
+        let state = Governance::unsafe_new_contract_state();
+        let res = state.proposal_vote_end_timestamp.read(currid);
+        if res == 0 {
+            currid
+        } else {
+            _get_free_prop_id_timestamp(currid + 1)
+        }
+    }
+
     fn submit_proposal(payload: felt252, to_upgrade: ContractType) -> felt252 {
         assert_correct_contract_type(to_upgrade);
         let mut state = Governance::unsafe_new_contract_state();
@@ -102,15 +117,13 @@ mod Proposals {
         ); // TODO use such multiplication that u128 * u128 = u256
         assert(total_supply < res, 'not enough tokens to submit');
 
-        let prop_id = get_free_prop_id();
+        let prop_id = get_free_prop_id_timestamp();
         let prop_details = PropDetails { payload: payload, to_upgrade: to_upgrade };
         state.proposal_details.write(prop_id, prop_details);
 
-        let current_block_number: u64 = get_block_info().unbox().block_number;
-        let end_block_number: BlockNumber = (current_block_number
-            + constants::PROPOSAL_VOTING_TIME_BLOCKS)
-            .into();
-        state.proposal_vote_ends.write(prop_id, end_block_number);
+        let current_timestamp: u64 = get_block_timestamp();
+        let end_timestamp: u64 = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
+        state.proposal_vote_end_timestamp.write(prop_id, end_timestamp);
 
         state.emit(Governance::Proposed { prop_id, payload, to_upgrade });
         prop_id
@@ -303,11 +316,10 @@ mod Proposals {
     fn get_proposal_status(prop_id: felt252) -> felt252 {
         let state = Governance::unsafe_new_contract_state();
 
-        let end_block_number_felt: felt252 = state.proposal_vote_ends.read(prop_id);
-        let end_block_number: u64 = end_block_number_felt.try_into().unwrap();
-        let current_block_number: u64 = get_block_info().unbox().block_number;
+        let end_timestamp: u64 = state.proposal_vote_end_timestamp.read(prop_id);
+        let current_timestamp: u64 = get_block_timestamp();
 
-        if current_block_number <= end_block_number {
+        if current_timestamp <= end_timestamp {
             return check_proposal_passed_express(prop_id).into();
         }
 

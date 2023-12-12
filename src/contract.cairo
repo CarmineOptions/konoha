@@ -55,6 +55,7 @@ mod Governance {
     struct Storage {
         proposal_details: LegacyMap::<felt252, PropDetails>,
         proposal_vote_ends: LegacyMap::<felt252, BlockNumber>,
+        proposal_vote_end_timestamp: LegacyMap::<felt252, u64>,
         proposal_voted_by: LegacyMap::<(felt252, ContractAddress), VoteStatus>,
         proposal_total_yay: LegacyMap::<felt252, felt252>,
         proposal_total_nay: LegacyMap::<felt252, felt252>,
