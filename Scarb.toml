@@ -14,7 +14,7 @@ snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", bran
 
 [[tool.snforge.fork]]
 name = "MAINNET"
-url = "https://limited-rpc.nethermind.io/mainnet-juno"
+url = "http://34.22.208.73:6060/"
 block_id.tag = "Latest"
 
 [[tool.snforge.fork]]
