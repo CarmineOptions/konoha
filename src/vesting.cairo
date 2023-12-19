@@ -28,7 +28,7 @@ mod vesting {
     use governance::traits::IGovernanceTokenDispatcher;
     use governance::traits::IGovernanceTokenDispatcherTrait;
 
-    // TODO: must depend on Ownable or Proposals to clarify who has the right to add vesting milestones
+    // TODO: must depend on Proposals to clarify who has the right to add vesting milestones
     #[storage]
     struct Storage {
         milestone: LegacyMap::<(u64, ContractAddress), u128>
