@@ -11,3 +11,13 @@ starknet = ">=1.1.0"
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", branch = "war-in/1212-1175-switch-to-universal-sierra-compilation"}
 
 [[target.starknet-contract]]
+
+[[tool.snforge.fork]]
+name = "MAINNET"
+url = "https://limited-rpc.nethermind.io/mainnet-juno"
+block_id.tag = "Latest"
+
+[[tool.snforge.fork]]
+name = "GOERLI"
+url = "https://limited-rpc.nethermind.io/goerli-juno"
+block_id.tag = "Latest"
