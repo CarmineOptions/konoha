@@ -87,6 +87,18 @@ trait IAMM<TContractState> {
         option_token_address_: ContractAddress,
         initial_volatility: Math64x61_,
     );
+    fn add_option_both_sides(
+        ref self: TContractState,
+        maturity: felt252,
+        strike_price: Math64x61_,
+        quote_token_address: ContractAddress,
+        base_token_address: ContractAddress,
+        option_type: OptionType,
+        lptoken_address: ContractAddress,
+        option_token_address_long: ContractAddress,
+        option_token_address_short: ContractAddress,
+        initial_volatility: Math64x61_,
+    );
     fn get_option_token_address(
         self: @TContractState,
         lptoken_address: ContractAddress,

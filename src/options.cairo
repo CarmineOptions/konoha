@@ -82,7 +82,7 @@ mod Options {
         loop {
             match options.pop_front() {
                 Option::Some(option) => {
-                    add_option(
+                    add_option_both_sides(
                         proxy_class, opt_class, governance_address, amm_address, salt, option
                     );
                 },
@@ -103,7 +103,7 @@ mod Options {
         initial_volatility: Math64x61_
     }
 
-    fn add_option(
+    fn add_option_both_sides(
         proxy_class: felt252,
         opt_class: felt252,
         governance_address: ContractAddress,
@@ -130,6 +130,9 @@ mod Options {
         let optoken_long_addr: ContractAddress = deploy_via_proxy(
             proxy_class_hash, opt_class_hash, custom_salt
         );
+        let optoken_short_addr: ContractAddress = deploy_via_proxy(
+            proxy_class_hash, opt_class_hash, custom_salt + 1
+        );
 
         IOptionTokenDispatcher { contract_address: optoken_long_addr }
             .initializer(
@@ -144,23 +147,6 @@ mod Options {
                 o.maturity,
                 TRADE_SIDE_LONG
             );
-
-        IAMMDispatcher { contract_address: amm_address }
-            .add_option(
-                TRADE_SIDE_LONG,
-                o.maturity,
-                o.strike_price,
-                quote_token_address,
-                base_token_address,
-                o.option_type,
-                o.lptoken_address,
-                optoken_long_addr,
-                o.initial_volatility
-            );
-
-        let optoken_short_addr: ContractAddress = deploy_via_proxy(
-            proxy_class_hash, opt_class_hash, custom_salt + 1
-        );
 
         IOptionTokenDispatcher { contract_address: optoken_short_addr }
             .initializer(
@@ -177,14 +163,14 @@ mod Options {
             );
 
         IAMMDispatcher { contract_address: amm_address }
-            .add_option(
-                TRADE_SIDE_SHORT,
+            .add_option_both_sides(
                 o.maturity,
                 o.strike_price,
                 quote_token_address,
                 base_token_address,
                 o.option_type,
                 o.lptoken_address,
+                optoken_long_addr,
                 optoken_short_addr,
                 o.initial_volatility
             );
