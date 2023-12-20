@@ -82,6 +82,27 @@ mod Options {
         loop {
             match options.pop_front() {
                 Option::Some(option) => {
+                    add_option(
+                        proxy_class, opt_class, governance_address, amm_address, salt, option
+                    );
+                },
+                Option::None(()) => { break (); },
+            };
+        }
+    }
+
+    // Usable after C1 AMM is deployed
+    fn add_options_both_sides(salt: felt252, mut options: Span<FutureOption>) {
+        // TODO use block hash from block_hash syscall as salt // actually doable with the new syscall
+        let governance_address = get_contract_address();
+        let state = Governance::unsafe_new_contract_state();
+        let amm_address = state.get_amm_address();
+        let proxy_class: felt252 =
+            0x00eafb0413e759430def79539db681f8a4eb98cf4196fe457077d694c6aeeb82;
+        let opt_class: felt252 = 0x5ce3a80daeb5b7a766df9b41ca8d9e52b6b0a045a0d2ced72f43d4dd2f93b10;
+        loop {
+            match options.pop_front() {
+                Option::Some(option) => {
                     add_option_both_sides(
                         proxy_class, opt_class, governance_address, amm_address, salt, option
                     );
@@ -101,6 +122,93 @@ mod Options {
         option_type: OptionType,
         lptoken_address: ContractAddress,
         initial_volatility: Math64x61_
+    }
+
+    fn add_option(
+        proxy_class: felt252,
+        opt_class: felt252,
+        governance_address: ContractAddress,
+        amm_address: ContractAddress,
+        salt: felt252,
+        option: @FutureOption
+    ) {
+        // mainnet
+        let USDC_addr: felt252 = 0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8;
+        let ETH_addr: felt252 = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7;
+        let quote_token_address = USDC_addr.try_into().unwrap();
+        let base_token_address = ETH_addr.try_into().unwrap();
+        let o = *option;
+        // Yes, this 'overflows', but it's expected and wanted.
+        let custom_salt: felt252 = salt
+            + o.strike_price
+            + o.maturity
+            + o.option_type
+            + o.lptoken_address.into()
+            + o.initial_volatility;
+
+        let proxy_class_hash: ClassHash = proxy_class.try_into().unwrap();
+        let opt_class_hash: ClassHash = opt_class.try_into().unwrap();
+        let optoken_long_addr: ContractAddress = deploy_via_proxy(
+            proxy_class_hash, opt_class_hash, custom_salt
+        );
+
+        IOptionTokenDispatcher { contract_address: optoken_long_addr }
+            .initializer(
+                o.name_long,
+                'C-OPT',
+                governance_address,
+                amm_address,
+                quote_token_address,
+                base_token_address,
+                o.option_type,
+                o.strike_price,
+                o.maturity,
+                TRADE_SIDE_LONG
+            );
+
+        IAMMDispatcher { contract_address: amm_address }
+            .add_option(
+                TRADE_SIDE_LONG,
+                o.maturity,
+                o.strike_price,
+                quote_token_address,
+                base_token_address,
+                o.option_type,
+                o.lptoken_address,
+                optoken_long_addr,
+                o.initial_volatility
+            );
+
+        let optoken_short_addr: ContractAddress = deploy_via_proxy(
+            proxy_class_hash, opt_class_hash, custom_salt + 1
+        );
+
+        IOptionTokenDispatcher { contract_address: optoken_short_addr }
+            .initializer(
+                o.name_short,
+                'C-OPT',
+                governance_address,
+                amm_address,
+                quote_token_address,
+                base_token_address,
+                o.option_type,
+                o.strike_price,
+                o.maturity,
+                TRADE_SIDE_SHORT
+            );
+
+        IAMMDispatcher { contract_address: amm_address }
+            .add_option(
+                TRADE_SIDE_SHORT,
+                o.maturity,
+                o.strike_price,
+                quote_token_address,
+                base_token_address,
+                o.option_type,
+                o.lptoken_address,
+                optoken_short_addr,
+                o.initial_volatility
+            );
     }
 
     fn add_option_both_sides(
