@@ -28,7 +28,7 @@ trait IGovernance<TContractState> {
 
     // OPTIONS
 
-    fn add_0911_1611_options(ref self: TContractState);
+    fn add_0501_options(ref self: TContractState);
 }
 
 
@@ -144,8 +144,8 @@ mod Governance {
             Upgrades::apply_passed_proposal(prop_id)
         }
 
-        fn add_0911_1611_options(ref self: ContractState) {
-            Options::run_add_0911_1611_options()
+        fn add_0501_options(ref self: ContractState) {
+            Options::run_add_0501_options()
         }
     }
 }
