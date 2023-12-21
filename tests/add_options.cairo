@@ -3,7 +3,9 @@ use tests::basic::submit_44_signal_proposals;
 use governance::traits::IAMM;
 use governance::contract::IGovernanceDispatcher;
 use governance::contract::IGovernanceDispatcherTrait;
-use governance::traits::{IAMMDispatcher, IAMMDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait};
+use governance::traits::{
+    IAMMDispatcher, IAMMDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait
+};
 use governance::traits::Math64x61_;
 
 use starknet::{ContractAddress, get_block_timestamp};
@@ -35,14 +37,18 @@ fn test_add_options() {
     let status = dispatcher.get_proposal_status(ret);
     dispatcher.apply_passed_proposal(ret);
     dispatcher.add_0501_options();
-    let amm_addr = 0x076dbabc4293db346b0a56b29b6ea9fe18e93742c73f12348c8747ecfc1050aa.try_into().unwrap();
+    let amm_addr = 0x076dbabc4293db346b0a56b29b6ea9fe18e93742c73f12348c8747ecfc1050aa
+        .try_into()
+        .unwrap();
     let STRIKE_PRICE_2200: Math64x61_ = consteval_int!(2200 * 2305843009213693952);
     trade_option(1704412799, marek_address, amm_addr, STRIKE_PRICE_2200);
 }
 
 // buys 0.01 long eth/usdc call
-fn trade_option(maturity: u64, trader: ContractAddress, amm_addr: ContractAddress, strike_price: Math64x61_) {
-    let amm = IAMMDispatcher { contract_address: amm_addr};
+fn trade_option(
+    maturity: u64, trader: ContractAddress, amm_addr: ContractAddress, strike_price: Math64x61_
+) {
+    let amm = IAMMDispatcher { contract_address: amm_addr };
     start_prank(CheatTarget::One(amm_addr), trader);
     let amt = 184467440737095520;
     let USDC_addr: felt252 = 0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8;
@@ -52,6 +58,17 @@ fn trade_option(maturity: u64, trader: ContractAddress, amm_addr: ContractAddres
     let curr_timestamp = get_block_timestamp();
     let eth = IERC20Dispatcher { contract_address: base_token_address };
     start_prank(CheatTarget::One(base_token_address), trader);
-    eth.approve(amm_addr, amt+amt);
-    amm.trade_open(0, strike_price, maturity.into(), 0, amt.low.into(), quote_token_address, base_token_address, 18446744073709551616, (curr_timestamp+420).into());
+    eth.approve(amm_addr, amt + amt);
+    amm
+        .trade_open(
+            0,
+            strike_price,
+            maturity.into(),
+            0,
+            amt.low.into(),
+            quote_token_address,
+            base_token_address,
+            18446744073709551616,
+            (curr_timestamp + 420).into()
+        );
 }
