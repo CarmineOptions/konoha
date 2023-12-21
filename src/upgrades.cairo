@@ -22,6 +22,7 @@ mod Upgrades {
     use governance::contract::Governance::unsafe_new_contract_state;
     use governance::contract::Governance::proposal_appliedContractMemberStateTrait;
     use governance::contract::Governance::proposal_detailsContractMemberStateTrait;
+    use governance::contract::Governance::amm_addressContractMemberStateTrait;
     use governance::contract::Governance::airdrop_component::UnsafeNewContractStateTraitForAirdropImpl;
     use governance::contract::Governance::airdrop_component;
     use governance::contract::Governance::airdrop_component::ComponentState;
@@ -66,10 +67,14 @@ mod Upgrades {
                     let mut airdrop_component_state: ComponentState<ContractState> =
                         Governance::airdrop_component::unsafe_new_component_state();
                     airdrop_component_state.merkle_root.write(impl_hash);
+                } else if (contract_type == 4) {
+                    let new_amm_address: ContractAddress = impl_hash.try_into().unwrap();
+                    let mut state = Governance::unsafe_new_contract_state();
+                    state.amm_address.write(new_amm_address);
                 } else {
                     assert(
-                        contract_type == 4, 'invalid contract_type'
-                    ); // type 4 is no-op, signal vote
+                        contract_type == 5, 'invalid contract_type'
+                    ); // type 5 is no-op, signal vote
                 }
             }
         }

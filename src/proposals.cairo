@@ -58,7 +58,7 @@ mod Proposals {
 
     fn assert_correct_contract_type(contract_type: ContractType) {
         let contract_type_u: u64 = contract_type.try_into().unwrap();
-        assert(contract_type_u <= 4, 'invalid contract type')
+        assert(contract_type_u <= 5, 'invalid contract type')
     }
 
     fn assert_voting_in_progress(prop_id: felt252) {
