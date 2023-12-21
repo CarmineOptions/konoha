@@ -38,6 +38,7 @@ mod Proposals {
     use governance::types::BlockNumber;
     use governance::types::ContractType;
     use governance::types::PropDetails;
+    use governance::types::VoteStatus;
     use governance::traits::IERC20Dispatcher;
     use governance::traits::IERC20DispatcherTrait;
     use governance::constants;
@@ -124,6 +125,11 @@ mod Proposals {
         };
 
         arr
+    }
+
+    fn get_user_voted(user_address: ContractAddress, prop_id: felt252) -> VoteStatus {
+        let state = Governance::unsafe_new_contract_state();
+        state.proposal_voted_by.read((prop_id, user_address))
     }
 
     fn submit_proposal(payload: felt252, to_upgrade: ContractType) -> felt252 {
