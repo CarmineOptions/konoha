@@ -41,10 +41,36 @@ fn test_forking_functionality() {
 }
 
 
+// Raises the prop_id to 44, fixes prop_id now 0
+fn submit_44_signal_proposals() {
+    let gov_contract_addr: ContractAddress =
+        0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f
+        .try_into()
+        .unwrap();
+    let dispatcher = IGovernanceDispatcher { contract_address: gov_contract_addr };
+    let scaling_address: ContractAddress =
+        0x052df7acdfd3174241fa6bd5e1b7192cd133f8fc30a2a6ed99b0ddbfb5b22dcd
+        .try_into()
+        .unwrap();
+
+    let mut curr_prop: u8 = 0;
+
+    loop {
+        if curr_prop == 44 {
+            break;
+        }
+        start_prank(CheatTarget::One(gov_contract_addr), scaling_address);
+        dispatcher.submit_proposal(42, 4); // for signal vote with payload 42
+        curr_prop += 1;
+    }
+}
+
+
 // This proposes upgrading the current mainnet Carmine governance to the one in master, votes on it with multiple wallets and passes the upgrade turbo.
 #[test]
 #[fork("MAINNET")]
 fn test_upgrade_mainnet_to_master() {
+    submit_44_signal_proposals();
     let gov_contract_addr: ContractAddress =
         0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f
         .try_into()
