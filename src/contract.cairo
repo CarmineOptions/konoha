@@ -15,6 +15,7 @@ trait IGovernance<TContractState> {
         ref self: TContractState, impl_hash: felt252, to_upgrade: ContractType
     ) -> felt252;
     fn get_proposal_status(self: @TContractState, prop_id: felt252) -> felt252;
+    fn get_live_proposals(self: @TContractState) -> Array<felt252>;
 
     // UPGRADES
 
@@ -128,6 +129,10 @@ mod Governance {
 
         fn get_proposal_status(self: @ContractState, prop_id: felt252) -> felt252 {
             Proposals::get_proposal_status(prop_id)
+        }
+
+        fn get_live_proposals(self: @ContractState) -> Array<felt252> {
+            Proposals::get_live_proposals()
         }
 
         // UPGRADES

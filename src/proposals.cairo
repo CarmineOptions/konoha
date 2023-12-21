@@ -103,6 +103,29 @@ mod Proposals {
         }
     }
 
+    fn get_live_proposals() -> Array<felt252> {
+        let max: u32 = get_free_prop_id_timestamp().try_into().unwrap();
+        let mut i: u32 = 0;
+        let mut arr = ArrayTrait::<felt252>::new();
+
+        loop {
+            if i >= max {
+                break;
+            }
+
+            let prop_id: felt252 = i.into();
+            let current_status = get_proposal_status(prop_id);
+
+            if current_status == 0 {
+                arr.append(prop_id);
+            }
+
+            i += 1;
+        };
+
+        arr
+    }
+
     fn submit_proposal(payload: felt252, to_upgrade: ContractType) -> felt252 {
         assert_correct_contract_type(to_upgrade);
         let mut state = Governance::unsafe_new_contract_state();
