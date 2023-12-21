@@ -123,15 +123,11 @@ fn test_upgrade_mainnet_to_master() {
     let new_contract: ContractClass = declare('Governance');
     start_prank(CheatTarget::One(gov_contract_addr), scaling_address);
     let ret = dispatcher.submit_proposal(new_contract.class_hash.into(), 1);
-    ret.print();
     let new_prop_id = 44;
     loop {
         match top_carm_holders.pop_front() {
             Option::Some(holder) => {
                 start_prank(CheatTarget::One(gov_contract_addr), holder);
-                'voting:'.print();
-                holder.print();
-                new_prop_id.print();
                 dispatcher.vote(new_prop_id, 1);
             },
             Option::None(()) => { break (); },
@@ -147,7 +143,7 @@ fn test_upgrade_mainnet_to_master() {
 fn check_if_healthy(gov_contract_addr: ContractAddress) -> bool {
     // TODO
     let dispatcher = IGovernanceDispatcher { contract_address: gov_contract_addr };
-    dispatcher.get_proposal_details(0);
     dispatcher.get_proposal_status(0);
-    true
+    let prop_details = dispatcher.get_proposal_details(0);
+    (prop_details.payload + prop_details.to_upgrade) != 0
 }
