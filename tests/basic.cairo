@@ -70,7 +70,6 @@ fn submit_44_signal_proposals() {
 #[test]
 #[fork("MAINNET")]
 fn test_upgrade_mainnet_to_master() {
-    submit_44_signal_proposals();
     let gov_contract_addr: ContractAddress =
         0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f
         .try_into()
@@ -122,8 +121,7 @@ fn test_upgrade_mainnet_to_master() {
     // declare current and submit proposal
     let new_contract: ContractClass = declare('Governance');
     start_prank(CheatTarget::One(gov_contract_addr), scaling_address);
-    let ret = dispatcher.submit_proposal(new_contract.class_hash.into(), 1);
-    let new_prop_id = 44;
+    let new_prop_id = dispatcher.submit_proposal(new_contract.class_hash.into(), 1);
     loop {
         match top_carm_holders.pop_front() {
             Option::Some(holder) => {

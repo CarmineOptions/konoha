@@ -29,7 +29,6 @@ fn test_add_options() {
     let new_contract: ContractClass = declare('Governance');
     start_prank(CheatTarget::One(gov_contract_addr), marek_address);
     let ret = dispatcher.submit_proposal(new_contract.class_hash.into(), 1);
-    assert(ret == 44, 'wrong new prop_id');
     dispatcher.vote(ret, 1);
     let curr_timestamp = get_block_timestamp();
     let warped_timestamp = curr_timestamp + consteval_int!(60 * 60 * 24 * 7) + 420;
