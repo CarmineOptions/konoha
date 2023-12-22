@@ -11,10 +11,4 @@ name = "governance"
 version = "0.2.0"
 dependencies = [
  "cubit",
- "snforge_std",
 ]
-
-[[package]]
-name = "snforge_std"
-version = "0.1.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry.git#d0b22ad676990f00f4fc14922e9eef21c959717d"
