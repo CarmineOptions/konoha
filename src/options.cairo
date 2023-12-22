@@ -207,16 +207,8 @@ mod Options {
         res
     }
 
-    fn run_add_0501_options() {
-        let mut state = Governance::unsafe_new_contract_state();
-        assert(!state.proposal_initializer_run.read(44), 'prop already initialized');
 
-        state.proposal_initializer_run.write(44, true);
-
-        add_0501_options();
-    }
-
-    fn add_0501_options() {
+    fn add_1201_options() {
         let MATURITY: felt252 = 1704412799;
 
         let eth_lpt_addr: ContractAddress =

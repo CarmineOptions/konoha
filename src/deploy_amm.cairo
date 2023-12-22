@@ -1,5 +1,6 @@
 mod Deploy_AMM {
-    #[starknet::interface]
+    use core::starknet::SyscallResultTrait;
+#[starknet::interface]
     trait IAMM<TContractState> {
         fn trade_open(
             ref self: TContractState,
@@ -86,15 +87,6 @@ mod Deploy_AMM {
         fn get_available_lptoken_addresses(
             self: @TContractState, order_i: felt252
         ) -> ContractAddress;
-        fn get_all_options(
-            self: @TContractState, lptoken_address: ContractAddress
-        ) -> Array<Option_>;
-        fn get_all_non_expired_options_with_premia(
-            self: @TContractState, lptoken_address: ContractAddress
-        ) -> Array<OptionWithPremia>;
-        fn get_option_with_position_of_user(
-            self: @TContractState, user_address: ContractAddress
-        ) -> Array<OptionWithUsersPosition>;
         fn get_all_lptoken_addresses(self: @TContractState,) -> Array<ContractAddress>;
         fn get_value_of_pool_position(
             self: @TContractState, lptoken_address: ContractAddress
@@ -107,16 +99,6 @@ mod Deploy_AMM {
             self: @TContractState, lptoken_address: ContractAddress
         ) -> Fixed;
 
-
-        fn get_value_of_position(
-            self: @TContractState,
-            option: Option_,
-            position_size: u128,
-            option_type: OptionType,
-            current_volatility: Fixed,
-        ) -> Fixed;
-        fn get_all_poolinfo(self: @TContractState) -> Array<PoolInfo>;
-        fn get_user_pool_infos(self: @TContractState, user: ContractAddress) -> Array<UserPoolInfo>;
         fn deposit_liquidity(
             ref self: TContractState,
             pooled_token_addr: ContractAddress,
@@ -151,9 +133,6 @@ mod Deploy_AMM {
             ref self: TContractState, lpt_addr: ContractAddress, max_lpool_bal: u256
         );
         fn get_pool_locked_capital(self: @TContractState, lptoken_address: ContractAddress) -> u256;
-        fn get_available_options(
-            self: @TContractState, lptoken_address: ContractAddress, order_i: u32
-        ) -> Option_;
 
         fn get_lptoken_address_for_given_option(
             self: @TContractState,
@@ -161,9 +140,6 @@ mod Deploy_AMM {
             base_token_address: ContractAddress,
             option_type: OptionType,
         ) -> ContractAddress;
-        fn get_pool_definition_from_lptoken_address(
-            self: @TContractState, lptoken_addres: ContractAddress
-        ) -> Pool;
         fn get_option_volatility(
             self: @TContractState,
             lptoken_address: ContractAddress,
@@ -189,9 +165,6 @@ mod Deploy_AMM {
             maturity: u64,
             strike_price: Fixed
         ) -> u128;
-        fn get_total_premia(
-            self: @TContractState, option: Option_, position_size: u256, is_closing: bool
-        ) -> (Fixed, Fixed);
 
         fn black_scholes(
             self: @TContractState,
@@ -218,24 +191,27 @@ mod Deploy_AMM {
         fn set_pragma_required_checkpoints(ref self: TContractState);
         fn upgrade(ref self: TContractState, new_implementation: ClassHash);
     }
-
+ 
     use starknet::syscalls::deploy_syscall;
     use starknet::{ClassHash, ContractAddress};
     use starknet::info::get_contract_address;
     use array::ArrayTrait;
-    use BoundedInt;
+    use integer::BoundedInt;
 
     use cubit::f128::types::{Fixed, FixedTrait};
 
-    use governance::amm_types::basic::OptionType;
+    use governance::amm_types::basic::{OptionType, OptionSide};
+    use governance::contract::Governance;
+    use governance::contract::Governance::proposal_initializer_runContractMemberStateTrait;
+    use governance::contract::Governance::amm_addressContractMemberStateTrait;
     
 
     // Deploys new AMM, sets AMM address storage var to new AMM, adds lptokens, etc etc etc
     fn deploy_amm() {
         
-        let amm_class: ClassHash = 0x0; // TODO
-        let voladjspd_eth_call_lpt = 15; // TODO check, no increase??
-        let voladjspd_eth_call_lpt = 25000; // TODO check, no increase?? // also BTC put pool
+        let amm_class: ClassHash = 0x0.try_into().unwrap(); // TODO
+        let voladjspd_eth_call_lpt: felt252 = 15; // TODO check, no increase??
+        let voladjspd_eth_put_lpt: felt252 = 25000; // TODO check, no increase?? // also BTC put pool
         // 1 BTC voladjspd for btc call pool
 
         let mut state = Governance::unsafe_new_contract_state();
@@ -247,9 +223,10 @@ mod Deploy_AMM {
         let eth_addr: ContractAddress = 0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7.try_into().unwrap();
         let btc_addr: ContractAddress = 0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5a7c771641e8e7ac.try_into().unwrap();
 
-        let mut amm_calldata: Array<felt252> = ArrayTrait();
-        amm_calldata.append(governance_addr);
-        let amm_addr = deploy_syscall(amm_class, 42, amm_calldata.span(), false);
+        let mut amm_calldata = ArrayTrait::<felt252>::new();
+        amm_calldata.append(governance_addr.into());
+        let amm_deploy_retval = deploy_syscall(amm_class, 42, amm_calldata.span(), false);
+        let (amm_addr, _) = amm_deploy_retval.unwrap_syscall();
         state.amm_address.write(amm_addr);
         let amm = IAMMDispatcher{ contract_address: amm_addr };
 
@@ -259,17 +236,19 @@ mod Deploy_AMM {
         let btc_call_lpt_addr = deploy_lptoken(amm, 'Carmine BTC/USDC call pool', 'C-BTCUSDC-C', usdc_addr, btc_addr, 0, FixedTrait::ONE());
         let btc_put_lpt_addr = deploy_lptoken(amm, 'Carmine BTC/USDC put pool', 'C-BTCUSDC-P', usdc_addr, btc_addr, 1, FixedTrait::from_unscaled_felt(voladjspd_eth_put_lpt));
 
-        
+
     }
 
-    fn deploy_lptoken(amm: IAMMDispatcherTrait, name: felt252, symbol: felt252, quote_token_address: ContractAddress, base_token_address: ContractAddress, option_type: OptionType, voladjspd: Fixed) -> ContractAddress {
-        let lptoken_class: ClassHash = 0x0; // TODO
-        let mut lpt_calldata: Array<felt252> = ArrayTrait();
+    fn deploy_lptoken(amm: IAMMDispatcher, name: felt252, symbol: felt252, quote_token_address: ContractAddress, base_token_address: ContractAddress, option_type: OptionType, voladjspd: Fixed) -> ContractAddress {
+        let lptoken_class: ClassHash = 0x0.try_into().unwrap(); // TODO
+        let mut lpt_calldata: Array<felt252> = ArrayTrait::<felt252>::new();
         lpt_calldata.append('Carmine ETH/USDC call pool');
         lpt_calldata.append('C-ETHUSDC-C');
-        lpt_calldata.append(governance_addr);
-        let lpt_addr = deploy_syscall(lptoken_class, 0, lpt_calldata.span(), false);
-        amm.add_lptoken(quote_token_address, base_token_address, option_type, lpt_addr, voladjspd, u256::max());
+        let governance_addr = get_contract_address();
+        lpt_calldata.append(governance_addr.into());
+        let deploy_retval = deploy_syscall(lptoken_class, 0, lpt_calldata.span(), false);
+        let (lpt_addr, _) = deploy_retval.unwrap_syscall();
+        amm.add_lptoken(quote_token_address, base_token_address, option_type, lpt_addr, voladjspd, BoundedInt::max());
 
         lpt_addr
     }
