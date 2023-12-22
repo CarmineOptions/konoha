@@ -7,6 +7,7 @@ cairo-version = "2.1.1"
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest
 
 [dependencies]
+cubit = { git = "https://github.com/influenceth/cubit.git", commit = "b4590530d5aeae9aabd36740cc2a3d9e6adc5fde" }
 starknet = ">=1.1.0"
 snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", commit = "acdd4a573cf6a89647f48124e75074674f844f47"}
 
