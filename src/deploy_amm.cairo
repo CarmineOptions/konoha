@@ -1,44 +1,17 @@
 mod Deploy_AMM {
     use core::traits::TryInto;
-use core::starknet::SyscallResultTrait;
+    use core::starknet::SyscallResultTrait;
     use cubit::f128::types::{Fixed, FixedTrait};
-#[starknet::interface]
-    trait IAMM<TContractState> {
-        fn set_trading_halt(ref self: TContractState, new_status: bool);
-        fn get_trading_halt(self: @TContractState) -> bool;
-        fn set_trading_halt_permission(
-            ref self: TContractState, address: ContractAddress, permission: bool
-        );
-        fn get_trading_halt_permission(self: @TContractState, address: ContractAddress) -> bool;
-        fn add_lptoken(
-            ref self: TContractState,
-            quote_token_address: ContractAddress,
-            base_token_address: ContractAddress,
-            option_type: OptionType,
-            lptoken_address: ContractAddress,
-            volatility_adjustment_speed: Fixed,
-            max_lpool_bal: u256,
-        );
-        fn add_option_both_sides(
-            ref self: TContractState,
-            maturity: u64,
-            strike_price: Fixed,
-            quote_token_address: ContractAddress,
-            base_token_address: ContractAddress,
-            option_type: OptionType,
-            lptoken_address: ContractAddress,
-            option_token_address_long: ContractAddress,
-            option_token_address_short: ContractAddress,
-            initial_volatility: Fixed
-        );
-    }
+
+    use governance::traits::{
+        IAMMDispatcher, IAMMDispatcherTrait
+    };
 
     use starknet::syscalls::deploy_syscall;
     use starknet::{ClassHash, ContractAddress};
     use starknet::info::get_contract_address;
     use array::ArrayTrait;
     use integer::BoundedInt;
-
 
 
     use governance::amm_types::basic::{OptionType, OptionSide};
@@ -90,7 +63,7 @@ use core::starknet::SyscallResultTrait;
         let deploy_retval = deploy_syscall(lptoken_class, 0, lpt_calldata.span(), false);
         let (lpt_addr, _) = deploy_retval.unwrap_syscall();
         let voladj_new = voladjspd;
-        amm.add_lptoken(quote_token_address, base_token_address, option_type, lpt_addr, voladj_new, BoundedInt::max());
+        amm.add_lptoken(quote_token_address, base_token_address, option_type.into(), lpt_addr, voladj_new, BoundedInt::max());
 
         lpt_addr
     }
