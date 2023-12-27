@@ -1,5 +1,6 @@
 mod Deploy_AMM {
-    use core::starknet::SyscallResultTrait;
+    use core::traits::TryInto;
+use core::starknet::SyscallResultTrait;
     use cubit::f128::types::{Fixed, FixedTrait};
 #[starknet::interface]
     trait IAMM<TContractState> {
@@ -38,7 +39,7 @@ mod Deploy_AMM {
     use array::ArrayTrait;
     use integer::BoundedInt;
 
-    
+
 
     use governance::amm_types::basic::{OptionType, OptionSide};
     use governance::contract::Governance;
@@ -76,7 +77,7 @@ mod Deploy_AMM {
         let btc_call_lpt_addr = deploy_lptoken(amm, 'Carmine BTC/USDC call pool', 'C-BTCUSDC-C', usdc_addr, btc_addr, 0, FixedTrait::ONE());
         let btc_put_lpt_addr = deploy_lptoken(amm, 'Carmine BTC/USDC put pool', 'C-BTCUSDC-P', usdc_addr, btc_addr, 1, FixedTrait::from_unscaled_felt(voladjspd_eth_put_lpt));
 
-        // TODO set trading halt permission
+        set_trading_halt_permissions(amm);
     }
 
     fn deploy_lptoken(amm: IAMMDispatcher, name: felt252, symbol: felt252, quote_token_address: ContractAddress, base_token_address: ContractAddress, option_type: OptionType, voladjspd: Fixed) -> ContractAddress {
@@ -92,5 +93,23 @@ mod Deploy_AMM {
         amm.add_lptoken(quote_token_address, base_token_address, option_type, lpt_addr, voladj_new, BoundedInt::max());
 
         lpt_addr
+    }
+
+    fn set_trading_halt_permissions(amm: IAMMDispatcher) {
+        let mut team_addresses: Array<felt252> = ArrayTrait::new();
+        team_addresses.append(0x0583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1); // Ondra
+        team_addresses.append(0x06717eaf502baac2b6b2c6ee3ac39b34a52e726a73905ed586e757158270a0af); // Andrej
+        team_addresses.append(0x0011d341c6e841426448ff39aa443a6dbb428914e05ba2259463c18308b86233); // Marek
+        team_addresses.append(0x00d79a15d84f5820310db21f953a0fae92c95e25d93cb983cc0c27fc4c52273c); // Marek second
+        team_addresses.append(0x03d1525605db970fa1724693404f5f64cba8af82ec4aab514e6ebd3dec4838ad); // David
+
+        loop {
+            match team_addresses.pop_front() {
+                Option::Some(team_address) => {
+                    amm.set_trading_halt_permission(team_address.try_into().expect('invalid addr'), true);
+                },
+                Option::None(()) => { break (); },
+            };
+        }
     }
 }
