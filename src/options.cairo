@@ -127,7 +127,7 @@ mod Options {
                 o.lptoken_address,
                 optoken_long_addr,
                 optoken_short_addr,
-                FixedTrait::from_felt(o.initial_volatility.mag.into())
+                o.initial_volatility
             );
     }
 
