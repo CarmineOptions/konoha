@@ -18,6 +18,7 @@ mod Deploy_AMM {
     use governance::contract::Governance;
     use governance::contract::Governance::proposal_initializer_runContractMemberStateTrait;
     use governance::contract::Governance::amm_addressContractMemberStateTrait;
+    use governance::options::Options;
     
 
     // Deploys new AMM, sets AMM address storage var to new AMM, adds lptokens, etc etc etc
@@ -51,6 +52,8 @@ mod Deploy_AMM {
         let btc_put_lpt_addr = deploy_lptoken(amm, 'Carmine BTC/USDC put pool', 'C-BTCUSDC-P', usdc_addr, btc_addr, 1, FixedTrait::from_unscaled_felt(voladjspd_eth_put_lpt));
 
         set_trading_halt_permissions(amm);
+
+        Options::add_1201_options(eth_call_lpt_addr, eth_put_lpt_addr, btc_call_lpt_addr, btc_put_lpt_addr);
     }
 
     fn deploy_lptoken(amm: IAMMDispatcher, name: felt252, symbol: felt252, quote_token_address: ContractAddress, base_token_address: ContractAddress, option_type: OptionType, voladjspd: Fixed) -> ContractAddress {
