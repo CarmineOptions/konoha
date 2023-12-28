@@ -21,7 +21,7 @@ mod Options {
     use cubit::f128::types::{Fixed, FixedTrait};
 
     use governance::contract::Governance::{amm_address, proposal_initializer_run};
-    use governance::constants::{OPTION_CALL, OPTION_PUT, TRADE_SIDE_LONG, TRADE_SIDE_SHORT};
+    use governance::constants::{OPTION_CALL, OPTION_PUT, TRADE_SIDE_LONG, TRADE_SIDE_SHORT, OPTION_TOKEN_CLASS_HASH};
     use governance::traits::{
         IAMMDispatcher, IAMMDispatcherTrait, IOptionTokenDispatcher, IOptionTokenDispatcherTrait
     };
@@ -65,10 +65,6 @@ mod Options {
         amm_address: ContractAddress,
         option: @FutureOption
     ) {
-        // TODO check if class hash = compiled_contract_class.json or contract_class.json
-        // starkli class-hash target/dev/carmine_protocol_OptionToken.compiled_contract_class.json
-        let opt_class: felt252 = 0x07fc0b6ecc96a698cdac8c4ae447816d73bffdd9603faacffc0a8047149d02ed;
-
         let o = *option;
 
         // mainnet
@@ -89,7 +85,7 @@ mod Options {
             + o.option_type
             + o.lptoken_address.into();
 
-        let opt_class_hash: ClassHash = opt_class.try_into().unwrap();
+        let opt_class_hash: ClassHash = OPTION_TOKEN_CLASS_HASH.try_into().unwrap();
         let mut optoken_long_calldata = array![];
         optoken_long_calldata.append(o.name_long);
         optoken_long_calldata.append('C-OPT');

@@ -19,5 +19,7 @@ const BTC_ADDRESS: felt252 = 0x03fe2b97c1fd336e750087d68b9b867997fd64a2661ff3ca5
 
 // CLASS HASHES
 
-const LP_TOKEN_CLASS_HASH: felt252 = 0x0; // TODO
-const AMM_CLASS_HASH: felt252 = 0x0; // TODO
+// corresponds to commit 7b7db57419fdb25b93621fbea6a845005f7725d0 in protocol-cairo1 repo, branch audit-fixes
+const LP_TOKEN_CLASS_HASH: felt252 = 0x06d15bc862ce48375ec98fea84d76ca67b7ac5978d80c848fa5496108783fbc2;
+const AMM_CLASS_HASH: felt252 = 0x045fb686c8875f31966e7308d71c03e9ae78f9566a61870a2b616dc225dd3313;
+const OPTION_TOKEN_CLASS_HASH: felt252 = 0x07fc0b6ecc96a698cdac8c4ae447816d73bffdd9603faacffc0a8047149d02ed;
