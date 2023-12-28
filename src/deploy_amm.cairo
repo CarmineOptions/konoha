@@ -122,22 +122,22 @@ mod DeployAMM {
     }
 
     fn set_trading_halt_permissions(amm: IAMMDispatcher) {
-        let mut team_addresses: Array<felt252> = ArrayTrait::new();
-        team_addresses
+        let mut halting_addresses: Array<felt252> = ArrayTrait::new();
+        halting_addresses
             .append(0x0583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1); // Ondra
-        team_addresses
+        halting_addresses
             .append(0x06717eaf502baac2b6b2c6ee3ac39b34a52e726a73905ed586e757158270a0af); // Andrej
-        team_addresses
+        halting_addresses
             .append(0x0011d341c6e841426448ff39aa443a6dbb428914e05ba2259463c18308b86233); // Marek
-        team_addresses
+        halting_addresses
             .append(
                 0x00d79a15d84f5820310db21f953a0fae92c95e25d93cb983cc0c27fc4c52273c
             ); // Marek second
-        team_addresses
+        halting_addresses
             .append(0x03d1525605db970fa1724693404f5f64cba8af82ec4aab514e6ebd3dec4838ad); // David
 
         loop {
-            match team_addresses.pop_front() {
+            match halting_addresses.pop_front() {
                 Option::Some(team_address) => {
                     amm
                         .set_trading_halt_permission(
