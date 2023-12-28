@@ -40,7 +40,7 @@ mod Governance {
     use governance::types::ContractType;
     use governance::types::PropDetails;
     use governance::upgrades::Upgrades;
-    use governance::deploy_amm::Deploy_AMM;
+    use governance::deploy_amm::DeployAMM;
     use governance::airdrop::airdrop as airdrop_component;
 
     use starknet::ContractAddress;
@@ -145,7 +145,7 @@ mod Governance {
         }
 
         fn deploy_new_amm(ref self: ContractState) {
-            Deploy_AMM::deploy_amm()
+            DeployAMM::deploy_amm()
         }
     }
 }
