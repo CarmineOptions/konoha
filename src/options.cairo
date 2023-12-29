@@ -100,15 +100,15 @@ mod Options {
         let (optoken_long_addr, _) = deploy_retval.unwrap_syscall();
 
         let mut optoken_short_calldata = array![];
-        optoken_long_calldata.append(o.name_short);
-        optoken_long_calldata.append('C-OPT');
-        optoken_long_calldata.append(amm_address.into());
-        optoken_long_calldata.append(quote_token_address);
-        optoken_long_calldata.append(base_token_address);
-        optoken_long_calldata.append(o.option_type);
-        optoken_long_calldata.append(o.strike_price.mag.into());
-        optoken_long_calldata.append(o.maturity);
-        optoken_long_calldata.append(TRADE_SIDE_SHORT);
+        optoken_short_calldata.append(o.name_short);
+        optoken_short_calldata.append('C-OPT');
+        optoken_short_calldata.append(amm_address.into());
+        optoken_short_calldata.append(quote_token_address);
+        optoken_short_calldata.append(base_token_address);
+        optoken_short_calldata.append(o.option_type);
+        optoken_short_calldata.append(o.strike_price.mag.into());
+        optoken_short_calldata.append(o.maturity);
+        optoken_short_calldata.append(TRADE_SIDE_SHORT);
         let deploy_retval = deploy_syscall(opt_class_hash, custom_salt+2, optoken_short_calldata.span(), false);
         let (optoken_short_addr, _) = deploy_retval.unwrap_syscall();
 
@@ -116,7 +116,7 @@ mod Options {
         IAMMDispatcher { contract_address: amm_address }
             .add_option_both_sides(
                 o.maturity.try_into().unwrap(),
-                FixedTrait::from_felt(o.strike_price.mag.into()),
+                o.strike_price,
                 quote_token_address.try_into().unwrap(),
                 base_token_address.try_into().unwrap(),
                 o.option_type,
