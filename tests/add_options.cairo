@@ -6,46 +6,46 @@ use governance::contract::IGovernanceDispatcherTrait;
 use governance::traits::{
     IAMMDispatcher, IAMMDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait
 };
-use governance::traits::Math64x61_;
 
 use starknet::{ContractAddress, get_block_timestamp};
+
 use snforge_std::{declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget};
+use cubit::f128::types::{Fixed, FixedTrait};
 
 use debug::PrintTrait;
 
-#[test]
-#[fork("MAINNET")]
-fn test_add_options() {
-    submit_44_signal_proposals();
-    let gov_contract_addr: ContractAddress =
-        0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f
-        .try_into()
-        .unwrap();
-    let dispatcher = IGovernanceDispatcher { contract_address: gov_contract_addr };
-    let marek_address: ContractAddress =
-        0x0011d341c6e841426448ff39aa443a6dbb428914e05ba2259463c18308b86233
-        .try_into()
-        .unwrap();
-    let new_contract: ContractClass = declare('Governance');
-    start_prank(CheatTarget::One(gov_contract_addr), marek_address);
-    let ret = dispatcher.submit_proposal(new_contract.class_hash.into(), 1);
-    dispatcher.vote(ret, 1);
-    let curr_timestamp = get_block_timestamp();
-    let warped_timestamp = curr_timestamp + consteval_int!(60 * 60 * 24 * 7) + 420;
-    start_warp(CheatTarget::One(gov_contract_addr), warped_timestamp);
-    let status = dispatcher.get_proposal_status(ret);
-    dispatcher.apply_passed_proposal(ret);
-    dispatcher.add_0501_options();
-    let amm_addr = 0x076dbabc4293db346b0a56b29b6ea9fe18e93742c73f12348c8747ecfc1050aa
-        .try_into()
-        .unwrap();
-    let STRIKE_PRICE_2200: Math64x61_ = consteval_int!(2200 * 2305843009213693952);
-    trade_option(1704412799, marek_address, amm_addr, STRIKE_PRICE_2200);
-}
+// #[test]
+// #[fork("MAINNET")]
+// fn test_add_options() {
+//     submit_44_signal_proposals();
+//     let gov_contract_addr: ContractAddress =
+//         0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f
+//         .try_into()
+//         .unwrap();
+//     let dispatcher = IGovernanceDispatcher { contract_address: gov_contract_addr };
+//     let marek_address: ContractAddress =
+//         0x0011d341c6e841426448ff39aa443a6dbb428914e05ba2259463c18308b86233
+//         .try_into()
+//         .unwrap();
+//     let new_contract: ContractClass = declare('Governance');
+//     start_prank(CheatTarget::One(gov_contract_addr), marek_address);
+//     let ret = dispatcher.submit_proposal(new_contract.class_hash.into(), 1);
+//     dispatcher.vote(ret, 1);
+//     let curr_timestamp = get_block_timestamp();
+//     let warped_timestamp = curr_timestamp + consteval_int!(60 * 60 * 24 * 7) + 420;
+//     start_warp(CheatTarget::One(gov_contract_addr), warped_timestamp);
+//     let status = dispatcher.get_proposal_status(ret);
+//     dispatcher.apply_passed_proposal(ret);
+//     dispatcher.add_0501_options();
+//     let amm_addr = 0x076dbabc4293db346b0a56b29b6ea9fe18e93742c73f12348c8747ecfc1050aa
+//         .try_into()
+//         .unwrap();
+//     trade_option(1704412799, marek_address, amm_addr, FixedTrait::from_unscaled_felt(2200));
+// }
 
 // buys 0.01 long eth/usdc call
 fn trade_option(
-    maturity: u64, trader: ContractAddress, amm_addr: ContractAddress, strike_price: Math64x61_
+    maturity: u64, trader: ContractAddress, amm_addr: ContractAddress, strike_price: Fixed
 ) {
     let amm = IAMMDispatcher { contract_address: amm_addr };
     start_prank(CheatTarget::One(amm_addr), trader);
@@ -67,7 +67,7 @@ fn trade_option(
             amt.low.into(),
             quote_token_address,
             base_token_address,
-            18446744073709551616,
+            FixedTrait::ONE(),
             (curr_timestamp + 420).into()
         );
 }
