@@ -24,11 +24,11 @@ mod DeployAMM {
 
     // Deploys new AMM, sets AMM address storage var to new AMM, adds lptokens, etc etc etc
     fn deploy_amm() {
-        let amm_class: ClassHash = AMM_CLASS_HASH.try_into().unwrap(); // TODO
+        let amm_class: ClassHash = AMM_CLASS_HASH.try_into().unwrap();
         let voladjspd_eth_call_lpt: felt252 = 15; // TODO check, no increase??
         let voladjspd_eth_put_lpt: felt252 =
-            25000; // TODO check, no increase?? // also BTC put pool
-        // 1 BTC voladjspd for btc call pool
+            25000; // also BTC put pool
+        let voladjspd_btc_call_lpt: Fixed = FixedTrait::ONE() / FixedTrait::from_unscaled_felt(2); // 0.5 BTC voladjspd for btc call pool
 
         let mut state = Governance::unsafe_new_contract_state();
         assert(!state.proposal_initializer_run.read(45), 'prop already initialized');
@@ -71,7 +71,7 @@ mod DeployAMM {
             usdc_addr,
             btc_addr,
             0,
-            FixedTrait::ONE()
+            voladjspd_btc_call_lpt
         );
         let btc_put_lpt_addr = deploy_lptoken(
             amm,
@@ -101,20 +101,19 @@ mod DeployAMM {
     ) -> ContractAddress {
         let lptoken_class: ClassHash = LP_TOKEN_CLASS_HASH.try_into().unwrap();
         let mut lpt_calldata: Array<felt252> = ArrayTrait::<felt252>::new();
-        lpt_calldata.append('Carmine ETH/USDC call pool');
-        lpt_calldata.append('C-ETHUSDC-C');
+        lpt_calldata.append(name);
+        lpt_calldata.append(symbol);
         let governance_addr = get_contract_address();
-        lpt_calldata.append(governance_addr.into());
+        lpt_calldata.append(amm.contract_address.into());
         let deploy_retval = deploy_syscall(lptoken_class, 0, lpt_calldata.span(), false);
         let (lpt_addr, _) = deploy_retval.unwrap_syscall();
-        let voladj_new = voladjspd;
         amm
             .add_lptoken(
                 quote_token_address,
                 base_token_address,
                 option_type.into(),
                 lpt_addr,
-                voladj_new,
+                voladjspd,
                 BoundedInt::max()
             );
 
