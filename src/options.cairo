@@ -21,7 +21,9 @@ mod Options {
     use cubit::f128::types::{Fixed, FixedTrait};
 
     use governance::contract::Governance::{amm_address, proposal_initializer_run};
-    use governance::constants::{OPTION_CALL, OPTION_PUT, TRADE_SIDE_LONG, TRADE_SIDE_SHORT, OPTION_TOKEN_CLASS_HASH};
+    use governance::constants::{
+        OPTION_CALL, OPTION_PUT, TRADE_SIDE_LONG, TRADE_SIDE_SHORT, OPTION_TOKEN_CLASS_HASH
+    };
     use governance::traits::{
         IAMMDispatcher, IAMMDispatcherTrait, IOptionTokenDispatcher, IOptionTokenDispatcherTrait
     };
@@ -30,6 +32,7 @@ mod Options {
     use governance::types::OptionType;
     use governance::contract::Governance::proposal_initializer_runContractMemberStateTrait;
 
+
     fn add_options(mut options: Span<FutureOption>) {
         // TODO use block hash from block_hash syscall as salt // actually doable with the new syscall
         let governance_address = get_contract_address();
@@ -37,11 +40,7 @@ mod Options {
         let amm_address = state.get_amm_address();
         loop {
             match options.pop_front() {
-                Option::Some(option) => {
-                    add_option(
-                        governance_address, amm_address, option
-                    );
-                },
+                Option::Some(option) => { add_option(governance_address, amm_address, option); },
                 Option::None(()) => { break (); },
             };
         }
@@ -61,9 +60,7 @@ mod Options {
     }
 
     fn add_option(
-        governance_address: ContractAddress,
-        amm_address: ContractAddress,
-        option: @FutureOption
+        governance_address: ContractAddress, amm_address: ContractAddress, option: @FutureOption
     ) {
         let o = *option;
 
@@ -77,7 +74,7 @@ mod Options {
         } else {
             ETH_addr
         };
-        
+
         // Yes, this 'overflows', but it's expected and wanted.
         let custom_salt: felt252 = 42
             + o.strike_price.mag.into()
@@ -96,7 +93,9 @@ mod Options {
         optoken_long_calldata.append(o.strike_price.mag.into());
         optoken_long_calldata.append(o.maturity);
         optoken_long_calldata.append(TRADE_SIDE_LONG);
-        let deploy_retval = deploy_syscall(opt_class_hash, custom_salt+1, optoken_long_calldata.span(), false);
+        let deploy_retval = deploy_syscall(
+            opt_class_hash, custom_salt + 1, optoken_long_calldata.span(), false
+        );
         let (optoken_long_addr, _) = deploy_retval.unwrap_syscall();
 
         let mut optoken_short_calldata = array![];
@@ -109,9 +108,10 @@ mod Options {
         optoken_short_calldata.append(o.strike_price.mag.into());
         optoken_short_calldata.append(o.maturity);
         optoken_short_calldata.append(TRADE_SIDE_SHORT);
-        let deploy_retval = deploy_syscall(opt_class_hash, custom_salt+2, optoken_short_calldata.span(), false);
+        let deploy_retval = deploy_syscall(
+            opt_class_hash, custom_salt + 2, optoken_short_calldata.span(), false
+        );
         let (optoken_short_addr, _) = deploy_retval.unwrap_syscall();
-
 
         IAMMDispatcher { contract_address: amm_address }
             .add_option_both_sides(
@@ -128,8 +128,13 @@ mod Options {
     }
 
 
-    fn add_1201_options(eth_lpt_addr: ContractAddress, eth_usdc_lpt_addr: ContractAddress, btc_lpt_addr: ContractAddress, btc_usdc_lpt_addr: ContractAddress) {
-        let MATURITY: felt252 = 1705017599;
+    fn add_1901_options(
+        eth_lpt_addr: ContractAddress,
+        eth_usdc_lpt_addr: ContractAddress,
+        btc_lpt_addr: ContractAddress,
+        btc_usdc_lpt_addr: ContractAddress
+    ) {
+        let MATURITY: felt252 = 1705622399;
 
         let point_five = FixedTrait::ONE() / FixedTrait::from_unscaled_felt(2);
 
@@ -137,66 +142,66 @@ mod Options {
         to_add
             .append(
                 FutureOption {
-                    name_long: 'ETHUSDC-12JAN24-2300-LONG-CALL',
-                    name_short: 'ETHUSDC-12JAN24-2300-SHORT-CALL',
+                    name_long: 'ETHUSDC-19JAN24-2300-LONG-CALL',
+                    name_short: 'ETHUSDC-19JAN24-2300-SHORT-CALL',
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(2300),
                     option_type: OPTION_CALL,
                     lptoken_address: eth_lpt_addr,
                     btc: false,
-                    initial_volatility: FixedTrait::from_unscaled_felt(62)
+                    initial_volatility: FixedTrait::from_unscaled_felt(70)
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name_long: 'ETHUSDC-12JAN24-2400-LONG-CALL',
-                    name_short: 'ETHUSDC-12JAN24-2400-SHORT-CALL',
+                    name_long: 'ETHUSDC-19JAN24-2400-LONG-CALL',
+                    name_short: 'ETHUSDC-19JAN24-2400-SHORT-CALL',
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(2400),
                     option_type: OPTION_CALL,
                     lptoken_address: eth_lpt_addr,
                     btc: false,
-                    initial_volatility: FixedTrait::from_unscaled_felt(62) + point_five
+                    initial_volatility: FixedTrait::from_unscaled_felt(70) + point_five
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name_long: 'ETHUSDC-12JAN24-2500-LONG-CALL',
-                    name_short: 'ETHUSDC-12JAN24-2500-SHORT-CALL',
+                    name_long: 'ETHUSDC-19JAN24-2500-LONG-CALL',
+                    name_short: 'ETHUSDC-19JAN24-2500-SHORT-CALL',
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(2500),
                     option_type: OPTION_CALL,
                     lptoken_address: eth_lpt_addr,
                     btc: false,
-                    initial_volatility: FixedTrait::from_unscaled_felt(64)
+                    initial_volatility: FixedTrait::from_unscaled_felt(72)
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name_long: 'ETHUSDC-12JAN24-2300-LONG-PUT',
-                    name_short: 'ETHUSDC-12JAN24-2300-SHORT-PUT',
-                    maturity: MATURITY,
-                    strike_price: FixedTrait::from_unscaled_felt(2300),
-                    option_type: OPTION_PUT,
-                    lptoken_address: eth_usdc_lpt_addr,
-                    btc: false,
-                    initial_volatility: FixedTrait::from_unscaled_felt(62)
-                }
-            );
-        to_add
-            .append(
-                FutureOption {
-                    name_long: 'ETHUSDC-12JAN24-2200-LONG-PUT',
-                    name_short: 'ETHUSDC-12JAN24-2200-SHORT-PUT',
+                    name_long: 'ETHUSDC-19JAN24-2200-LONG-PUT',
+                    name_short: 'ETHUSDC-19JAN24-2200-SHORT-PUT',
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(2200),
                     option_type: OPTION_PUT,
                     lptoken_address: eth_usdc_lpt_addr,
                     btc: false,
-                    initial_volatility: FixedTrait::from_unscaled_felt(62)
+                    initial_volatility: FixedTrait::from_unscaled_felt(70) + point_five
+                }
+            );
+        to_add
+            .append(
+                FutureOption {
+                    name_long: 'ETHUSDC-19JAN24-2100-LONG-PUT',
+                    name_short: 'ETHUSDC-19JAN24-2100-SHORT-PUT',
+                    maturity: MATURITY,
+                    strike_price: FixedTrait::from_unscaled_felt(2100),
+                    option_type: OPTION_PUT,
+                    lptoken_address: eth_usdc_lpt_addr,
+                    btc: false,
+                    initial_volatility: FixedTrait::from_unscaled_felt(72)
                 }
             );
 
@@ -205,56 +210,75 @@ mod Options {
         to_add
             .append(
                 FutureOption {
-                    name_long: 'BTCUSD-12JAN24-44000-LONG-CALL',
-                    name_short: 'BTCUSD-12JAN24-44000-SHORT-CALL',
+                    name_long: 'BTCUSD-19JAN24-44000-LONG-CALL',
+                    name_short: 'BTCUSD-19JAN24-44000-SHORT-CALL',
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(44000),
                     option_type: OPTION_CALL,
                     lptoken_address: btc_lpt_addr,
                     btc: true,
-                    initial_volatility: FixedTrait::from_unscaled_felt(62) + point_five
+                    initial_volatility: FixedTrait::from_unscaled_felt(74) + point_five
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name_long: 'BTCUSD-12JAN24-45000-LONG-CALL',
-                    name_short: 'BTCUSD-12JAN24-45000-SHORT-CALL',
+                    name_long: 'BTCUSD-19JAN24-45000-LONG-CALL',
+                    name_short: 'BTCUSD-19JAN24-45000-SHORT-CALL',
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(45000),
                     option_type: OPTION_CALL,
                     lptoken_address: btc_lpt_addr,
                     btc: true,
-                    initial_volatility: FixedTrait::from_unscaled_felt(63) + point_five
+                    initial_volatility: FixedTrait::from_unscaled_felt(75)
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name_long: 'BTCUSD-12JAN24-43000-LONG-PUT',
-                    name_short: 'BTCUSD-12JAN24-43000-SHORT-PUT',
+                    name_long: 'BTCUSD-19JAN24-43000-LONG-PUT',
+                    name_short: 'BTCUSD-19JAN24-43000-SHORT-PUT',
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(43000),
                     option_type: OPTION_PUT,
                     lptoken_address: btc_usdc_lpt_addr,
                     btc: true,
-                    initial_volatility: FixedTrait::from_unscaled_felt(62)
+                    initial_volatility: FixedTrait::from_unscaled_felt(74)
                 }
             );
         to_add
             .append(
                 FutureOption {
-                    name_long: 'BTCUSD-12JAN24-42000-LONG-PUT',
-                    name_short: 'BTCUSD-12JAN24-42000-SHORT-PUT',
+                    name_long: 'BTCUSD-19JAN24-42000-LONG-PUT',
+                    name_short: 'BTCUSD-19JAN24-42000-SHORT-PUT',
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(42000),
                     option_type: OPTION_PUT,
                     lptoken_address: btc_usdc_lpt_addr,
                     btc: true,
-                    initial_volatility: FixedTrait::from_unscaled_felt(62)
+                    initial_volatility: FixedTrait::from_unscaled_felt(75)
                 }
             );
 
         add_options(to_add.span())
+    }
+
+    fn run_add_1901_options() {
+        let mut state = Governance::unsafe_new_contract_state();
+
+        assert(!state.proposal_initializer_run.read(46), 'prop already initialized');
+        state.proposal_initializer_run.write(46, true);
+
+        let amm_address = state.get_amm_address();
+
+        // LP_ADDRESSES are ETH/USDC CALL, ETH/USDC PUT, BTC/USDC CALL, BTC/USDC PUT
+        let lp_addresses = IAMMDispatcher { contract_address: amm_address }
+            .get_all_lptoken_addresses();
+
+        assert(lp_addresses.len() == 4, 'unexpected lp_addresses length');
+
+        add_1901_options(
+            *lp_addresses.at(0), *lp_addresses.at(1), *lp_addresses.at(2), *lp_addresses.at(3)
+        );
     }
 }
