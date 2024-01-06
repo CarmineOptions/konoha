@@ -2,9 +2,11 @@ use starknet::{ClassHash, ContractAddress};
 
 use governance::types::OptionSide;
 use governance::types::OptionType;
+use governance::amm_types::option::{Option_, OptionWithPremia};
 
 use core::starknet::SyscallResultTrait;
 use cubit::f128::types::{Fixed, FixedTrait};
+
 
 #[starknet::interface]
 trait IERC20<TContractState> {
@@ -106,10 +108,10 @@ trait IAMM<TContractState> {
         self: @TContractState, lptoken_addr: ContractAddress, lpt_amt: u256
     ) -> u256;
     fn get_available_lptoken_addresses(self: @TContractState, order_i: felt252) -> ContractAddress;
-    // fn get_all_options(self: @TContractState, lptoken_address: ContractAddress) -> Array<Option_>;
-    // fn get_all_non_expired_options_with_premia(
-    //     self: @TContractState, lptoken_address: ContractAddress
-    // ) -> Array<OptionWithPremia>;
+    fn get_all_options(self: @TContractState, lptoken_address: ContractAddress) -> Array<Option_>;
+    fn get_all_non_expired_options_with_premia(
+        self: @TContractState, lptoken_address: ContractAddress
+    ) -> Array<OptionWithPremia>;
     // fn get_option_with_position_of_user(
     //     self: @TContractState, user_address: ContractAddress
     // ) -> Array<OptionWithUsersPosition>;

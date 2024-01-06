@@ -1,6 +1,7 @@
 mod airdrop;
 mod amm_types {
     mod basic;
+    mod option;
 }
 mod constants;
 mod contract;

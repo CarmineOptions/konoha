@@ -129,10 +129,10 @@ mod Options {
 
 
     fn add_1901_options(
-        eth_lpt_addr: ContractAddress,
-        eth_usdc_lpt_addr: ContractAddress,
-        btc_lpt_addr: ContractAddress,
-        btc_usdc_lpt_addr: ContractAddress
+        eth_usdc_call_address: ContractAddress,
+        eth_usdc_put_address: ContractAddress,
+        btc_usdc_call_address: ContractAddress,
+        btc_usdc_put_address: ContractAddress
     ) {
         let MATURITY: felt252 = 1705622399;
 
@@ -147,7 +147,7 @@ mod Options {
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(2300),
                     option_type: OPTION_CALL,
-                    lptoken_address: eth_lpt_addr,
+                    lptoken_address: eth_usdc_call_address,
                     btc: false,
                     initial_volatility: FixedTrait::from_unscaled_felt(70)
                 }
@@ -160,7 +160,7 @@ mod Options {
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(2400),
                     option_type: OPTION_CALL,
-                    lptoken_address: eth_lpt_addr,
+                    lptoken_address: eth_usdc_call_address,
                     btc: false,
                     initial_volatility: FixedTrait::from_unscaled_felt(70) + point_five
                 }
@@ -173,7 +173,7 @@ mod Options {
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(2500),
                     option_type: OPTION_CALL,
-                    lptoken_address: eth_lpt_addr,
+                    lptoken_address: eth_usdc_call_address,
                     btc: false,
                     initial_volatility: FixedTrait::from_unscaled_felt(72)
                 }
@@ -186,7 +186,7 @@ mod Options {
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(2200),
                     option_type: OPTION_PUT,
-                    lptoken_address: eth_usdc_lpt_addr,
+                    lptoken_address: eth_usdc_put_address,
                     btc: false,
                     initial_volatility: FixedTrait::from_unscaled_felt(70) + point_five
                 }
@@ -199,7 +199,7 @@ mod Options {
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(2100),
                     option_type: OPTION_PUT,
-                    lptoken_address: eth_usdc_lpt_addr,
+                    lptoken_address: eth_usdc_put_address,
                     btc: false,
                     initial_volatility: FixedTrait::from_unscaled_felt(72)
                 }
@@ -215,7 +215,7 @@ mod Options {
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(44000),
                     option_type: OPTION_CALL,
-                    lptoken_address: btc_lpt_addr,
+                    lptoken_address: btc_usdc_call_address,
                     btc: true,
                     initial_volatility: FixedTrait::from_unscaled_felt(74) + point_five
                 }
@@ -228,7 +228,7 @@ mod Options {
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(45000),
                     option_type: OPTION_CALL,
-                    lptoken_address: btc_lpt_addr,
+                    lptoken_address: btc_usdc_call_address,
                     btc: true,
                     initial_volatility: FixedTrait::from_unscaled_felt(75)
                 }
@@ -241,7 +241,7 @@ mod Options {
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(43000),
                     option_type: OPTION_PUT,
-                    lptoken_address: btc_usdc_lpt_addr,
+                    lptoken_address: btc_usdc_put_address,
                     btc: true,
                     initial_volatility: FixedTrait::from_unscaled_felt(74)
                 }
@@ -254,7 +254,7 @@ mod Options {
                     maturity: MATURITY,
                     strike_price: FixedTrait::from_unscaled_felt(42000),
                     option_type: OPTION_PUT,
-                    lptoken_address: btc_usdc_lpt_addr,
+                    lptoken_address: btc_usdc_put_address,
                     btc: true,
                     initial_volatility: FixedTrait::from_unscaled_felt(75)
                 }

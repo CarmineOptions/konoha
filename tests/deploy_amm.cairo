@@ -48,12 +48,55 @@ fn test_deploy_amm() {
     let quote_token_address: ContractAddress = USDC_addr.try_into().unwrap();
     let base_token_address: ContractAddress = ETH_addr.try_into().unwrap();
 
-    deposit(amm_addr, 1, quote_token_address, base_token_address, 0x0583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1.try_into().unwrap());
-    
-    //trade_option(1705017599, marek_address, amm_addr, FixedTrait::from_unscaled_felt(2200));
+    let amm = IAMMDispatcher { contract_address: amm_addr };
+
+    test_1901_options_added(dispatcher, amm);
+// deposit(amm_addr, 1, quote_token_address, base_token_address, 0x0583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1.try_into().unwrap());
+
+//trade_option(1705017599, marek_address, amm_addr, FixedTrait::from_unscaled_felt(2200));
 }
 
-fn deposit(amm: ContractAddress, amt: u256, quote: ContractAddress, base: ContractAddress, from: ContractAddress) {
+fn test_1901_options_added(governance: IGovernanceDispatcher, amm: IAMMDispatcher) {
+    let lp_addresses = amm.get_all_lptoken_addresses();
+    let eth_usdc_call_lp_address = *lp_addresses.at(0);
+    let eth_usdc_put_lp_address = *lp_addresses.at(1);
+    let btc_usdc_call_lp_address = *lp_addresses.at(2);
+    let btc_usdc_put_lp_address = *lp_addresses.at(3);
+
+    // before adding new options
+
+    let eth_usdc_call_options = amm.get_all_options(eth_usdc_call_lp_address);
+    assert(eth_usdc_call_options.len() == 0, 'eth call before');
+    let eth_usdc_put_options = amm.get_all_options(eth_usdc_put_lp_address);
+    assert(eth_usdc_put_options.len() == 0, 'eth put before');
+    let btc_usdc_call_options = amm.get_all_options(btc_usdc_call_lp_address);
+    assert(btc_usdc_call_options.len() == 0, 'btc call before');
+    let btc_usdc_put_options = amm.get_all_options(btc_usdc_put_lp_address);
+    assert(btc_usdc_put_options.len() == 0, 'btc put before');
+
+    // add new options
+
+    governance.add_1901_options();
+
+    // after adding new options
+
+    let eth_usdc_call_options = amm.get_all_options(eth_usdc_call_lp_address);
+    assert(eth_usdc_call_options.len() == 6, 'eth call after');
+    let eth_usdc_put_options = amm.get_all_options(eth_usdc_put_lp_address);
+    assert(eth_usdc_put_options.len() == 4, 'eth put after');
+    let btc_usdc_call_options = amm.get_all_options(btc_usdc_call_lp_address);
+    assert(btc_usdc_call_options.len() == 4, 'btc call after');
+    let btc_usdc_put_options = amm.get_all_options(btc_usdc_put_lp_address);
+    assert(btc_usdc_put_options.len() == 4, 'btc put after');
+}
+
+fn deposit(
+    amm: ContractAddress,
+    amt: u256,
+    quote: ContractAddress,
+    base: ContractAddress,
+    from: ContractAddress
+) {
     let eth = IERC20Dispatcher { contract_address: base };
     start_prank(CheatTarget::One(base), from);
     eth.approve(amm, amt + 1);
@@ -61,12 +104,7 @@ fn deposit(amm: ContractAddress, amt: u256, quote: ContractAddress, base: Contra
     assert(allowance == amt + 1, 'approve unsuccessful?');
     start_prank(CheatTarget::One(amm), from);
     let amm = IAMMDispatcher { contract_address: amm };
-    amm.deposit_liquidity(
-        base,
-        quote,
-        base,
-        TRADE_SIDE_LONG,
-        amt //4000908584712648
+    amm.deposit_liquidity(base, quote, base, TRADE_SIDE_LONG, amt //4000908584712648
     );
 }
 
