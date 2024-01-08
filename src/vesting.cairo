@@ -1,5 +1,8 @@
 use starknet::ContractAddress;
 
+// To add new vesting schedules, this Component should be part of a Custom proposal which calls add_linear_vesting_schedule or a vesting milestone.
+// This will execute the code from this component in the context of the contract. Only vest() should be exported externally from the contract.
+
 #[starknet::interface]
 trait IVesting<TContractState> {
     fn vest(ref self: TContractState, grantee: ContractAddress, vested_timestamp: u64);
@@ -15,8 +18,6 @@ trait IVesting<TContractState> {
         increments_count: u64,
         total_amount: u128
     );
-// add_linear_vesting_schedule
-// add_cliff_linear_vesting_schedule
 // MAYBE – streaming?
 // MAYBE – options on the govtoken?
 }
@@ -28,7 +29,6 @@ mod vesting {
     use governance::traits::IGovernanceTokenDispatcher;
     use governance::traits::IGovernanceTokenDispatcherTrait;
 
-    // TODO: must depend on Proposals to clarify who has the right to add vesting milestones
     #[storage]
     struct Storage {
         milestone: LegacyMap::<(u64, ContractAddress), u128>
@@ -82,7 +82,6 @@ mod vesting {
             grantee: ContractAddress,
             amount: u128
         ) {
-            // TODO: check if caller is eligible to add vesting milestone or if this is part of a proposal
             self.milestone.write((vested_timestamp, grantee), amount);
             self
                 .emit(
