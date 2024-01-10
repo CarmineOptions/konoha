@@ -2,11 +2,23 @@
 name = "governance"
 description = "A flexible monolithic governance contract, developed for use with Carmine Options AMM"
 version = "0.2.0"
-cairo-version = "2.1.1"
+cairo-version = "2.3.1"
 
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest
 
 [dependencies]
+cubit = { git = "https://github.com/influenceth/cubit.git", commit = "b4590530d5aeae9aabd36740cc2a3d9e6adc5fde" }
 starknet = ">=1.1.0"
+#snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", commit = "acdd4a573cf6a89647f48124e75074674f844f47"}
 
 [[target.starknet-contract]]
+
+[[tool.snforge.fork]]
+name = "MAINNET"
+url = "http://34.22.208.73:6060/"
+block_id.tag = "Latest"
+
+[[tool.snforge.fork]]
+name = "GOERLI"
+url = "https://limited-rpc.nethermind.io/goerli-juno"
+block_id.tag = "Latest"

@@ -1,9 +1,10 @@
-use starknet::ContractAddress;
+use starknet::{ClassHash, ContractAddress};
 
 use governance::types::OptionSide;
 use governance::types::OptionType;
 
-type Math64x61_ = felt252; // legacy, for AMM trait definition
+use core::starknet::SyscallResultTrait;
+use cubit::f128::types::{Fixed, FixedTrait};
 
 #[starknet::interface]
 trait IERC20<TContractState> {
@@ -25,34 +26,34 @@ trait IAMM<TContractState> {
     fn trade_open(
         ref self: TContractState,
         option_type: OptionType,
-        strike_price: Math64x61_,
-        maturity: felt252,
+        strike_price: Fixed,
+        maturity: u64,
         option_side: OptionSide,
-        option_size: felt252,
+        option_size: u128,
         quote_token_address: ContractAddress,
         base_token_address: ContractAddress,
-        limit_total_premia: Math64x61_,
-        tx_deadline: felt252,
-    ) -> Math64x61_;
+        limit_total_premia: Fixed,
+        tx_deadline: u64,
+    ) -> Fixed;
     fn trade_close(
         ref self: TContractState,
         option_type: OptionType,
-        strike_price: Math64x61_,
-        maturity: felt252,
+        strike_price: Fixed,
+        maturity: u64,
         option_side: OptionSide,
-        option_size: felt252,
+        option_size: u128,
         quote_token_address: ContractAddress,
         base_token_address: ContractAddress,
-        limit_total_premia: Math64x61_,
-        tx_deadline: felt252,
-    ) -> Math64x61_;
+        limit_total_premia: Fixed,
+        tx_deadline: u64,
+    ) -> Fixed;
     fn trade_settle(
         ref self: TContractState,
         option_type: OptionType,
-        strike_price: Math64x61_,
-        maturity: felt252,
+        strike_price: Fixed,
+        maturity: u64,
         option_side: OptionSide,
-        option_size: felt252,
+        option_size: u128,
         quote_token_address: ContractAddress,
         base_token_address: ContractAddress,
     );
@@ -60,69 +61,78 @@ trait IAMM<TContractState> {
         self: @TContractState,
         lptoken_address: ContractAddress,
         option_side: OptionSide,
-        strike_price: Math64x61_,
-        maturity: felt252,
-    ) -> felt252;
-    fn set_trading_halt(ref self: TContractState, new_status: felt252);
-    fn get_trading_halt(self: @TContractState) -> felt252;
+        strike_price: Fixed,
+        maturity: u64,
+    ) -> bool;
+    fn set_trading_halt(ref self: TContractState, new_status: bool);
+    fn get_trading_halt(self: @TContractState) -> bool;
+    fn set_trading_halt_permission(
+        ref self: TContractState, address: ContractAddress, permission: bool
+    );
+    fn get_trading_halt_permission(self: @TContractState, address: ContractAddress) -> bool;
     fn add_lptoken(
         ref self: TContractState,
         quote_token_address: ContractAddress,
         base_token_address: ContractAddress,
         option_type: OptionType,
         lptoken_address: ContractAddress,
-        pooled_token_addr: ContractAddress,
-        volatility_adjustment_speed: Math64x61_,
+        volatility_adjustment_speed: Fixed,
         max_lpool_bal: u256,
     );
-    fn add_option(
+    fn add_option_both_sides(
         ref self: TContractState,
-        option_side: OptionSide,
-        maturity: felt252,
-        strike_price: Math64x61_,
+        maturity: u64,
+        strike_price: Fixed,
         quote_token_address: ContractAddress,
         base_token_address: ContractAddress,
         option_type: OptionType,
         lptoken_address: ContractAddress,
-        option_token_address_: ContractAddress,
-        initial_volatility: Math64x61_,
+        option_token_address_long: ContractAddress,
+        option_token_address_short: ContractAddress,
+        initial_volatility: Fixed
     );
+
     fn get_option_token_address(
         self: @TContractState,
         lptoken_address: ContractAddress,
         option_side: OptionSide,
-        maturity: felt252,
-        strike_price: Math64x61_,
+        maturity: u64,
+        strike_price: Fixed,
     ) -> ContractAddress;
     fn get_lptokens_for_underlying(
-        ref self: TContractState, pooled_token_addr: ContractAddress, underlying_amt: u256,
+        self: @TContractState, pooled_token_addr: ContractAddress, underlying_amt: u256,
     ) -> u256;
     fn get_underlying_for_lptokens(
-        self: @TContractState, pooled_token_addr: ContractAddress, lpt_amt: u256
+        self: @TContractState, lptoken_addr: ContractAddress, lpt_amt: u256
     ) -> u256;
     fn get_available_lptoken_addresses(self: @TContractState, order_i: felt252) -> ContractAddress;
-    fn get_all_options(self: @TContractState, lptoken_address: ContractAddress) -> Array<felt252>;
-    fn get_all_non_expired_options_with_premia(
-        self: @TContractState, lptoken_address: ContractAddress
-    ) -> Array<felt252>;
-    fn get_option_with_position_of_user(
-        self: @TContractState, user_address: ContractAddress
-    ) -> Array<felt252>;
+    // fn get_all_options(self: @TContractState, lptoken_address: ContractAddress) -> Array<Option_>;
+    // fn get_all_non_expired_options_with_premia(
+    //     self: @TContractState, lptoken_address: ContractAddress
+    // ) -> Array<OptionWithPremia>;
+    // fn get_option_with_position_of_user(
+    //     self: @TContractState, user_address: ContractAddress
+    // ) -> Array<OptionWithUsersPosition>;
     fn get_all_lptoken_addresses(self: @TContractState,) -> Array<ContractAddress>;
-    fn get_value_of_pool_position(
+    fn get_value_of_pool_position(self: @TContractState, lptoken_address: ContractAddress) -> Fixed;
+
+    fn get_value_of_pool_expired_position(
         self: @TContractState, lptoken_address: ContractAddress
-    ) -> Math64x61_;
+    ) -> Fixed;
+    fn get_value_of_pool_non_expired_position(
+        self: @TContractState, lptoken_address: ContractAddress
+    ) -> Fixed;
+
+
     // fn get_value_of_position(
-    //     option: Option,
-    //     position_size: Math64x61_,
+    //     self: @TContractState,
+    //     option: Option_,
+    //     position_size: u128,
     //     option_type: OptionType,
-    //     current_volatility: Math64x61_,
-    // ) -> Math64x61_;
-    // fn get_all_poolinfo() -> Array<PoolInfo>;
-    // fn get_option_info_from_addresses(
-    //     lptoken_address: ContractAddress, option_token_address: ContractAddress, 
-    // ) -> Option;
-    // fn get_user_pool_infos(user: ContractAddress) -> Array<UserPoolInfo>;
+    //     current_volatility: Fixed,
+    // ) -> Fixed;
+    // fn get_all_poolinfo(self: @TContractState) -> Array<PoolInfo>;
+    // fn get_user_pool_infos(self: @TContractState, user: ContractAddress) -> Array<UserPoolInfo>;
     fn deposit_liquidity(
         ref self: TContractState,
         pooled_token_addr: ContractAddress,
@@ -144,38 +154,35 @@ trait IAMM<TContractState> {
         ref self: TContractState,
         lptoken_address: ContractAddress,
         option_side: OptionSide,
-        strike_price: Math64x61_,
-        maturity: felt252,
+        strike_price: Fixed,
+        maturity: u64,
     );
-    fn getAdmin(self: @TContractState);
     fn set_max_option_size_percent_of_voladjspd(
-        ref self: TContractState, max_opt_size_as_perc_of_vol_adjspd: felt252
+        ref self: TContractState, max_opt_size_as_perc_of_vol_adjspd: u128
     );
-    fn get_max_option_size_percent_of_voladjspd(self: @TContractState) -> felt252;
+    fn get_max_option_size_percent_of_voladjspd(self: @TContractState) -> u128;
     fn get_lpool_balance(self: @TContractState, lptoken_address: ContractAddress) -> u256;
-    fn get_max_lpool_balance(self: @TContractState, pooled_token_addr: ContractAddress) -> u256;
+    fn get_max_lpool_balance(self: @TContractState, lpt_addr: ContractAddress) -> u256;
     fn set_max_lpool_balance(
-        ref self: TContractState, pooled_token_addr: ContractAddress, max_lpool_bal: u256
+        ref self: TContractState, lpt_addr: ContractAddress, max_lpool_bal: u256
     );
     fn get_pool_locked_capital(self: @TContractState, lptoken_address: ContractAddress) -> u256;
-    // fn get_available_options(lptoken_address: ContractAddress, order_i: felt252) -> Option;
-    fn get_available_options_usable_index(
-        self: @TContractState, lptoken_address: ContractAddress, starting_index: felt252
-    ) -> felt252;
+    // fn get_available_options(
+    //     self: @TContractState, lptoken_address: ContractAddress, order_i: u32
+    // ) -> Option_;
+
     fn get_lptoken_address_for_given_option(
         self: @TContractState,
         quote_token_address: ContractAddress,
         base_token_address: ContractAddress,
         option_type: OptionType,
     ) -> ContractAddress;
-    //fn get_pool_definition_from_lptoken_address(lptoken_addres: ContractAddress) -> Pool;
-    fn get_option_type(self: @TContractState, lptoken_address: ContractAddress) -> OptionType;
-    fn get_pool_volatility_separate(
-        self: @TContractState,
-        lptoken_address: ContractAddress,
-        maturity: felt252,
-        strike_price: Math64x61_,
-    ) -> Math64x61_;
+    // fn get_pool_definition_from_lptoken_address(
+    //     self: @TContractState, lptoken_addres: ContractAddress
+    // ) -> Pool;
+    fn get_option_volatility(
+        self: @TContractState, lptoken_address: ContractAddress, maturity: u64, strike_price: Fixed,
+    ) -> Fixed;
     fn get_underlying_token_address(
         self: @TContractState, lptoken_address: ContractAddress
     ) -> ContractAddress;
@@ -184,44 +191,45 @@ trait IAMM<TContractState> {
     ) -> felt252;
     fn get_pool_volatility_adjustment_speed(
         self: @TContractState, lptoken_address: ContractAddress
-    ) -> Math64x61_;
-    fn set_pool_volatility_adjustment_speed_external(
-        ref self: TContractState, lptoken_address: ContractAddress, new_speed: Math64x61_,
+    ) -> Fixed;
+    fn set_pool_volatility_adjustment_speed(
+        ref self: TContractState, lptoken_address: ContractAddress, new_speed: Fixed
     );
-    fn get_pool_volatility(
-        self: @TContractState, lptoken_address: ContractAddress, maturity: felt252
-    ) -> Math64x61_;
-    fn get_pool_volatility_auto(
-        self: @TContractState,
-        lptoken_address: ContractAddress,
-        maturity: felt252,
-        strike_price: Math64x61_,
-    ) -> Math64x61_;
     fn get_option_position(
         self: @TContractState,
         lptoken_address: ContractAddress,
         option_side: OptionSide,
-        maturity: felt252,
-        strike_price: Math64x61_
-    ) -> felt252;
-    // need to return two values, unclear rn
-    //fn get_total_premia(
-    //    option: Option, lptoken_address: ContractAddress, position_size: u256, is_closing: Bool, 
-    //) -> (total_premia_before_fees : Math64x61_, total_premia_including_fees : Math64x61_);
+        maturity: u64,
+        strike_price: Fixed
+    ) -> u128;
+    // fn get_total_premia(
+    //     self: @TContractState, option: Option_, position_size: u256, is_closing: bool
+    // ) -> (Fixed, Fixed);
+
     fn black_scholes(
         self: @TContractState,
-        sigma: felt252,
-        time_till_maturity_annualized: felt252,
-        strike_price: felt252,
-        underlying_price: felt252,
-        risk_free_rate_annualized: felt252,
-        is_for_trade: felt252, // bool
-    ) -> (felt252, felt252);
-    fn empiric_median_price(self: @TContractState, key: felt252) -> Math64x61_;
-    fn initializer(ref self: TContractState, proxy_admin: ContractAddress);
-    fn upgrade(ref self: TContractState, new_implementation: felt252);
-    fn setAdmin(ref self: TContractState, address: felt252);
-    fn getImplementationHash(self: @TContractState,) -> felt252;
+        sigma: Fixed,
+        time_till_maturity_annualized: Fixed,
+        strike_price: Fixed,
+        underlying_price: Fixed,
+        risk_free_rate_annualized: Fixed,
+        is_for_trade: bool, // bool
+    ) -> (Fixed, Fixed, bool);
+    fn get_current_price(
+        self: @TContractState,
+        quote_token_address: ContractAddress,
+        base_token_address: ContractAddress
+    ) -> Fixed;
+    fn get_terminal_price(
+        self: @TContractState,
+        quote_token_address: ContractAddress,
+        base_token_address: ContractAddress,
+        maturity: u64
+    ) -> Fixed;
+
+    fn set_pragma_checkpoint(ref self: TContractState, key: felt252);
+    fn set_pragma_required_checkpoints(ref self: TContractState);
+    fn upgrade(ref self: TContractState, new_implementation: ClassHash);
 }
 
 #[starknet::interface]
@@ -251,42 +259,56 @@ trait IGovernanceToken<TContractState> {
 }
 
 #[starknet::interface]
-trait IOptionToken<TContractState> {
-    fn initializer(
-        ref self: TContractState,
-        name: felt252,
-        symbol: felt252,
-        proxy_admin: ContractAddress,
-        owner: ContractAddress,
-        quote_token_address: ContractAddress,
-        base_token_address: ContractAddress,
-        option_type: OptionType,
-        strike_price: Math64x61_,
-        maturity: felt252,
-        side: OptionSide
-    );
-    fn _set_owner_admin(ref self: TContractState, owner: ContractAddress);
-    fn upgrade(ref self: TContractState, new_implementation: felt252);
-    fn name(self: @TContractState) -> felt252;
-    fn symbol(self: @TContractState) -> felt252;
-    fn decimals(self: @TContractState) -> felt252;
-    fn totalSupply(self: @TContractState) -> u256;
-    fn balanceOf(self: @TContractState, account: ContractAddress) -> u256;
-    fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> u256;
-    fn owner(self: @TContractState) -> ContractAddress;
-    fn quote_token_address(self: @TContractState) -> ContractAddress;
-    fn base_token_address(self: @TContractState) -> ContractAddress;
-    fn option_type(self: @TContractState) -> OptionType;
-    fn strike_price(self: @TContractState) -> Math64x61_;
-    fn maturity(self: @TContractState) -> felt252;
-    fn side(self: @TContractState) -> OptionSide;
-    fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256) -> felt252;
+trait IOptionToken<TState> {
+    // IERC20
+    fn total_supply(self: @TState) -> u256;
+    fn balance_of(self: @TState, account: ContractAddress) -> u256;
+    fn allowance(self: @TState, owner: ContractAddress, spender: ContractAddress) -> u256;
+    fn transfer(ref self: TState, recipient: ContractAddress, amount: u256) -> bool;
+    fn transfer_from(
+        ref self: TState, sender: ContractAddress, recipient: ContractAddress, amount: u256
+    ) -> bool;
+    fn approve(ref self: TState, spender: ContractAddress, amount: u256) -> bool;
+
+    // IERC20Metadata
+    fn name(self: @TState) -> felt252;
+    fn symbol(self: @TState) -> felt252;
+    fn decimals(self: @TState) -> u8;
+
+    // IERC20SafeAllowance
+    fn increase_allowance(ref self: TState, spender: ContractAddress, added_value: u256) -> bool;
+    fn decrease_allowance(
+        ref self: TState, spender: ContractAddress, subtracted_value: u256
+    ) -> bool;
+
+    // IERC20CamelOnly
+    fn totalSupply(self: @TState) -> u256;
+    fn balanceOf(self: @TState, account: ContractAddress) -> u256;
     fn transferFrom(
-        ref self: TContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256
-    ) -> felt252;
-    fn approve(ref self: TContractState, spender: ContractAddress, amount: u256) -> felt252;
-    fn mint(ref self: TContractState, to: ContractAddress, amount: u256);
-    fn burn(ref self: TContractState, account: ContractAddress, amount: u256);
-    fn transferOwnership(ref self: TContractState, newOwner: ContractAddress);
-    fn renounceOwnership(ref self: TContractState);
+        ref self: TState, sender: ContractAddress, recipient: ContractAddress, amount: u256
+    ) -> bool;
+
+    // IERC20CamelSafeAllowance
+    fn increaseAllowance(ref self: TState, spender: ContractAddress, addedValue: u256) -> bool;
+    fn decreaseAllowance(ref self: TState, spender: ContractAddress, subtractedValue: u256) -> bool;
+
+    // Custom Functions
+    fn mint(ref self: TState, recipient: ContractAddress, amount: u256);
+    fn burn(ref self: TState, account: ContractAddress, amount: u256);
+    fn upgrade(ref self: TState, new_class_hash: ClassHash);
+
+    // Ownable Functions
+    fn transferOwnership(ref self: TState, newOwner: ContractAddress);
+    fn renounceOwnership(ref self: TState);
+    fn owner(self: @TState) -> ContractAddress;
+    fn transfer_ownership(ref self: TState, new_owner: ContractAddress);
+    fn renounce_ownership(ref self: TState);
+
+    // Option data
+    fn quote_token_address(self: @TState) -> ContractAddress;
+    fn base_token_address(self: @TState) -> ContractAddress;
+    fn option_type(self: @TState) -> u8;
+    fn strike_price(self: @TState) -> Fixed;
+    fn maturity(self: @TState) -> u64;
+    fn side(self: @TState) -> u8;
 }
