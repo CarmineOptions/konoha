@@ -28,7 +28,7 @@ trait IGovernance<TContractState> {
 
     // OPTIONS / ONE-OFF
 
-    fn deploy_new_amm(ref self: TContractState);
+    fn update_amm_address(ref self: TContractState);
 }
 
 
@@ -144,8 +144,8 @@ mod Governance {
             Upgrades::apply_passed_proposal(prop_id)
         }
 
-        fn deploy_new_amm(ref self: ContractState) {
-            DeployAMM::deploy_amm()
+        fn update_amm_address(ref self: ContractState) {
+            self.amm_address.write(0x02614962c68c76e51d622aa3f57445a980802f02be340d3c7cdc6c0c7bda5ef5.try_into().unwrap());
         }
     }
 }
