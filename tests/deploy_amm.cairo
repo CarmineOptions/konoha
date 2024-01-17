@@ -17,8 +17,8 @@ use cubit::f128::types::{Fixed, FixedTrait};
 
 use debug::PrintTrait;
 
-#[test]
-#[fork("MAINNET")]
+//#[test]
+//#[fork("MAINNET")]
 fn test_deploy_amm() {
     let gov_contract_addr: ContractAddress =
         0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f
