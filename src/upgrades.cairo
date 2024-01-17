@@ -52,7 +52,8 @@ mod Upgrades {
         match contract_type {
             0 => {
                 let amm_addr: ContractAddress = state.get_amm_address();
-                IAMMDispatcher { contract_address: amm_addr }.upgrade(impl_hash.try_into().unwrap());
+                IAMMDispatcher { contract_address: amm_addr }
+                    .upgrade(impl_hash.try_into().unwrap());
             },
             _ => {
                 if (contract_type == 1) {

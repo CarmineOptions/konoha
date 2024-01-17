@@ -48,12 +48,23 @@ fn test_deploy_amm() {
     let quote_token_address: ContractAddress = USDC_addr.try_into().unwrap();
     let base_token_address: ContractAddress = ETH_addr.try_into().unwrap();
 
-    deposit(amm_addr, 1, quote_token_address, base_token_address, 0x0583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1.try_into().unwrap());
-    
-    //trade_option(1705017599, marek_address, amm_addr, FixedTrait::from_unscaled_felt(2200));
+    deposit(
+        amm_addr,
+        1,
+        quote_token_address,
+        base_token_address,
+        0x0583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1.try_into().unwrap()
+    );
+//trade_option(1705017599, marek_address, amm_addr, FixedTrait::from_unscaled_felt(2200));
 }
 
-fn deposit(amm: ContractAddress, amt: u256, quote: ContractAddress, base: ContractAddress, from: ContractAddress) {
+fn deposit(
+    amm: ContractAddress,
+    amt: u256,
+    quote: ContractAddress,
+    base: ContractAddress,
+    from: ContractAddress
+) {
     let eth = IERC20Dispatcher { contract_address: base };
     start_prank(CheatTarget::One(base), from);
     eth.approve(amm, amt + 1);
@@ -61,12 +72,7 @@ fn deposit(amm: ContractAddress, amt: u256, quote: ContractAddress, base: Contra
     assert(allowance == amt + 1, 'approve unsuccessful?');
     start_prank(CheatTarget::One(amm), from);
     let amm = IAMMDispatcher { contract_address: amm };
-    amm.deposit_liquidity(
-        base,
-        quote,
-        base,
-        TRADE_SIDE_LONG,
-        amt //4000908584712648
+    amm.deposit_liquidity(base, quote, base, TRADE_SIDE_LONG, amt //4000908584712648
     );
 }
 

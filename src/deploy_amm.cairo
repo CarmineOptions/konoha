@@ -26,9 +26,9 @@ mod DeployAMM {
     fn deploy_amm() {
         let amm_class: ClassHash = AMM_CLASS_HASH.try_into().unwrap();
         let voladjspd_eth_call_lpt: felt252 = 15; // TODO check, no increase??
-        let voladjspd_eth_put_lpt: felt252 =
-            25000; // also BTC put pool
-        let voladjspd_btc_call_lpt: Fixed = FixedTrait::ONE() / FixedTrait::from_unscaled_felt(2); // 0.5 BTC voladjspd for btc call pool
+        let voladjspd_eth_put_lpt: felt252 = 25000; // also BTC put pool
+        let voladjspd_btc_call_lpt: Fixed = FixedTrait::ONE()
+            / FixedTrait::from_unscaled_felt(2); // 0.5 BTC voladjspd for btc call pool
 
         let mut state = Governance::unsafe_new_contract_state();
         assert(!state.proposal_initializer_run.read(45), 'prop already initialized');
