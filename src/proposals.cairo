@@ -38,6 +38,7 @@ mod Proposals {
     use governance::types::BlockNumber;
     use governance::types::ContractType;
     use governance::types::PropDetails;
+    use governance::types::VoteStatus;
     use governance::traits::IERC20Dispatcher;
     use governance::traits::IERC20DispatcherTrait;
     use governance::constants;
@@ -101,6 +102,34 @@ mod Proposals {
         } else {
             _get_free_prop_id_timestamp(currid + 1)
         }
+    }
+
+    fn get_live_proposals() -> Array<felt252> {
+        let max: u32 = get_free_prop_id_timestamp().try_into().unwrap();
+        let mut i: u32 = 0;
+        let mut arr = ArrayTrait::<felt252>::new();
+
+        loop {
+            if i >= max {
+                break;
+            }
+
+            let prop_id: felt252 = i.into();
+            let current_status = get_proposal_status(prop_id);
+
+            if current_status == 0 {
+                arr.append(prop_id);
+            }
+
+            i += 1;
+        };
+
+        arr
+    }
+
+    fn get_user_voted(user_address: ContractAddress, prop_id: felt252) -> VoteStatus {
+        let state = Governance::unsafe_new_contract_state();
+        state.proposal_voted_by.read((prop_id, user_address))
     }
 
     fn submit_proposal(payload: felt252, to_upgrade: ContractType) -> felt252 {

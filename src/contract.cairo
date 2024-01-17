@@ -2,7 +2,7 @@
 // When Components arrive in Cairo 2.?, it will be refactored to take advantage of them. Random change to rerun CI
 
 use starknet::ContractAddress;
-use governance::types::{ContractType, PropDetails};
+use governance::types::{ContractType, PropDetails, VoteStatus};
 
 #[starknet::interface]
 trait IGovernance<TContractState> {
@@ -15,6 +15,10 @@ trait IGovernance<TContractState> {
         ref self: TContractState, impl_hash: felt252, to_upgrade: ContractType
     ) -> felt252;
     fn get_proposal_status(self: @TContractState, prop_id: felt252) -> felt252;
+    fn get_live_proposals(self: @TContractState) -> Array<felt252>;
+    fn get_user_voted(
+        self: @TContractState, user_address: ContractAddress, prop_id: felt252
+    ) -> VoteStatus;
 
     // UPGRADES
 
@@ -124,6 +128,16 @@ mod Governance {
 
         fn get_proposal_status(self: @ContractState, prop_id: felt252) -> felt252 {
             Proposals::get_proposal_status(prop_id)
+        }
+
+        fn get_live_proposals(self: @ContractState) -> Array<felt252> {
+            Proposals::get_live_proposals()
+        }
+
+        fn get_user_voted(
+            self: @ContractState, user_address: ContractAddress, prop_id: felt252
+        ) -> VoteStatus {
+            Proposals::get_user_voted(user_address, prop_id)
         }
 
         // UPGRADES
