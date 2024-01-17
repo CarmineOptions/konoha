@@ -27,8 +27,6 @@ trait IGovernance<TContractState> {
     // in component
 
     // OPTIONS / ONE-OFF
-
-    fn deploy_new_amm(ref self: TContractState);
 }
 
 
@@ -142,10 +140,6 @@ mod Governance {
 
         fn apply_passed_proposal(ref self: ContractState, prop_id: felt252) {
             Upgrades::apply_passed_proposal(prop_id)
-        }
-
-        fn deploy_new_amm(ref self: ContractState) {
-            DeployAMM::deploy_amm()
         }
     }
 }

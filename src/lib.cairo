@@ -4,7 +4,6 @@ mod amm_types {
 }
 mod constants;
 mod contract;
-mod deploy_amm;
 mod merkle_tree;
 mod options;
 mod proposals;
