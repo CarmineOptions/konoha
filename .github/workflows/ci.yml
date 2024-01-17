@@ -9,8 +9,8 @@ on:
       - 'Scarb.toml'
 
 env:
-  SCARB_VERSION: 2.3.1
-  FOUNDRY_VERSION: 0.10.2
+  SCARB_VERSION: 2.4.3
+  FOUNDRY_VERSION: 0.14.0
 
 jobs:
   build:
@@ -26,5 +26,5 @@ jobs:
         run: snfoundryup -v $FOUNDRY_VERSION
       - name: Check formatting
         run: scarb fmt --check
-      - name: Build with scarb
-        run: scarb build
+      - name: Run tests with snforge
+        run: snforge test
