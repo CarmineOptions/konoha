@@ -28,7 +28,7 @@ trait IGovernance<TContractState> {
 
     // OPTIONS / ONE-OFF
 
-    fn deploy_new_amm(ref self: TContractState);
+    fn add_020224_options(ref self: TContractState);
 }
 
 
@@ -42,6 +42,7 @@ mod Governance {
     use governance::upgrades::Upgrades;
     use governance::deploy_amm::DeployAMM;
     use governance::airdrop::airdrop as airdrop_component;
+    use governance::options::Options;
 
     use starknet::ContractAddress;
 
@@ -144,8 +145,8 @@ mod Governance {
             Upgrades::apply_passed_proposal(prop_id)
         }
 
-        fn deploy_new_amm(ref self: ContractState) {
-            DeployAMM::deploy_amm()
+        fn add_020224_options(ref self: ContractState) {
+            Options::add_020224_options()
         }
     }
 }

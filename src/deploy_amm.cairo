@@ -12,11 +12,10 @@ mod DeployAMM {
     use integer::BoundedInt;
 
 
-    use governance::amm_types::basic::{OptionType, OptionSide};
+    use governance::amm_types::basic::OptionType;
     use governance::contract::Governance;
     use governance::contract::Governance::proposal_initializer_runContractMemberStateTrait;
     use governance::contract::Governance::amm_addressContractMemberStateTrait;
-    use governance::options::Options;
     use governance::constants::{
         AMM_CLASS_HASH, LP_TOKEN_CLASS_HASH, ETH_ADDRESS, USDC_ADDRESS, BTC_ADDRESS
     };
@@ -26,9 +25,9 @@ mod DeployAMM {
     fn deploy_amm() {
         let amm_class: ClassHash = AMM_CLASS_HASH.try_into().unwrap();
         let voladjspd_eth_call_lpt: felt252 = 15; // TODO check, no increase??
-        let voladjspd_eth_put_lpt: felt252 =
-            25000; // also BTC put pool
-        let voladjspd_btc_call_lpt: Fixed = FixedTrait::ONE() / FixedTrait::from_unscaled_felt(2); // 0.5 BTC voladjspd for btc call pool
+        let voladjspd_eth_put_lpt: felt252 = 25000; // also BTC put pool
+        let voladjspd_btc_call_lpt: Fixed = FixedTrait::ONE()
+            / FixedTrait::from_unscaled_felt(2); // 0.5 BTC voladjspd for btc call pool
 
         let mut state = Governance::unsafe_new_contract_state();
         assert(!state.proposal_initializer_run.read(45), 'prop already initialized');
@@ -84,10 +83,6 @@ mod DeployAMM {
         );
 
         set_trading_halt_permissions(amm);
-
-        Options::add_1201_options(
-            eth_call_lpt_addr, eth_put_lpt_addr, btc_call_lpt_addr, btc_put_lpt_addr
-        );
     }
 
     fn deploy_lptoken(
