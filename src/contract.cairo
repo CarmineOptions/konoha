@@ -21,12 +21,11 @@ trait IGovernance<TContractState> {
     fn get_governance_token_address(self: @TContractState) -> ContractAddress;
     fn get_amm_address(self: @TContractState) -> ContractAddress;
     fn apply_passed_proposal(ref self: TContractState, prop_id: felt252);
+// AIRDROPS
 
-    // AIRDROPS
+// in component
 
-    // in component
-
-    // OPTIONS / ONE-OFF
+// OPTIONS / ONE-OFF
 }
 
 
