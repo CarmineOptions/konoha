@@ -1,4 +1,7 @@
 mod airdrop;
+mod amm_types {
+    mod basic;
+}
 mod constants;
 mod contract;
 mod merkle_tree;
