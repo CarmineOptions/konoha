@@ -21,7 +21,9 @@ mod Options {
     use cubit::f128::types::{Fixed, FixedTrait};
 
     use governance::contract::Governance::{amm_address, proposal_initializer_run};
-    use governance::constants::{OPTION_CALL, OPTION_PUT, TRADE_SIDE_LONG, TRADE_SIDE_SHORT, OPTION_TOKEN_CLASS_HASH};
+    use governance::constants::{
+        OPTION_CALL, OPTION_PUT, TRADE_SIDE_LONG, TRADE_SIDE_SHORT, OPTION_TOKEN_CLASS_HASH
+    };
     use governance::traits::{
         IAMMDispatcher, IAMMDispatcherTrait, IOptionTokenDispatcher, IOptionTokenDispatcherTrait
     };
@@ -37,11 +39,7 @@ mod Options {
         let amm_address = state.get_amm_address();
         loop {
             match options.pop_front() {
-                Option::Some(option) => {
-                    add_option(
-                        governance_address, amm_address, option
-                    );
-                },
+                Option::Some(option) => { add_option(governance_address, amm_address, option); },
                 Option::None(()) => { break (); },
             };
         }
@@ -61,9 +59,7 @@ mod Options {
     }
 
     fn add_option(
-        governance_address: ContractAddress,
-        amm_address: ContractAddress,
-        option: @FutureOption
+        governance_address: ContractAddress, amm_address: ContractAddress, option: @FutureOption
     ) {
         let o = *option;
 
@@ -77,7 +73,7 @@ mod Options {
         } else {
             ETH_addr
         };
-        
+
         // Yes, this 'overflows', but it's expected and wanted.
         let custom_salt: felt252 = 42
             + o.strike_price.mag.into()
@@ -96,7 +92,9 @@ mod Options {
         optoken_long_calldata.append(o.strike_price.mag.into());
         optoken_long_calldata.append(o.maturity);
         optoken_long_calldata.append(TRADE_SIDE_LONG);
-        let deploy_retval = deploy_syscall(opt_class_hash, custom_salt+1, optoken_long_calldata.span(), false);
+        let deploy_retval = deploy_syscall(
+            opt_class_hash, custom_salt + 1, optoken_long_calldata.span(), false
+        );
         let (optoken_long_addr, _) = deploy_retval.unwrap_syscall();
 
         let mut optoken_short_calldata = array![];
@@ -109,9 +107,10 @@ mod Options {
         optoken_short_calldata.append(o.strike_price.mag.into());
         optoken_short_calldata.append(o.maturity);
         optoken_short_calldata.append(TRADE_SIDE_SHORT);
-        let deploy_retval = deploy_syscall(opt_class_hash, custom_salt+2, optoken_short_calldata.span(), false);
+        let deploy_retval = deploy_syscall(
+            opt_class_hash, custom_salt + 2, optoken_short_calldata.span(), false
+        );
         let (optoken_short_addr, _) = deploy_retval.unwrap_syscall();
-
 
         IAMMDispatcher { contract_address: amm_address }
             .add_option_both_sides(
@@ -128,7 +127,12 @@ mod Options {
     }
 
 
-    fn add_1201_options(eth_lpt_addr: ContractAddress, eth_usdc_lpt_addr: ContractAddress, btc_lpt_addr: ContractAddress, btc_usdc_lpt_addr: ContractAddress) {
+    fn add_1201_options(
+        eth_lpt_addr: ContractAddress,
+        eth_usdc_lpt_addr: ContractAddress,
+        btc_lpt_addr: ContractAddress,
+        btc_usdc_lpt_addr: ContractAddress
+    ) {
         let MATURITY: felt252 = 1705017599;
 
         let point_five = FixedTrait::ONE() / FixedTrait::from_unscaled_felt(2);
