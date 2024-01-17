@@ -37,7 +37,6 @@ mod Governance {
     use governance::types::ContractType;
     use governance::types::PropDetails;
     use governance::upgrades::Upgrades;
-    use governance::deploy_amm::DeployAMM;
     use governance::airdrop::airdrop as airdrop_component;
 
     use starknet::ContractAddress;
