@@ -28,6 +28,7 @@ mod vesting {
     use governance::contract::IGovernance;
     use starknet::get_block_timestamp;
     use starknet::ContractAddress;
+    use starknet::{get_caller_address, get_contract_address};
 
     use governance::contract::Governance;
     use governance::contract::Governance::ContractState;
@@ -88,6 +89,7 @@ mod vesting {
             grantee: ContractAddress,
             amount: u128
         ) {
+            assert(get_caller_address() == get_contract_address(), 'not self-call');
             self.milestone.write((vesting_timestamp, grantee), amount);
             self
                 .emit(
@@ -105,6 +107,7 @@ mod vesting {
             total_amount: u128,
             grantee: ContractAddress
         ) {
+            assert(get_caller_address() == get_contract_address(), 'not self-call');
             let mut i: u16 = 0;
             let mut curr_timestamp = first_vest;
             assert(increments_count > 1, 'increments_count <= 1');

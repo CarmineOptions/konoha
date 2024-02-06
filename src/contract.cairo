@@ -29,6 +29,9 @@ trait IGovernance<TContractState> {
 
 // in component
 
+// VESTING
+
+// in component
 // OPTIONS / ONE-OFF
 }
 
