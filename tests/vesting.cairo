@@ -4,7 +4,9 @@ use array::ArrayTrait;
 use core::traits::TryInto;
 use debug::PrintTrait;
 use starknet::ContractAddress;
-use snforge_std::{BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget};
+use snforge_std::{
+    BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget
+};
 
 use governance::vesting::{IVestingDispatcher, IVestingDispatcherTrait, IVesting};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -32,7 +34,7 @@ fn test_setup() -> (ContractAddress, ContractAddress) {
 }
 
 #[test]
-#[should_panic(expected: ('not self-call', ))]
+#[should_panic(expected: ('not self-call',))]
 fn test_unauthorized_add_vesting_schedule() {
     let (gov_address, token_address) = test_setup();
 
@@ -44,7 +46,7 @@ fn test_unauthorized_add_vesting_schedule() {
 }
 
 #[test]
-#[should_panic(expected: ('not yet eligible', ))]
+#[should_panic(expected: ('not yet eligible',))]
 fn test_unauthorized_vest_early() {
     let (gov_address, token_address) = test_setup();
 
@@ -61,7 +63,7 @@ fn test_unauthorized_vest_early() {
 }
 
 #[test]
-#[should_panic(expected: ('nothing to vest', ))]
+#[should_panic(expected: ('nothing to vest',))]
 fn test_vest_twice() {
     let (gov_address, token_address) = test_setup();
 
