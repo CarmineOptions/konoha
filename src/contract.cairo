@@ -67,6 +67,11 @@ mod Governance {
         amm_address: ContractAddress,
         delegate_hash: LegacyMap::<ContractAddress, felt252>,
         total_delegated_to: LegacyMap::<ContractAddress, u128>,
+        // TODO toufic
+        // custom_proposal_calldata: mapping from prop ID to a Span.
+        // I'm not certain whether you can save a Span directly to storage, I think rather not.
+        // therefore quite possibly this will have to be LegacyMap::<(u64 (prop id), u32 (span element index)), felt252 (span element)>
+        // but please do look into this
         #[substorage(v0)]
         airdrop: airdrop_component::Storage
     }

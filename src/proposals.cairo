@@ -158,6 +158,13 @@ mod Proposals {
         prop_id
     }
 
+    //fn submit_custom_proposal(custom_proposal_type: u64, calldata: Span<felt252>) -> felt252 {
+        // custom prop type ids will probably follow right after normal prop types.
+        // see types.cairo – get all custom proposals from the protocol-implemented trait, check if the custom prop type is valid and defined.
+        // Save PropDetails should have the prop_id that is corresponding to this custom proposal, payload should be probably length of calldata?
+        // save
+    // }
+
 
     fn hashing(
         hashed_data: felt252, calldata_span: Span<(ContractAddress, u128)>, index: u32
