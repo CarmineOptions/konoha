@@ -84,7 +84,20 @@ expiry and settlement.
 
 proposals.cairo :
 
-Delegate_vote and withdraw_delegation functions :
+### Usual proposal functionalities
+
+1) Successful proposal submission : ensure the proposal submission is registered with a unique proposal id
+
+2) Proposal expiry : check that the proposal is correctly flagged as expired after its voting deadline
+
+3) Express proposal : create a proposition and simulate a massive vote to ensure the proposal is considered to be passed
+
+4) Vote on an expired proposal : make sure the contract rejects a vote that occurs after the expiry of the proposal
+
+5) Re-applying a proposal that has already passed : make sure the contract rejects the submission of a proposal that has expired in the past
+
+
+### Delegate_vote and withdraw_delegation functions 
 
 1) Multiple delegations with insufficient balance 
 
