@@ -1,7 +1,7 @@
-Here is a comprehensive but evolutive list of the unit and integration tests to perform.
+Here is a comprehensive but evolutive list of the unit and integration tests we need.
 
 
-airdrops.cairo :
+## airdrops.cairo
 
 ### Unit tests
 
@@ -10,79 +10,34 @@ airdrops.cairo :
 Simulate a claim with valid merkle proof, check the claimed amount is correctly
 minted and recorded.
 
-2) Claim with incorrect amount
-
-The contract should reject the claim if the amount exceeds the one encoded in
-the merkle proof.
-
-3) Claim more than eligible through multiple claims
-
-After successful claim, attempt another claim that would exceed the adress's
-total eligible amount. Expecting rejection.
-
-
-4) Claim with incorrect claimee
-
-Attempt a claim with a merkle proof corresponding to a different address and
-check if the contract rejects the claim.
-
-5) Claim with invalid proof
-
-Generate a random merkle proof and checks the contract correctly rejects it.
-
- 
-6) Claim with a proof that has already been used
-
-Simply repeat a claim and expect the second one to be rejected.
-
-
 ### Integration tests
 
 1) Simulate a valid claim and verify that the correct amount of governance
-tokens is minted to the claimee's address.
+tokens is minted to the claimee's address. Check that the
+contract's storage reflects the claimed amount
 
 2) Check that the Claimed event is correctly emitted when a claim is processed
 successfully
 
-3) Test contract's state update : after a successful claim, check that the
-contract's storage reflects the claimed amount and prevents the same claimee
-from claiming more than entitled
+3) Simulate a valid claim and multiple invalid attempts:
+ - claim second time with same proof
+ - claim with invalid proof
+ - update root
+ - claim with old root + new proof, new root + old proof
 
 
-options.cairo : 
-
-### Unit tests
-
-1) Add valid option 
-
-Ensure the addition of a single option (either call or put) with valid parameters
-is successful.
-
-2) Add option with invalid parameters
-
-Make sure the contract rejects the addition of options with invalid parameters,
-namely invalid option_type or unsupported asset pair.
-
-3) Add two options with exact same parameters
-
-Attempt to add two call or put options with same strike, maturity, vol, asset pair
-and other features. The second addition should be rejected.
-
+## options.cairo
 
 ### Integration tests
 
-1) Ensure that after adding an option, it can be traded on the AMM and the
-liquidity pool is correctly updated
+1) Add options and after adding an option, it can be traded on the AMM. Test already done, needs to be activated.
 
 2) Options deployment and contract interaction
 
 Deploy a new option contract and check that it interacts correctly with the
 governance token contract for minting option tokens.
 
-3) Validate the lifecycle of the option from its creation through trading up to its
-expiry and settlement.
-
-proposals.cairo :
+## proposals.cairo
 
 ### Usual proposal functionalities
 
@@ -137,3 +92,7 @@ A tries to withdraw a delegation with an unmatching calldata. Should fail.
 A delegates to B, B votes, then A withdraws the delegation and finally A attempts to vote 
 on the same proposal.
 Should prevent A from voting on the same proposal to avoid double counting.
+
+### Health check
+
+Runs tests on a specific, already deployed contract.
