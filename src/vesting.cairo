@@ -75,7 +75,7 @@ mod vesting {
             assert(get_block_timestamp() > vested_timestamp, 'not yet eligible');
             let state = Governance::unsafe_new_contract_state();
             IGovernanceTokenDispatcher { contract_address: state.get_governance_token_address() }
-                .mint(grantee, u256 { high: 0, low: amt_to_vest });
+                .mint(grantee, amt_to_vest.into());
             self.milestone.write((vested_timestamp, grantee), 0);
             self
                 .emit(
