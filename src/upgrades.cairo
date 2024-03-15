@@ -102,7 +102,10 @@ mod upgrades {
             self.proposal_applied.write(prop_id, true); // Mark the proposal as applied
             self
                 .emit(
-                    Upgraded { prop_id: prop_id.try_into().unwrap(), upgrade_type: contract_type.try_into().unwrap() }
+                    Upgraded {
+                        prop_id: prop_id.try_into().unwrap(),
+                        upgrade_type: contract_type.try_into().unwrap()
+                    }
                 );
         }
     }
