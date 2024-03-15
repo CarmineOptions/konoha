@@ -4,8 +4,6 @@ description = "A flexible monolithic governance contract, developed for use with
 version = "0.3.0"
 cairo-version = "2.6.3"
 
-# See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest
-
 [dependencies]
 cubit = { git = "https://github.com/akhercha/cubit.git", branch = "chore/cairo_upgrade" }
 starknet = ">=1.3.0"
