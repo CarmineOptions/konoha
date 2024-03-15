@@ -9,8 +9,8 @@ on:
       - 'Scarb.toml'
 
 env:
-  SCARB_VERSION: 2.4.0
-  FOUNDRY_VERSION: 0.14.0
+  SCARB_VERSION: 2.6.3
+  FOUNDRY_VERSION: 0.19.0
 
 jobs:
   build:
@@ -26,5 +26,9 @@ jobs:
         run: snfoundryup -v $FOUNDRY_VERSION
       - name: Check formatting
         run: scarb fmt --check
+      - name: Setup Starknet Foundry
+        uses: foundry-rs/setup-snfoundry@v2
+        with:
+          starknet-foundry-version: ${{ env.FOUNDRY_VERSION }}
       - name: Run tests with snforge
         run: snforge test
