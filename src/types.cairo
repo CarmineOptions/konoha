@@ -18,6 +18,6 @@ struct VoteCounts {
 type BlockNumber = felt252;
 type VoteStatus = felt252; // 0 = not voted, 1 = yay, -1 = nay
 type ContractType =
-    felt252; // for Carmine 0 = amm, 1 = governance, 2 = CARM token, 3 = merkle tree root, 4 = no-op/signal vote
+    u64; // for Carmine 0 = amm, 1 = governance, 2 = CARM token, 3 = merkle tree root, 4 = no-op/signal vote
 type OptionSide = felt252;
 type OptionType = felt252;

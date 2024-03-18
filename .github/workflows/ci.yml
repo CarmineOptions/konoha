@@ -9,8 +9,8 @@ on:
       - 'Scarb.toml'
 
 env:
-  SCARB_VERSION: 2.4.0
-  FOUNDRY_VERSION: 0.14.0
+  SCARB_VERSION: 2.6.3
+  FOUNDRY_VERSION: 0.19.0
 
 jobs:
   build:
@@ -20,11 +20,10 @@ jobs:
         uses: actions/checkout@v3
       - name: Install Scarb
         run: curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v $SCARB_VERSION
-      - name: Install SnFoundryUp
-        run: curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh 
-      - name: Install SnFoundry
-        run: snfoundryup -v $FOUNDRY_VERSION
       - name: Check formatting
         run: scarb fmt --check
+      - uses: foundry-rs/setup-snfoundry@v3
+        with:
+          starknet-foundry-version: ${{ env.FOUNDRY_VERSION }}
       - name: Run tests with snforge
         run: snforge test

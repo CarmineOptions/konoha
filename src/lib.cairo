@@ -5,7 +5,7 @@ mod amm_types {
 mod constants;
 mod contract;
 mod merkle_tree;
-mod options;
+//mod options;
 mod proposals;
 mod traits;
 mod types;
