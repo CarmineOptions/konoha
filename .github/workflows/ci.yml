@@ -22,9 +22,8 @@ jobs:
         run: curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | bash -s -- -v $SCARB_VERSION
       - name: Check formatting
         run: scarb fmt --check
-      - name: Install SnFoundryUp
-        run: curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh 
-      - name: Install SnFoundry
-        run: snfoundryup -v $FOUNDRY_VERSION
+      - uses: foundry-rs/setup-snfoundry@v3
+        with:
+          starknet-foundry-version: ${{ env.FOUNDRY_VERSION }}
       - name: Run tests with snforge
         run: snforge test
