@@ -4,7 +4,7 @@ version = 1
 [[package]]
 name = "cubit"
 version = "1.3.0"
-source = "git+https://github.com/akhercha/cubit.git?branch=chore%2Fcairo_upgrade#d3869a3f0c47e5ed229bbbfe2fce3fc0510cbc8a"
+source = "git+https://github.com/influenceth/cubit.git#62756082bf2555d7ab25c69d9c7bc30574ff1ce8"
 
 [[package]]
 name = "governance"
