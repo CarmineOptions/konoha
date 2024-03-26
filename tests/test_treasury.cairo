@@ -1,3 +1,13 @@
+mod testStorage {
+    use core::traits::TryInto;
+    use starknet::ContractAddress;
+    const zero_address: felt252 = 0;
+    const GOV_CONTRACT_ADDRESS: felt252 =
+        0x0304256e5fade73a6fc8f49ed7c1c43ac34e6867426601b01204e1f7ba05b53d;
+    const AMM_CONTRACT_ADDRESS: felt252 =
+        0x018890b58b08f341acd1292e8f67edfb01f539c835ef4a2176946a995fe794a5;
+}
+
 use core::result::ResultTrait;
 use core::serde::Serde;
 use core::option::OptionTrait;
@@ -15,20 +25,15 @@ use governance::traits::{
     IERC20Dispatcher, IERC20DispatcherTrait, IAMMDispatcher, IAMMDispatcherTrait
 };
 
-mod testStorage {
-    use core::traits::TryInto;
-    use starknet::ContractAddress;
-    const zero_address: felt252 = 0;
-    const gov_contract_address: felt252 =
-        0x0304256e5fade73a6fc8f49ed7c1c43ac34e6867426601b01204e1f7ba05b53d;
-    const AMM_contract_address: felt252 =
-        0x018890b58b08f341acd1292e8f67edfb01f539c835ef4a2176946a995fe794a5;
-}
 
-fn deploy_contract(
-    name: ByteArray, gov_contract_address: ContractAddress, AMM_contract_address: ContractAddress
-) -> (ContractAddress, ContractAddress) {
-    let contract = declare(name);
+fn get_important_addresses() -> (ContractAddress, ContractAddress, ContractAddress) {
+    let gov_contract_address: ContractAddress = testStorage::GOV_CONTRACT_ADDRESS
+        .try_into()
+        .unwrap();
+    let AMM_contract_address: ContractAddress = testStorage::AMM_CONTRACT_ADDRESS
+        .try_into()
+        .unwrap();
+    let contract = declare("Treasury");
     let mut calldata = ArrayTrait::new();
     gov_contract_address.serialize(ref calldata);
     AMM_contract_address.serialize(ref calldata);
@@ -38,45 +43,15 @@ fn deploy_contract(
 
     prank(CheatTarget::One(contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
     let deployed_contract = contract.deploy(@calldata).unwrap();
-    (deployed_contract, contract_address)
+
+    return (gov_contract_address, AMM_contract_address, deployed_contract,);
 }
 
-fn get_important_addresses() -> (
-    ContractAddress, ContractAddress, ContractAddress, ContractAddress
-) {
-    let gov_contract_address: ContractAddress = testStorage::gov_contract_address
-        .try_into()
-        .unwrap();
-    let AMM_contract_address: ContractAddress = testStorage::AMM_contract_address
-        .try_into()
-        .unwrap();
-    let (treasury_contract_address, pre_calculated_address) = deploy_contract(
-        "Treasury", gov_contract_address, AMM_contract_address
-    );
-    return (
-        gov_contract_address,
-        AMM_contract_address,
-        treasury_contract_address,
-        pre_calculated_address
-    );
-}
-
-#[test]
-fn test_contract_deployment() {
-    let (
-        _gov_contract_address,
-        _AMM_contract_address,
-        treasury_contract_address,
-        pre_calculated_address
-    ) =
-        get_important_addresses();
-    assert(treasury_contract_address == pre_calculated_address, 'Deployment Error');
-}
 
 #[test]
 #[fork("GOERLI")]
-fn test_send_tokens_to_address() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+fn test_transfer_token() {
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address) =
         get_important_addresses();
     let user1: ContractAddress = 0x026fa92011b2f27eca57a44411837e38a4313dfb11d561146039b445815db35b
         .try_into()
@@ -108,7 +83,7 @@ fn test_send_tokens_to_address() {
 #[should_panic(expected: ('Caller is not the owner',))]
 #[fork("GOERLI")]
 fn test_send_tokens_to_address_by_unauthorized_caller() {
-    let (_gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (_gov_contract_address, _AMM_contract_address, treasury_contract_address) =
         get_important_addresses();
     let user1: ContractAddress = 0x026fa92011b2f27eca57a44411837e38a4313dfb11d561146039b445815db35b
         .try_into()
@@ -135,46 +110,8 @@ fn test_send_tokens_to_address_by_unauthorized_caller() {
 }
 
 #[test]
-fn test_update_governance_contract() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
-        get_important_addresses();
-    let newGovernance: ContractAddress = '0xnewGovernance'.try_into().unwrap();
-
-    prank(
-        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
-    );
-    ItreasuryDispatcher { contract_address: treasury_contract_address }
-        .update_governance_contract(newGovernance);
-
-    let recorded_governance_addr = ItreasuryDispatcher {
-        contract_address: treasury_contract_address
-    }
-        .get_governance_address();
-    assert(newGovernance == recorded_governance_addr, 'Error updating governance');
-}
-
-#[test]
-#[should_panic(expected: ('Caller is not the owner',))]
-fn test_update_governance_contract_by_unauthorized_caller() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
-        get_important_addresses();
-    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
-    let newGovernance: ContractAddress = '0xnewGovernance'.try_into().unwrap();
-
-    prank(CheatTarget::One(treasury_contract_address), user2, CheatSpan::TargetCalls(1));
-    ItreasuryDispatcher { contract_address: treasury_contract_address }
-        .update_governance_contract(newGovernance);
-
-    let recorded_governance_addr = ItreasuryDispatcher {
-        contract_address: treasury_contract_address
-    }
-        .get_governance_address();
-    assert(gov_contract_address == recorded_governance_addr, 'unAuthorized governance update');
-}
-
-#[test]
 fn test_update_AMM_contract() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address) =
         get_important_addresses();
     let new_AMM_contract: ContractAddress = '0xnewAMMcontract'.try_into().unwrap();
 
@@ -182,7 +119,7 @@ fn test_update_AMM_contract() {
         CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
     );
     ItreasuryDispatcher { contract_address: treasury_contract_address }
-        .update_AMM_contract(new_AMM_contract);
+        .update_AMM_address(new_AMM_contract);
 
     let recorded_AMM_addr = ItreasuryDispatcher { contract_address: treasury_contract_address }
         .get_amm_address();
@@ -192,24 +129,20 @@ fn test_update_AMM_contract() {
 #[test]
 #[should_panic(expected: ('Caller is not the owner',))]
 fn test_update_AMM_contract_by_unauthorized_caller() {
-    let (_gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (_gov_contract_address, _AMM_contract_address, treasury_contract_address) =
         get_important_addresses();
     let user2: ContractAddress = '0xUser2'.try_into().unwrap();
     let new_AMM_contract: ContractAddress = '0xnewAMMcontract'.try_into().unwrap();
 
     prank(CheatTarget::One(treasury_contract_address), user2, CheatSpan::TargetCalls(1));
     ItreasuryDispatcher { contract_address: treasury_contract_address }
-        .update_AMM_contract(new_AMM_contract);
-
-    let recorded_AMM_addr = ItreasuryDispatcher { contract_address: treasury_contract_address }
-        .get_amm_address();
-    assert(new_AMM_contract == recorded_AMM_addr, 'unAuthorized AMM update');
+        .update_AMM_address(new_AMM_contract);
 }
 
 #[test]
-#[fork("MAINNET2")]
+#[fork("MAINNET")]
 fn test_provide_liquidity_to_carm_AMM() {
-    let (gov_contract_address, _AMM_contract_address1, treasury_contract_address, _) =
+    let (gov_contract_address, _AMM_contract_address1, treasury_contract_address) =
         get_important_addresses();
     let quote_token: ContractAddress =
         0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8

@@ -2,22 +2,14 @@ use starknet::ContractAddress;
 use governance::types::OptionType;
 
 #[starknet::interface]
-trait IGovernance<TContractState> {
-    fn claim(
-        ref self: TContractState, claimee: ContractAddress, amount: u128, proof: Array::<felt252>
-    );
-}
-
-#[starknet::interface]
 trait Itreasury<TContractState> {
     fn send_tokens_to_address(
         ref self: TContractState,
         receiver: ContractAddress,
         amount: u256,
-        tokenAddr: ContractAddress
+        token_addr: ContractAddress
     ) -> bool;
-    fn update_governance_contract(ref self: TContractState, newGovernanceContract: ContractAddress);
-    fn update_AMM_contract(ref self: TContractState, newAMMContract: ContractAddress);
+    fn update_AMM_address(ref self: TContractState, new_amm_address: ContractAddress);
     fn provide_liquidity_to_carm_AMM(
         ref self: TContractState,
         pooled_token_addr: ContractAddress,
@@ -34,27 +26,33 @@ trait Itreasury<TContractState> {
         option_type: OptionType,
         lp_token_amount: u256
     );
-    fn claim_airdrop_tokens(
+    fn claim_distribution(
         ref self: TContractState, claimee: ContractAddress, amount: u128, proof: Array::<felt252>
     );
-    fn get_governance_address(self: @TContractState) -> ContractAddress;
     fn get_amm_address(self: @TContractState) -> ContractAddress;
 }
 
 #[starknet::contract]
 mod Treasury {
+    use openzeppelin::access::ownable::interface::IOwnable;
     use core::starknet::event::EventEmitter;
-    use super::{OptionType, IGovernanceDispatcher, IGovernanceDispatcherTrait};
+    use super::{OptionType};
     use core::num::traits::zero::Zero;
     use openzeppelin::access::ownable::OwnableComponent;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
+    use openzeppelin::upgrades::interface::IUpgradeable;
+    use starknet::{ContractAddress, get_caller_address, get_contract_address, ClassHash};
+    use governance::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
     use governance::traits::{
         IERC20Dispatcher, IERC20DispatcherTrait, IAMMDispatcher, IAMMDispatcherTrait
     };
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+    component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
     #[abi(embed_v0)]
     impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
+
 
     #[abi(embed_v0)]
     impl OwnableCamelOnlyImpl =
@@ -63,28 +61,29 @@ mod Treasury {
 
     #[storage]
     struct Storage {
-        governance_contract_address: ContractAddress,
         amm_address: ContractAddress,
         #[substorage(v0)]
-        ownable: OwnableComponent::Storage
+        ownable: OwnableComponent::Storage,
+        #[substorage(v0)]
+        upgradeable: UpgradeableComponent::Storage
     }
     #[derive(starknet::Event, Drop)]
     struct TokenSent {
         receiver: ContractAddress,
-        tokenAddr: ContractAddress,
+        token_addr: ContractAddress,
         amount: u256
     }
 
     #[derive(starknet::Event, Drop)]
-    struct GovernanceContractUpdated {
-        previousContract: ContractAddress,
-        newGovernanceContract: ContractAddress
+    struct GovernanceAddressUpdated {
+        previous_address: ContractAddress,
+        new_governance_address: ContractAddress
     }
 
     #[derive(starknet::Event, Drop)]
-    struct AMMContractUpdated {
-        previousContract: ContractAddress,
-        newAMMContract: ContractAddress
+    struct AMMAddressUpdated {
+        previous_address: ContractAddress,
+        new_amm_address: ContractAddress
     }
 
     #[derive(starknet::Event, Drop)]
@@ -113,23 +112,24 @@ mod Treasury {
     #[derive(Drop, starknet::Event)]
     enum Event {
         TokenSent: TokenSent,
-        GovernanceContractUpdated: GovernanceContractUpdated,
-        AMMContractUpdated: AMMContractUpdated,
+        GovernanceAddressUpdated: GovernanceAddressUpdated,
+        AMMAddressUpdated: AMMAddressUpdated,
         LiquidityProvided: LiquidityProvided,
         LiquidityWithdrawn: LiquidityWithdrawn,
         airdropClaimed: airdropClaimed,
         #[flat]
-        OwnableEvent: OwnableComponent::Event
+        OwnableEvent: OwnableComponent::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event
     }
 
     mod Errors {
-        const InsufficientFunds: felt252 = 'Insufficient token ballance';
-        const InsufficientQuoteToken: felt252 = 'Insufficient Quote ballance';
-        const InsufficientBaseToken: felt252 = 'Insufficient Base ballance';
-        const InsufficientLPToken: felt252 = 'Insufficient LP token ballance';
-        const AddressZeroGovernance: felt252 = 'Governance addr is zero address';
-        const AddressZeroAMM: felt252 = 'AMM addr is zero address';
-        const AddressAlreadyChanged: felt252 = 'New Address same as Previous';
+        const INSUFFICIENT_FUNDS: felt252 = 'Insufficient token balance';
+        const INSUFFICIENT_POOLED_TOKEN: felt252 = 'Insufficient Pooled balance';
+        const INSUFFICIENT_LP_TOKENS: felt252 = 'Insufficient LP token balance';
+        const ADDRESS_ZERO_GOVERNANCE: felt252 = 'Governance addr is zero address';
+        const ADDRESS_ZERO_AMM: felt252 = 'AMM addr is zero address';
+        const ADDRESS_ALREADY_CHANGED: felt252 = 'New Address same as Previous';
     }
 
     #[constructor]
@@ -138,9 +138,8 @@ mod Treasury {
         gov_contract_address: ContractAddress,
         AMM_contract_address: ContractAddress
     ) {
-        assert(gov_contract_address != zeroable::Zeroable::zero(), Errors::AddressZeroGovernance);
-        assert(AMM_contract_address != zeroable::Zeroable::zero(), Errors::AddressZeroAMM);
-        self.governance_contract_address.write(gov_contract_address);
+        assert(gov_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_GOVERNANCE);
+        assert(AMM_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_AMM);
         self.amm_address.write(AMM_contract_address);
         self.ownable.initializer(gov_contract_address);
     }
@@ -151,39 +150,23 @@ mod Treasury {
             ref self: ContractState,
             receiver: ContractAddress,
             amount: u256,
-            tokenAddr: ContractAddress
+            token_addr: ContractAddress
         ) -> bool {
             self.ownable.assert_only_owner();
-            let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: tokenAddr };
-            assert(token.balanceOf(get_contract_address()) >= amount, Errors::InsufficientFunds);
+            let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token_addr };
+            assert(token.balanceOf(get_contract_address()) >= amount, Errors::INSUFFICIENT_FUNDS);
             let status: bool = token.transfer(receiver, amount);
-            self.emit(TokenSent { receiver, tokenAddr, amount });
+            self.emit(TokenSent { receiver, token_addr, amount });
             return status;
         }
 
-        fn update_governance_contract(
-            ref self: ContractState, newGovernanceContract: ContractAddress
-        ) {
+        fn update_AMM_address(ref self: ContractState, new_amm_address: ContractAddress) {
             self.ownable.assert_only_owner();
-            assert(
-                newGovernanceContract != zeroable::Zeroable::zero(), Errors::AddressZeroGovernance
-            );
-            assert(
-                newGovernanceContract != self.governance_contract_address.read(),
-                Errors::AddressAlreadyChanged
-            );
-            let previousContract: ContractAddress = self.governance_contract_address.read();
-            self.governance_contract_address.write(newGovernanceContract);
-            self.emit(GovernanceContractUpdated { previousContract, newGovernanceContract })
-        }
-
-        fn update_AMM_contract(ref self: ContractState, newAMMContract: ContractAddress) {
-            self.ownable.assert_only_owner();
-            assert(newAMMContract != zeroable::Zeroable::zero(), Errors::AddressZeroAMM);
-            assert(newAMMContract != self.amm_address.read(), Errors::AddressAlreadyChanged);
-            let previousContract: ContractAddress = self.amm_address.read();
-            self.amm_address.write(newAMMContract);
-            self.emit(AMMContractUpdated { previousContract, newAMMContract })
+            assert(new_amm_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_AMM);
+            assert(new_amm_address != self.amm_address.read(), Errors::ADDRESS_ALREADY_CHANGED);
+            let previous_address: ContractAddress = self.amm_address.read();
+            self.amm_address.write(new_amm_address);
+            self.emit(AMMAddressUpdated { previous_address, new_amm_address })
         }
 
         fn provide_liquidity_to_carm_AMM(
@@ -199,14 +182,15 @@ mod Treasury {
                 contract_address: self.amm_address.read()
             };
 
-            let _quote_token: IERC20Dispatcher = IERC20Dispatcher {
-                contract_address: quote_token_address
+            let pooled_token: IERC20Dispatcher = IERC20Dispatcher {
+                contract_address: pooled_token_addr
             };
-            // assert(quote_token.balanceOf(get_contract_address()) >= amount, Errors::InsufficientQuoteToken);
-            let _base_token: IERC20Dispatcher = IERC20Dispatcher {
-                contract_address: quote_token_address
-            };
-            // assert(base_token.balanceOf(get_contract_address()) >= amount, Errors::InsufficientBaseToken);
+
+            assert(
+                pooled_token.balanceOf(get_contract_address()) >= amount,
+                Errors::INSUFFICIENT_POOLED_TOKEN
+            );
+            pooled_token.approve(self.amm_address.read(), amount);
 
             carm_AMM
                 .deposit_liquidity(
@@ -240,7 +224,7 @@ mod Treasury {
             let lp_token: IERC20Dispatcher = IERC20Dispatcher { contract_address: lp_tokenAddr };
             assert(
                 lp_token.balanceOf(get_contract_address()) >= lp_token_amount,
-                Errors::InsufficientLPToken
+                Errors::INSUFFICIENT_LP_TOKENS
             );
 
             carm_AMM
@@ -259,24 +243,27 @@ mod Treasury {
                 );
         }
 
-        // Note the claim airdrop function is a prototype implementation, clearity is needed for the actual intended purpose of this function.
-        fn claim_airdrop_tokens(
+        fn claim_distribution(
             ref self: ContractState, claimee: ContractAddress, amount: u128, proof: Array::<felt252>
         ) {
             self.ownable.assert_only_owner();
-            let Governance: IGovernanceDispatcher = IGovernanceDispatcher {
-                contract_address: self.governance_contract_address.read()
+            let Governance: IAirdropDispatcher = IAirdropDispatcher {
+                contract_address: self.ownable.owner()
             };
             Governance.claim(claimee, amount, proof);
             self.emit(airdropClaimed { claimee, amount });
         }
 
-        fn get_governance_address(self: @ContractState) -> ContractAddress {
-            self.governance_contract_address.read()
-        }
-
         fn get_amm_address(self: @ContractState) -> ContractAddress {
             self.amm_address.read()
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.upgradeable._upgrade(new_class_hash);
         }
     }
 }
