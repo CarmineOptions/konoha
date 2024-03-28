@@ -2,7 +2,7 @@ use starknet::ContractAddress;
 use governance::types::OptionType;
 
 #[starknet::interface]
-trait Itreasury<TContractState> {
+trait ITreasury<TContractState> {
     fn send_tokens_to_address(
         ref self: TContractState,
         receiver: ContractAddress,
@@ -34,11 +34,11 @@ trait Itreasury<TContractState> {
 
 #[starknet::contract]
 mod Treasury {
-    use openzeppelin::access::ownable::interface::IOwnable;
     use core::starknet::event::EventEmitter;
     use super::{OptionType};
     use core::num::traits::zero::Zero;
     use openzeppelin::access::ownable::OwnableComponent;
+    use openzeppelin::access::ownable::interface::IOwnableTwoStep;
     use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
     use starknet::{ContractAddress, get_caller_address, get_contract_address, ClassHash};
@@ -49,15 +49,12 @@ mod Treasury {
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
+  
     #[abi(embed_v0)]
-    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
-    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
-
-
-    #[abi(embed_v0)]
-    impl OwnableCamelOnlyImpl =
-        OwnableComponent::OwnableCamelOnlyImpl<ContractState>;
+    impl OwnableTwoStepImpl =
+        OwnableComponent::OwnableTwoStepImpl<ContractState>;
     impl InternalImpl = OwnableComponent::InternalImpl<ContractState>;
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
     #[storage]
     struct Storage {
@@ -72,12 +69,6 @@ mod Treasury {
         receiver: ContractAddress,
         token_addr: ContractAddress,
         amount: u256
-    }
-
-    #[derive(starknet::Event, Drop)]
-    struct GovernanceAddressUpdated {
-        previous_address: ContractAddress,
-        new_governance_address: ContractAddress
     }
 
     #[derive(starknet::Event, Drop)]
@@ -112,7 +103,6 @@ mod Treasury {
     #[derive(Drop, starknet::Event)]
     enum Event {
         TokenSent: TokenSent,
-        GovernanceAddressUpdated: GovernanceAddressUpdated,
         AMMAddressUpdated: AMMAddressUpdated,
         LiquidityProvided: LiquidityProvided,
         LiquidityWithdrawn: LiquidityWithdrawn,
@@ -145,7 +135,7 @@ mod Treasury {
     }
 
     #[abi(embed_v0)]
-    impl Treasury of super::Itreasury<ContractState> {
+    impl Treasury of super::ITreasury<ContractState> {
         fn send_tokens_to_address(
             ref self: ContractState,
             receiver: ContractAddress,
@@ -217,11 +207,11 @@ mod Treasury {
                 contract_address: self.amm_address.read()
             };
 
-            let lp_tokenAddr = carm_AMM
+            let lp_token_addr = carm_AMM
                 .get_lptoken_address_for_given_option(
                     quote_token_address, base_token_address, option_type
                 );
-            let lp_token: IERC20Dispatcher = IERC20Dispatcher { contract_address: lp_tokenAddr };
+            let lp_token: IERC20Dispatcher = IERC20Dispatcher { contract_address: lp_token_addr };
             assert(
                 lp_token.balanceOf(get_contract_address()) >= lp_token_amount,
                 Errors::INSUFFICIENT_LP_TOKENS
