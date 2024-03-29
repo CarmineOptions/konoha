@@ -26,9 +26,6 @@ trait ITreasury<TContractState> {
         option_type: OptionType,
         lp_token_amount: u256
     );
-    fn claim_distribution(
-        ref self: TContractState, claimee: ContractAddress, amount: u128, proof: Array::<felt252>
-    );
     fn get_amm_address(self: @TContractState) -> ContractAddress;
 }
 
@@ -49,10 +46,9 @@ mod Treasury {
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
-  
+
     #[abi(embed_v0)]
-    impl OwnableTwoStepImpl =
-        OwnableComponent::OwnableTwoStepImpl<ContractState>;
+    impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
     impl InternalImpl = OwnableComponent::InternalImpl<ContractState>;
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
@@ -93,12 +89,6 @@ mod Treasury {
         lp_token_amount: u256
     }
 
-    #[derive(starknet::Event, Drop)]
-    struct airdropClaimed {
-        claimee: ContractAddress,
-        amount: u128
-    }
-
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -106,7 +96,6 @@ mod Treasury {
         AMMAddressUpdated: AMMAddressUpdated,
         LiquidityProvided: LiquidityProvided,
         LiquidityWithdrawn: LiquidityWithdrawn,
-        airdropClaimed: airdropClaimed,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         #[flat]
@@ -231,17 +220,6 @@ mod Treasury {
                         quote_token_address, base_token_address, option_type, lp_token_amount
                     }
                 );
-        }
-
-        fn claim_distribution(
-            ref self: ContractState, claimee: ContractAddress, amount: u128, proof: Array::<felt252>
-        ) {
-            self.ownable.assert_only_owner();
-            let Governance: IAirdropDispatcher = IAirdropDispatcher {
-                contract_address: self.ownable.owner()
-            };
-            Governance.claim(claimee, amount, proof);
-            self.emit(airdropClaimed { claimee, amount });
         }
 
         fn get_amm_address(self: @ContractState) -> ContractAddress {
