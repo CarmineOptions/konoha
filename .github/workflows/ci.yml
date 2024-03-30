@@ -9,8 +9,8 @@ on:
       - 'Scarb.toml'
 
 env:
-  SCARB_VERSION: 2.6.3
-  FOUNDRY_VERSION: 0.19.0
+  SCARB_VERSION: 2.6.4
+  FOUNDRY_VERSION: 0.20.1
 
 jobs:
   build:
