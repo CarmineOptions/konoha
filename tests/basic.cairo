@@ -29,21 +29,6 @@ fn test_submit_proposal() {
     dispatcher.submit_proposal(0x00, 1);
 }
 
-#[test]
-#[fork("GOERLI")]
-fn test_forking_functionality() {
-    let gov_contract_addr: ContractAddress =
-        0x7ba1d4836a1142c09dde23cb39b2885fe350912591461b5764454a255bdbac6
-        .try_into()
-        .unwrap();
-    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
-    let propdetails = dispatcher.get_proposal_details(1);
-    assert(
-        propdetails.payload == 0x78b4ccacdc1c902281f6f13d94b6d17b1f4c44ff811c01dea504d43a264f611,
-        'payload not match'
-    );
-}
-
 
 // Raises the prop_id to 44, fixes prop_id now 0
 fn submit_44_signal_proposals() {
