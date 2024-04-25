@@ -5,6 +5,8 @@ trait IUpgrades<TContractState> {
 
 #[starknet::component]
 mod upgrades {
+    use core::result::ResultTrait;
+    use core::array::ArrayTrait;
     use traits::TryInto;
     use option::OptionTrait;
     use traits::Into;
@@ -16,7 +18,7 @@ mod upgrades {
     use starknet::ContractAddress;
     use starknet::class_hash;
 
-    use governance::types::PropDetails;
+    use governance::types::{CustomProposalConfig, PropDetails};
     use governance::contract::Governance;
     use governance::contract::Governance::ContractState;
 
@@ -92,6 +94,43 @@ mod upgrades {
                     } else if (contract_type == 3) {
                         let mut airdrop_comp = get_dep_component_mut!(ref self, Airdrop);
                         airdrop_comp.merkle_root.write(impl_hash);
+                    } else if (contract_type == 5) {
+                        // custom proposal
+                        let custom_proposal_type: u32 = impl_hash
+                            .try_into()
+                            .expect('custom prop type fit in u32');
+                        let config: CustomProposalConfig = proposals_comp
+                            .custom_proposal_type
+                            .read(custom_proposal_type);
+
+                        let prop_id_: u32 = prop_id.try_into().unwrap();
+                        let mut calldata_len = proposals_comp
+                            .custom_proposal_payload
+                            .read((prop_id_, 0));
+                        let mut calldata: Array<felt252> = ArrayTrait::new();
+                        let mut i: u32 = 1;
+                        while (calldata_len != 0) {
+                            calldata
+                                .append(proposals_comp.custom_proposal_payload.read((prop_id_, i)));
+                            i += 1;
+                            calldata_len -= 1;
+                        };
+
+                        if (config.library_call) {
+                            let res = syscalls::library_call_syscall(
+                                config.target.try_into().expect('unable to convert>classhash'),
+                                config.selector,
+                                calldata.span()
+                            );
+                            res.expect('libcall failed');
+                        } else {
+                            let res = syscalls::call_contract_syscall(
+                                config.target.try_into().expect('unable to convert>addr'),
+                                config.selector,
+                                calldata.span()
+                            );
+                            res.expect('contract call failed');
+                        }
                     } else {
                         assert(
                             contract_type == 4, 'invalid contract_type'
