@@ -1,6 +1,11 @@
-import { useAccount, useContractRead } from "@starknet-react/core";
+import {
+    useAccount,
+    useContract,
+    useContractRead,
+    useContractWrite,
+} from "@starknet-react/core";
 import { abi } from "../lib/abi";
-import React from "react";
+import React, { useMemo } from "react";
 import { CONTRACT_ADDR } from "../lib/config";
 import toast from "react-hot-toast";
 
@@ -12,6 +17,10 @@ export default function Proposal({
     index: number;
 }) {
     const { isConnected } = useAccount();
+    const { contract } = useContract({
+        address: CONTRACT_ADDR,
+        abi: abi,
+    });
 
     // Call the contract function get_proposal_details with the proposalId to get the proposal details
     const { data, isLoading } = useContractRead({
@@ -31,8 +40,39 @@ export default function Proposal({
         4: "no-op/signal vote",
     };
 
+    const [voteChoice, setVoteChoice] = React.useState<number | null>(null);
+
+    // // Create a call to vote YES on a proposal
+    const yes_call = useMemo(() => {
+        if (!voteChoice) return [];
+
+        const tx = {
+            contractAddress: CONTRACT_ADDR,
+            entrypoint: "vote",
+            calldata: [proposalId.toString(), 1],
+        };
+        return [tx];
+    }, [voteChoice]);
+
+    console.log(contract.functions.vote);
+
+    const { write: write_yes } = useContractWrite({ calls: yes_call });
+
+    // Create a call to vote NO on a proposal
+    const no_call = useMemo(() => {
+        if (!voteChoice) return [];
+
+        const tx = {
+            contractAddress: CONTRACT_ADDR,
+            entrypoint: "vote",
+            calldata: [proposalId.toString(), 2],
+        };
+        return [tx];
+    }, [voteChoice]);
+    const { write: write_no } = useContractWrite({ calls: no_call });
+
     // Function to vote on a proposal
-    function vote(vote: boolean) {
+    async function vote(vote: boolean) {
         // Check if the user is connected to a wallet
         if (!isConnected) {
             // If the user is not connected, display a toast message
@@ -40,7 +80,24 @@ export default function Proposal({
             return;
         }
 
-        toast.success(`Voted ${vote ? "yes" : "no"} on proposal ${proposalId}`);
+        // Check if the contract is loaded
+        if (!contract) {
+            toast.error("Contract not found");
+            return;
+        }
+
+        // Set the vote choice
+        setVoteChoice(vote ? 1 : 2);
+
+        // Call the write function to vote on the proposal
+        if (vote) {
+            // contract.invoke("vote", [proposalId.toString(), 1]);
+
+            // await contract.functions.vote(proposalId.toString(), 1);
+            write_yes();
+        } else {
+            write_no();
+        }
     }
 
     return isLoading ? (
