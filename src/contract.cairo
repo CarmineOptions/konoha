@@ -46,6 +46,9 @@ mod Governance {
     #[abi(embed_v0)]
     impl Proposals = proposals_component::ProposalsImpl<ContractState>;
 
+    #[abi(embed_v0)]
+    impl Upgrades = upgrades_component::UpgradesImpl<ContractState>;
+
     #[storage]
     struct Storage {
         proposal_initializer_run: LegacyMap::<u64, bool>,
