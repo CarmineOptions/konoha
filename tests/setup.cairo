@@ -1,3 +1,4 @@
+use core::traits::Into;
 #[starknet::contract]
 mod MyToken {
     use openzeppelin::token::erc20::ERC20Component;
@@ -71,7 +72,7 @@ fn deploy_governance() -> IGovernanceDispatcher {
 fn deploy_and_distribute_gov_tokens(recipient: ContractAddress) {
     let mut calldata = ArrayTrait::new();
     calldata.append(GOV_TOKEN_INITIAL_SUPPLY);
-    calldata.append(recipient);
+    calldata.append(recipient.into());
 
     let gov_token_contract = declare('MyToken');
     let token_addr = gov_token_contract.deploy_at(@calldata).expect('unable to deploy MyToken');
@@ -108,6 +109,14 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
     assert(check_if_healthy(gov_contract_addr), 'new gov not healthy');
 }
 
+fn check_if_healthy(gov_contract_addr: ContractAddress) -> bool {
+    // TODO
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+    dispatcher.get_proposal_status(0);
+    let prop_details = dispatcher.get_proposal_details(0);
+    (prop_details.payload + prop_details.to_upgrade) != 0
+}
+
 
 fn test_express_proposal() {
     let gov_contract = deploy_governance();
@@ -136,9 +145,10 @@ fn test_proposal_expiry() {
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr);
     let prop_id = dispatcher.submit_proposal(42, 1);
 
+    //simulate passage of time
     let current_timestamp = get_block_timestamp();
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
-    start_warp(current_timestamp, end_timestamp + 1);
+    start_warp(end_timestamp + 1, current_timestamp);
 
     let status = dispatcher.get_proposal_status(prop_id);
 }
@@ -154,9 +164,10 @@ fn test_vote_on_expired_proposal() {
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr);
     let prop_id = dispatcher.submit_proposal(42, 1);
 
+    //simulate passage of time
     let current_timestamp = get_block_timestamp();
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
-    start_warp(current_timestamp, end_timestamp + 1);
+    start_warp(end_timestamp + 1, current_timestamp);
 
     start_prank(CheatTarget::One(gov_contract_addr), first_address);
     dispatcher.vote(prop_id, 1);
