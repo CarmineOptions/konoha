@@ -101,7 +101,7 @@ mod proposals {
     }
 
     fn assert_correct_contract_type(contract_type: ContractType) {
-        assert(contract_type <= 4, 'invalid contract type')
+        assert(contract_type <= 6, 'invalid contract type')
     }
 
     fn hashing(
