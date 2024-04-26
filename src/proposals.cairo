@@ -53,6 +53,8 @@ mod proposals {
     use governance::types::VoteStatus;
     use governance::traits::IERC20Dispatcher;
     use governance::traits::IERC20DispatcherTrait;
+    use governance::traits::IGovernanceTokenDispatcher;
+    use governance::traits::IGovernanceTokenDispatcherTrait;
     use governance::traits::get_governance_token_address_self;
     use governance::constants;
 
@@ -277,13 +279,13 @@ mod proposals {
             assert_correct_contract_type(to_upgrade);
             let govtoken_addr = get_governance_token_address_self();
             let caller = get_caller_address();
-            let caller_balance: u128 = IERC20Dispatcher { contract_address: govtoken_addr }
-                .balanceOf(caller)
+            let caller_balance: u128 = IGovernanceTokenDispatcher { contract_address: govtoken_addr }
+                .balance_of(caller)
                 .low;
-            let total_supply = IERC20Dispatcher { contract_address: govtoken_addr }.totalSupply();
+            let total_supply = IGovernanceTokenDispatcher { contract_address: govtoken_addr }.total_supply();
             let res: u256 = (caller_balance * constants::NEW_PROPOSAL_QUORUM)
                 .into(); // TODO use such multiplication that u128 * u128 = u256
-            assert(total_supply < res, 'not enough tokens to submit');
+            assert(total_supply <= res, 'not enough tokens to submit');
 
             let prop_id = self.get_free_prop_id_timestamp();
             let prop_details = PropDetails { payload: payload, to_upgrade: to_upgrade.into() };
@@ -372,8 +374,8 @@ mod proposals {
             // TODO allow override of previous vote
             assert(curr_vote_status == 0, 'already voted');
 
-            let caller_balance_u256: u256 = IERC20Dispatcher { contract_address: gov_token_addr }
-                .balanceOf(caller_addr);
+            let caller_balance_u256: u256 = IGovernanceTokenDispatcher { contract_address: gov_token_addr }
+                .balance_of(caller_addr);
             assert(caller_balance_u256.high == 0, 'CARM balance > u128');
             let caller_balance: u128 = caller_balance_u256.low;
             assert(caller_balance != 0, 'CARM balance is zero');
