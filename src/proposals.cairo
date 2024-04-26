@@ -118,10 +118,10 @@ mod proposals {
             let gov_token_addr = get_governance_token_address_self();
             let yay_tally_felt: felt252 = self.proposal_total_yay.read(prop_id);
             let yay_tally: u128 = yay_tally_felt.try_into().unwrap();
-            let total_eligible_votes_from_tokenholders_u256: u256 = IGovernanceTokenDispatcher {
+            let total_eligible_votes_from_tokenholders_u256: u256 = IERC20Dispatcher {
                 contract_address: gov_token_addr
             }
-                .total_supply();
+                .totalSupply();
             assert(
                 total_eligible_votes_from_tokenholders_u256.high == 0, 'totalSupply weirdly high'
             );
@@ -425,10 +425,10 @@ mod proposals {
             // If QUORUM = 10, quorum was not met if (total_tally*100) < (total_eligible * 10).
             let total_tally_multiplied = total_tally * 100;
 
-            let total_eligible_votes_u256: u256 = IGovernanceTokenDispatcher {
+            let total_eligible_votes_u256: u256 = IERC20Dispatcher {
                 contract_address: gov_token_addr
             }
-                .total_supply();
+                .totalSupply();
             assert(total_eligible_votes_u256.high == 0, 'unable to check quorum');
             let total_eligible_votes: u128 = total_eligible_votes_u256.low;
 
