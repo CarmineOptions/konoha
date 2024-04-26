@@ -1,8 +1,9 @@
 // This is the locked Cairo token.
+// TODO upgradability
 
 #[starknet::contract]
 mod VotingToken {
-    use openzeppelin::token::erc20::interface::IERC20;
+    use openzeppelin::token::erc20::interface::{IERC20, IERC20CamelOnly};
     use openzeppelin::token::erc20::ERC20Component;
     use starknet::ContractAddress;
 
@@ -34,6 +35,27 @@ mod VotingToken {
 
         self.erc20.initializer(name, symbol);
         self.erc20._mint(recipient, fixed_supply);
+    }
+
+    #[abi(embed_v0)]
+    impl VotingTokenCamelOnly of IERC20CamelOnly<ContractState> {
+        fn totalSupply(self: @ContractState) -> u256 {
+            self.erc20.total_supply()
+        }
+
+        fn balanceOf(self: @ContractState, account: ContractAddress) -> u256 {
+            self.erc20.balance_of(account)
+        }
+
+        fn transferFrom(
+            ref self: ContractState,
+            sender: ContractAddress,
+            recipient: ContractAddress,
+            amount: u256
+        ) -> bool {
+            assert(false, 'token locked, unwrap first');
+            false
+        }
     }
 
     #[abi(embed_v0)]
