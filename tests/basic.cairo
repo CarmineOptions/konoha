@@ -56,7 +56,7 @@ fn submit_44_signal_proposals() {
 
 
 // This proposes upgrading the current mainnet Carmine governance to the one in master, votes on it with multiple wallets and passes the upgrade turbo.
-//#[test]
+#[test]
 #[fork("MAINNET")]
 fn test_upgrade_mainnet_to_master() {
     let gov_contract_addr: ContractAddress =
