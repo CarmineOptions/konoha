@@ -1,0 +1,33 @@
+{
+  "name": "apibara-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon --exec ts-node src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@apibara/protocol": "^0.4.9",
+    "@apibara/starknet": "^0.5.0",
+    "axios": "^1.6.8",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.12.0",
+    "express": "^4.19.2",
+    "fs": "^0.0.1-security",
+    "logger": "^0.0.1",
+    "starknet": "^6.7.0",
+    "toml": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.19.5",
+    "@types/express": "^4.17.21",
+    "@types/logger": "^0.0.5",
+    "nodemon": "^3.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
