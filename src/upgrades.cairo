@@ -144,7 +144,7 @@ mod upgrades {
                     );
                     res.expect('libcall failed');
                 },
-                _ => {panic_with_felt252('invalid to_upgrade')}
+                _ => { panic_with_felt252('invalid to_upgrade') }
             };
             self.proposal_applied.write(prop_id, true); // Mark the proposal as applied
             self
