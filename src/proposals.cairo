@@ -279,10 +279,13 @@ mod proposals {
             assert_correct_contract_type(to_upgrade);
             let govtoken_addr = get_governance_token_address_self();
             let caller = get_caller_address();
-            let caller_balance: u128 = IGovernanceTokenDispatcher { contract_address: govtoken_addr }
+            let caller_balance: u128 = IGovernanceTokenDispatcher {
+                contract_address: govtoken_addr
+            }
                 .balance_of(caller)
                 .low;
-            let total_supply = IGovernanceTokenDispatcher { contract_address: govtoken_addr }.total_supply();
+            let total_supply = IGovernanceTokenDispatcher { contract_address: govtoken_addr }
+                .total_supply();
             let res: u256 = (caller_balance * constants::NEW_PROPOSAL_QUORUM)
                 .into(); // TODO use such multiplication that u128 * u128 = u256
             assert(total_supply <= res, 'not enough tokens to submit');
@@ -374,7 +377,9 @@ mod proposals {
             // TODO allow override of previous vote
             assert(curr_vote_status == 0, 'already voted');
 
-            let caller_balance_u256: u256 = IGovernanceTokenDispatcher { contract_address: gov_token_addr }
+            let caller_balance_u256: u256 = IGovernanceTokenDispatcher {
+                contract_address: gov_token_addr
+            }
                 .balance_of(caller_addr);
             assert(caller_balance_u256.high == 0, 'CARM balance > u128');
             let caller_balance: u128 = caller_balance_u256.low;
