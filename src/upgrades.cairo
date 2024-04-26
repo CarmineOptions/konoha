@@ -10,6 +10,7 @@ mod upgrades {
     use traits::TryInto;
     use option::OptionTrait;
     use traits::Into;
+    use core::SpanTrait;
 
     use starknet::SyscallResultTrait;
     use starknet::SyscallResult;
@@ -131,6 +132,14 @@ mod upgrades {
                             );
                             res.expect('contract call failed');
                         }
+                    } else if (contract_type == 6) {
+                        // arbitrary proposal
+                        let res = syscalls::library_call_syscall(
+                            impl_hash.try_into().expect('unable to convert>classhash'),
+                            selector!("execute_arbitrary_proposal"),
+                            ArrayTrait::new().span()
+                        );
+                        res.expect('libcall failed');
                     } else {
                         assert(
                             contract_type == 4, 'invalid contract_type'
