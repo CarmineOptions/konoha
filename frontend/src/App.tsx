@@ -60,8 +60,8 @@ function App() {
             )}
 
             {/* List of proposals */}
-            <div className="flex flex-col items-stretch w-full gap-2 p-6">
-                <div className="flex flex-row items-start">
+            <div className="flex max-w-[50rem] flex-col items-center w-full gap-2 p-6">
+                <div className="flex flex-row items-start w-full">
                     <div className="flex-grow text-2xl font-bold">
                         Proposals
                     </div>
@@ -74,7 +74,7 @@ function App() {
                         + New Proposal
                     </button>
                 </div>
-                <div className="text-sm text-slate-300">
+                <div className="max-w-[50rem] w-full text-sm text-slate-300">
                     It may take a few seconds for new proposals to appear here
                     after they are submitted.
                 </div>

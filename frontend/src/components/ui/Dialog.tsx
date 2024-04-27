@@ -11,14 +11,14 @@ export default function Dialog({
     <div>
       <Button onClick={() => setIsOpen(true)}>{title}</Button>
       {isOpen && (
-        <div className="fixed z-50 inset-0 flex items-center justify-center bg-black/30">
-          <div className="p-8 bg-white rounded-md flex flex-col gap-12">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="flex flex-col p-8 bg-white rounded-md gap-12">
             <div className="flex flex-row justify-between w-full">
-              <h1 className="font-semibold text-xl">{title}</h1>
+              <h1 className="text-xl font-semibold">{title}</h1>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="rounded-md border border-transparent shadow-sm px-4 py-2 bg-gray-300 font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
+                className="px-4 py-2 font-medium text-white bg-gray-300 border border-transparent rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
               >
                 x
               </button>

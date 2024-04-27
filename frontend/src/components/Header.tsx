@@ -7,9 +7,9 @@ export default function Header() {
   const { disconnect } = useDisconnect();
 
   return (
-    <div className="fixed top-0 left-0 right-0 bg-white border justify-between  flex flex-row px-4 p-2">
+    <div className="fixed top-0 left-0 right-0 flex flex-row justify-between p-2 px-4 bg-white border ">
       {address ? (
-        <div className="flex flex-col items-end bg-zinc-100 rounded-md px-6 py-2">
+        <div className="flex flex-col items-end px-6 py-2 bg-zinc-100 rounded-md">
           <p className="font-semibold">{`${address.slice(
             0,
             6,

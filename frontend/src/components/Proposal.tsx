@@ -92,8 +92,8 @@ export default function Proposal({
     return isLoading ? (
         <div>loading contract {proposalId?.toString()}</div>
     ) : (
-        <div className="flex flex-row items-center gap-1 p-2 pl-0 rounded-lg bg-slate-200">
-            <div className="grid self-stretch pl-5 pr-4 mr-4 font-mono border-r text-slate-400 place-content-center border-slate-400">
+        <div className="w-full max-w-[50rem] flex flex-row items-center gap-1 p-2 pl-0 rounded-lg bg-slate-200">
+            <div className="self-stretch pl-5 pr-4 mr-4 font-mono border-r grid text-slate-400 place-content-center border-slate-400">
                 {index}
             </div>
             <div>Type:</div>
@@ -101,13 +101,13 @@ export default function Proposal({
                 {proposal_type[data.valueOf()["to_upgrade"]]}
             </div>
             <button
-                className="px-3 py-2 text-sm font-semibold transition-all bg-green-300 rounded-lg hover:bg-green-400"
+                className="px-3 py-2 text-sm font-semibold bg-green-300 rounded-lg transition-all hover:bg-green-400"
                 onClick={() => vote(true)}
             >
                 Vote Yes
             </button>
             <button
-                className="px-3 py-2 text-sm font-semibold transition-all bg-red-300 rounded-lg hover:bg-red-400"
+                className="px-3 py-2 text-sm font-semibold bg-red-300 rounded-lg transition-all hover:bg-red-400"
                 onClick={() => vote(false)}
             >
                 Vote No
