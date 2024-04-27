@@ -5,9 +5,12 @@ import { useContractRead } from "@starknet-react/core";
 import { abi } from "./lib/abi";
 import Proposal from "./components/Proposal";
 import { CONTRACT_ADDR } from "./lib/config";
+import NewProposalForm from "./components/NewProposalForm";
 // import { useAccount } from "@starknet-react/core";
 
 function App() {
+    const [isModalOpen, setIsModalOpen] = React.useState(false);
+
     // Call the contract function get_live_proposals to get the live proposals
     const { data, isError, isLoading, error } = useContractRead({
         functionName: "get_live_proposals",
@@ -26,9 +29,55 @@ function App() {
     return (
         <main className="flex flex-col items-center min-h-screen gap-12 mt-16">
             <Header />
+            {isModalOpen && (
+                <dialog className="fixed inset-0 z-50 flex items-center justify-center w-full h-full p-6 bg-black bg-opacity-50">
+                    <div className="relative flex flex-col items-center gap-4 p-8 bg-white rounded-lg">
+                        {/* Close modal button */}
+                        <button
+                            className="absolute right-3 top-3 text-slate-400"
+                            onClick={() => setIsModalOpen(false)}
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="w-6 h-6"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </button>
+                        <p className="text-xl font-bold">New proposal</p>
+                        {/* New proposal form */}
+                        <NewProposalForm setIsModalOpen={setIsModalOpen} />
+                    </div>
+                </dialog>
+            )}
 
+            {/* List of proposals */}
             <div className="flex flex-col items-stretch w-full gap-2 p-6">
-                <div className="text-2xl font-bold">Proposals</div>
+                <div className="flex flex-row items-start">
+                    <div className="flex-grow text-2xl font-bold">
+                        Proposals
+                    </div>
+
+                    {/* New proposal button */}
+                    <button
+                        className="px-3 py-2 text-sm font-semibold text-blue-500 transition-all rounded-lg hover:bg-slate-200"
+                        onClick={() => setIsModalOpen(true)}
+                    >
+                        + New Proposal
+                    </button>
+                </div>
+                <div className="text-sm text-slate-300">
+                    It may take a few seconds for new proposals to appear here
+                    after they are submitted.
+                </div>
                 {isLoading ? (
                     <div className="text-center">loading...</div>
                 ) : (
@@ -43,49 +92,6 @@ function App() {
                     })
                 )}
             </div>
-
-            {/* <p className="mb-2 text-lg">
-                Get started by editing&nbsp;
-                <code className="p-2 rounded bg-zinc-200">src/App.tsx</code>
-            </p>
-            <div className="flex flex-row gap-12">
-                <a
-                    className="flex flex-col items-start justify-start w-48 gap-6 p-4 border rounded-md bg-zinc-100 group"
-                    href="https://starknet.io/docs"
-                    target="_blank"
-                    rel="noreferrer"
-                >
-                    <img
-                        src="https://pbs.twimg.com/profile_images/1656626805816565763/WyFDMG6u_400x400.png"
-                        className="object-contain w-24 h-24"
-                        alt="starknet-icon"
-                    />
-                    <p className="mb-2 text-lg">
-                        Starknet Documentation
-                        <span className="ml-2 transition-all group-hover:font-bold group-hover:ml-4">
-                            {">"}
-                        </span>
-                    </p>
-                </a>
-                <a
-                    className="flex flex-col items-start justify-start w-48 gap-6 p-4 border rounded-md bg-zinc-100 group"
-                    href="https://starknet-react.com/docs/getting-started"
-                    target="_blank"
-                    rel="noreferrer"
-                >
-                    <img
-                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/React-icon.svg/1150px-React-icon.svg.png"
-                        className="object-contain w-24 h-24"
-                        alt="react-icon"
-                    />
-                    <p className="mb-2 text-lg">
-                        Starknet React Documentation
-                        <span className="ml-2 transition-all group-hover:font-bold group-hover:ml-4">
-                            {">"}
-                        </span>
-                    </p>
-                </a>
-            </div> */}
         </main>
     );
 }

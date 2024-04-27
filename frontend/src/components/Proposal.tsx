@@ -1,6 +1,5 @@
 import {
     useAccount,
-    useContract,
     useContractRead,
     useContractWrite,
 } from "@starknet-react/core";
@@ -17,10 +16,6 @@ export default function Proposal({
     index: number;
 }) {
     const { isConnected } = useAccount();
-    const { contract } = useContract({
-        address: CONTRACT_ADDR,
-        abi: abi,
-    });
 
     // Call the contract function get_proposal_details with the proposalId to get the proposal details
     const { data, isLoading } = useContractRead({
@@ -42,7 +37,7 @@ export default function Proposal({
 
     const [voteChoice, setVoteChoice] = React.useState<number | null>(null);
 
-    // // Create a call to vote YES on a proposal
+    // Create a call to vote YES on a proposal
     const yes_call = useMemo(() => {
         if (!voteChoice) return [];
 
@@ -53,8 +48,6 @@ export default function Proposal({
         };
         return [tx];
     }, [voteChoice]);
-
-    console.log(contract.functions.vote);
 
     const { write: write_yes } = useContractWrite({ calls: yes_call });
 
@@ -77,12 +70,6 @@ export default function Proposal({
         if (!isConnected) {
             // If the user is not connected, display a toast message
             toast.error("Please connect your wallet to vote");
-            return;
-        }
-
-        // Check if the contract is loaded
-        if (!contract) {
-            toast.error("Contract not found");
             return;
         }
 

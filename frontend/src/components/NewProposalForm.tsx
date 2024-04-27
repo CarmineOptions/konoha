@@ -3,12 +3,18 @@ import toast from "react-hot-toast";
 import { CONTRACT_ADDR } from "../lib/config";
 import { useAccount, useContractWrite } from "@starknet-react/core";
 
-export default function NewProposalForm() {
+export default function NewProposalForm({
+    setIsModalOpen,
+}: {
+    setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
     const { isConnected } = useAccount();
 
+    // State variables for the payload and to_upgrade
     const [payload, setPayload] = React.useState<string>("");
     const [to_upgrade, setToUpgrade] = React.useState<string>("");
 
+    // Create a call to submit a proposal
     const calls = useMemo(() => {
         const tx = {
             contractAddress: CONTRACT_ADDR,
@@ -16,32 +22,36 @@ export default function NewProposalForm() {
             calldata: [payload.toString(), to_upgrade.toString()],
         };
         return [tx];
-    }, [payload, to_upgrade]);
+    }, [payload, to_upgrade, submitProposal]);
 
-    const { write } = useContractWrite({ calls });
+    // Use the useContractWrite hook to write the proposal
+    const { writeAsync } = useContractWrite({ calls });
 
     function submitProposal(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
 
+        // Check if the user is connected
         if (!isConnected) {
             toast.error("Please connect your wallet");
             return;
         }
 
-        const payload = e.currentTarget["#payload"].value;
-        const to_upgrade = e.currentTarget["#to_upgrade"].value;
-
+        // Check if the payload and to_upgrade fields are filled out
         if (!payload || !to_upgrade) {
             toast.error("Please fill out all fields");
             return;
         }
 
-        setPayload(payload);
-        setToUpgrade(to_upgrade);
-
-        write();
-
-        console.log(payload, to_upgrade);
+        // Call the write function to submit the proposal
+        writeAsync()
+            .then(() => {
+                toast.success("Proposal submitted");
+                setIsModalOpen(false);
+            })
+            .catch((e) => {
+                toast.error("Something went wrong");
+                console.error(e);
+            });
     }
 
     return (
@@ -52,11 +62,13 @@ export default function NewProposalForm() {
                 type="text"
                 placeholder="(integer or hex, e.g.: 1 or 0x1)"
                 className="w-full p-2 mb-2 border rounded-lg border-slate-300"
+                onChange={(e) => setPayload(e.target.value)}
             />
             <label htmlFor="#to_upgrade">To Upgrade</label>
             <select
                 id="#to_upgrade"
                 className="w-full p-2 border rounded-lg border-slate-300"
+                onChange={(e) => setToUpgrade(e.target.value)}
             >
                 {/* Carmine 0 = amm, 1 = governance, 2 = CARM token, 3 = merkle tree root, 4 = no-op/signal vote */}
                 <option value="0">amm</option>
