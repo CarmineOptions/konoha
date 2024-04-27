@@ -4,7 +4,7 @@ import {
     useContractWrite,
 } from "@starknet-react/core";
 import { abi } from "../lib/abi";
-import React, { useMemo } from "react";
+import React from "react";
 import { CONTRACT_ADDR } from "../lib/config";
 import toast from "react-hot-toast";
 
@@ -35,34 +35,25 @@ export default function Proposal({
         4: "no-op/signal vote",
     };
 
-    const [voteChoice, setVoteChoice] = React.useState<number | null>(null);
+    const { writeAsync: write_yes } = useContractWrite({
+        calls: [
+            {
+                contractAddress: CONTRACT_ADDR,
+                entrypoint: "vote",
+                calldata: [proposalId.toString(), 1],
+            },
+        ],
+    });
 
-    // Create a call to vote YES on a proposal
-    const yes_call = useMemo(() => {
-        if (!voteChoice) return [];
-
-        const tx = {
-            contractAddress: CONTRACT_ADDR,
-            entrypoint: "vote",
-            calldata: [proposalId.toString(), 1],
-        };
-        return [tx];
-    }, [voteChoice]);
-
-    const { write: write_yes } = useContractWrite({ calls: yes_call });
-
-    // Create a call to vote NO on a proposal
-    const no_call = useMemo(() => {
-        if (!voteChoice) return [];
-
-        const tx = {
-            contractAddress: CONTRACT_ADDR,
-            entrypoint: "vote",
-            calldata: [proposalId.toString(), 2],
-        };
-        return [tx];
-    }, [voteChoice]);
-    const { write: write_no } = useContractWrite({ calls: no_call });
+    const { writeAsync: write_no } = useContractWrite({
+        calls: [
+            {
+                contractAddress: CONTRACT_ADDR,
+                entrypoint: "vote",
+                calldata: [proposalId.toString(), 2],
+            },
+        ],
+    });
 
     // Function to vote on a proposal
     async function vote(vote: boolean) {
@@ -73,17 +64,28 @@ export default function Proposal({
             return;
         }
 
-        // Set the vote choice
-        setVoteChoice(vote ? 1 : 2);
-
         // Call the write function to vote on the proposal
         if (vote) {
             // contract.invoke("vote", [proposalId.toString(), 1]);
 
             // await contract.functions.vote(proposalId.toString(), 1);
-            write_yes();
+            write_yes()
+                .then(() => {
+                    toast.success("Voted Yes");
+                })
+                .catch((e) => {
+                    toast.error("Something went wrong");
+                    console.error(e);
+                });
         } else {
-            write_no();
+            write_no()
+                .then(() => {
+                    toast.success("Voted No");
+                })
+                .catch((e) => {
+                    toast.error("Something went wrong");
+                    console.error(e);
+                });
         }
     }
 
