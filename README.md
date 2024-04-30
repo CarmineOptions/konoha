@@ -23,10 +23,6 @@ A demo frontend accessing a deployment on Sepolia is available at http://34.171.
 
 A Telegram bot sending notifications when a new proposal appears is operated by Carmine Finance for everyone, ping us on Telegram for access.
 
-### Available proposal types
-
-0. 
-
 ## Development setup
 
 Run this in a Devcontainer or on Codespaces in VSCode. Cairo, Scarb and the Cairo extension comes installed.
