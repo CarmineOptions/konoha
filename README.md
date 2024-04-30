@@ -15,7 +15,19 @@ Reach out to us via [Telegram](https://t.me/+_BpaFo4iarszZmQ0)
 
 We're rewarding contributors with fiat and STRK tokens through [OnlyDust](https://app.onlydust.com/p/carmine-options-amm).
 
-## Setup
+## Frontend
+
+A demo frontend accessing a deployment on Sepolia is available at http://34.171.48.97/
+
+## Proposal notification service
+
+A Telegram bot sending notifications when a new proposal appears is operated by Carmine Finance for everyone, ping us on Telegram for access.
+
+### Available proposal types
+
+0. 
+
+## Development setup
 
 Run this in a Devcontainer or on Codespaces in VSCode. Cairo, Scarb and the Cairo extension comes installed.
 
