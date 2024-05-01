@@ -58,7 +58,7 @@ async function main() {
     // Apibara streaming
     const client = new StreamClient({
       url: config.apibara.url,
-      token: config.apibara.token,
+      token: "dna_HwF4zGZXGNNa1Opp579h",
       async onReconnect(err, retryCount) {
         console.log("reconnect", err, retryCount);
         // Sleep for 1 second before retrying.
@@ -69,23 +69,24 @@ async function main() {
     });
 
     const provider = new RpcProvider({
-      nodeUrl: constants.NetworkName.SN_MAIN,
-      chainId: constants.StarknetChainId.SN_MAIN,
+      nodeUrl: constants.NetworkName.SN_SEPOLIA,
+      chainId: constants.StarknetChainId.SN_SEPOLIA,
     });
 
     
     const hashAndBlockNumber = await provider.getBlockLatestAccepted();
-    const block_number = hashAndBlockNumber.block_number;
+    // const block_number = hashAndBlockNumber.block_number;
+    const block_number = 63228;
     // The address of governance deployment address 
     const key = FieldElement.fromBigInt(
       BigInt(
-        config.starknet.gov_contract_address,
+        "0x038c20cf30ac9cf91616e66cebd703953c621ed8e588abbfae6e09c179edd105",
       ),
     );
     // The address of the ERC20 contract
     const address = FieldElement.fromBigInt(
       BigInt(
-        config.starknet.ERC20,
+        "0x056dfcfa3c33c7a6852479f241f0cbbd2405791164754f16c0dcd90de13da059",
       ),
     );
 
@@ -106,26 +107,40 @@ async function main() {
     for await (const message of client) {
       switch (message.message) {
         case "data": {
+          // if (!message?.data) {
+          //   continue
+          // }
+          // const data = message.data;
+          // console.log(data)
           if (!message.data?.data) {
             continue;
           }
           for (const data of message.data.data) {
             const block = v1alpha2.Block.decode(data);
+            console.log(block);
+            // alert("Ping from Apibara server by event", false);
             const { header, events, transactions } = block;
-            console.log(header);
-            console.log(events);
-            console.log(transactions);
+            // console.log(header);
+            // console.log(events);
+            // console.log(transactions);
             if (!header || !transactions) {
               continue;
             }
-            console.log("Block " + header.blockNumber);
-            console.log("Events", events.length);
+            if (header.blockNumber == 63255) {
+              return;
+            }
+            // console.log(events);
+
+            // console.log("Block " + header.blockNumber);
+            // console.log("Events", events.length);
+            // console.log(transactions);
+
 
             for (const event of events) {
               console.log(event);
-              if (event.event && event.receipt) {
-                handleEventAvnuSwap(header, event.event, event.receipt);
-              }
+              // if (event.event && event.receipt) {
+              //   handleEventAvnuSwap(header, event.event, event.receipt);
+              // }
             }
           }
           break;
@@ -135,7 +150,7 @@ async function main() {
         }
         case "heartbeat": {
           console.log("Received heartbeat");
-          // alert("Ping from Apibara server", false);
+          // alert("Ping from Apibara server by heartbeat", false);
           break;
         }
         default: {
