@@ -12,7 +12,7 @@ export default function NewProposalForm({
 
     // State variables for the payload and to_upgrade
     const [payload, setPayload] = React.useState<string>("");
-    const [to_upgrade, setToUpgrade] = React.useState<string>("");
+    const [to_upgrade, setToUpgrade] = React.useState<string>("0");
 
     // Create a call to submit a proposal
     const calls = useMemo(() => {
@@ -46,11 +46,13 @@ export default function NewProposalForm({
         writeAsync()
             .then(() => {
                 toast.success("Proposal submitted");
-                setIsModalOpen(false);
             })
             .catch((e) => {
                 toast.error("Something went wrong");
                 console.error(e);
+            })
+            .finally(() => {
+                setIsModalOpen(false);
             });
     }
 
@@ -69,6 +71,7 @@ export default function NewProposalForm({
                 id="#to_upgrade"
                 className="w-full p-2 border rounded-lg border-slate-300"
                 onChange={(e) => setToUpgrade(e.target.value)}
+                defaultValue={to_upgrade}
             >
                 {/* Carmine 0 = amm, 1 = governance, 2 = CARM token, 3 = merkle tree root, 4 = no-op/signal vote */}
                 <option value="0">amm</option>
