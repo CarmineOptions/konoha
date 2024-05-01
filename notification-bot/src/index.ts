@@ -4,6 +4,7 @@ import {
   StarkNetCursor,
   v1alpha2,
   FieldElement,
+  EventFilter,
 } from "@apibara/starknet";
 
 import { RpcProvider, constants, provider, uint256 } from "starknet";
@@ -73,7 +74,7 @@ async function main() {
       chainId: constants.StarknetChainId.SN_SEPOLIA,
     });
 
-    
+
     const hashAndBlockNumber = await provider.getBlockLatestAccepted();
     // const block_number = hashAndBlockNumber.block_number;
     const block_number = 63228;
@@ -86,15 +87,23 @@ async function main() {
     // The address of the ERC20 contract
     const address = FieldElement.fromBigInt(
       BigInt(
+        "0x1b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1",
+      ),
+    );
+
+    const governance_contract_address = FieldElement.fromBigInt(
+      BigInt(
         "0x056dfcfa3c33c7a6852479f241f0cbbd2405791164754f16c0dcd90de13da059",
       ),
     );
 
     //Initialize the filter
     const filter_test = Filter.create()
-      .withHeader({ weak: false })
-      .addEvent((ev) => ev.withFromAddress(address).withKeys([key]))
+      .withHeader({ weak: true })
+      .addEvent((new EventFilter().withFromAddress(governance_contract_address)))
+      //.addEvent((ev) => ev.withFromAddress(address).withKeys([key]))
       .encode();
+
 
     // Configure the apibara client
     client.configure({
@@ -117,11 +126,10 @@ async function main() {
           }
           for (const data of message.data.data) {
             const block = v1alpha2.Block.decode(data);
-            console.log(block);
+            //console.log(block);
             // alert("Ping from Apibara server by event", false);
             const { header, events, transactions } = block;
             // console.log(header);
-            // console.log(events);
             // console.log(transactions);
             if (!header || !transactions) {
               continue;
@@ -129,7 +137,6 @@ async function main() {
             if (header.blockNumber == 63255) {
               return;
             }
-            // console.log(events);
 
             // console.log("Block " + header.blockNumber);
             // console.log("Events", events.length);
@@ -137,7 +144,12 @@ async function main() {
 
 
             for (const event of events) {
-              console.log(event);
+              console.log(event.event)
+              if (event.event!.keys) {
+                for (let evtkey of event.event!.keys) {
+                  console.log("key:", FieldElement.toHex(evtkey))
+                }
+              }
               // if (event.event && event.receipt) {
               //   handleEventAvnuSwap(header, event.event, event.receipt);
               // }
@@ -172,55 +184,55 @@ main()
     process.exit(1);
   });
 
-  const axios = require('axios'); // Ensure axios is required at the top of your script
+const axios = require('axios'); // Ensure axios is required at the top of your script
 
-  async function handleEventAvnuSwap(
-    header: v1alpha2.IBlockHeader,
-    event: v1alpha2.IEvent,
-    receipt: v1alpha2.ITransactionReceipt,
-  ) {
-    console.log("STARTING TO HANDLE AVNUSWAP EVENT");
-    
-    // Ensure the event has data to process
-    if (!event.data) return null;
-  
-    // Decode token and amount details
-    const takerAddress = FieldElement.toHex(event.data[0]);
-    const sellAddress = FieldElement.toHex(event.data[1]);
-    const sellToken = tokensDecimals.find(token => token.address === sellAddress);
-    const sellAddressDecimals = sellToken?.decimals;
-  
-    if (!sellAddressDecimals) return null; // Skip if sell token is not supported
-  
-    // Convert amounts using token decimal places
-    const sellAmount = +formatUnits(
-      uint256.uint256ToBN({
-        low: FieldElement.toBigInt(event.data[2]),
-        high: FieldElement.toBigInt(event.data[3]),
-      }),
-      sellAddressDecimals,
-    );
-  
-    const buyAddress = FieldElement.toHex(event.data[4]);
-    const buyToken = tokensDecimals.find(token => token.address === buyAddress);
-    const buyAddressDecimals = buyToken?.decimals;
-  
-    if (!buyAddressDecimals) return null; // Skip if buy token is not supported
-  
-    const buyAmount = +formatUnits(
-      uint256.uint256ToBN({
-        low: FieldElement.toBigInt(event.data[5]),
-        high: FieldElement.toBigInt(event.data[6]),
-      }),
-      buyAddressDecimals,
-    );
-  
-    const beneficiary = FieldElement.toHex(event.data[7]);
-  
-    console.log("FINISHED HANDLING AVNUSWAP EVENT");
-  
-    // Construct the swap data and message for notification
-    const message = `New swap on AvnuSwap:
+async function handleEventAvnuSwap(
+  header: v1alpha2.IBlockHeader,
+  event: v1alpha2.IEvent,
+  receipt: v1alpha2.ITransactionReceipt,
+) {
+  console.log("STARTING TO HANDLE AVNUSWAP EVENT");
+
+  // Ensure the event has data to process
+  if (!event.data) return null;
+
+  // Decode token and amount details
+  const takerAddress = FieldElement.toHex(event.data[0]);
+  const sellAddress = FieldElement.toHex(event.data[1]);
+  const sellToken = tokensDecimals.find(token => token.address === sellAddress);
+  const sellAddressDecimals = sellToken?.decimals;
+
+  if (!sellAddressDecimals) return null; // Skip if sell token is not supported
+
+  // Convert amounts using token decimal places
+  const sellAmount = +formatUnits(
+    uint256.uint256ToBN({
+      low: FieldElement.toBigInt(event.data[2]),
+      high: FieldElement.toBigInt(event.data[3]),
+    }),
+    sellAddressDecimals,
+  );
+
+  const buyAddress = FieldElement.toHex(event.data[4]);
+  const buyToken = tokensDecimals.find(token => token.address === buyAddress);
+  const buyAddressDecimals = buyToken?.decimals;
+
+  if (!buyAddressDecimals) return null; // Skip if buy token is not supported
+
+  const buyAmount = +formatUnits(
+    uint256.uint256ToBN({
+      low: FieldElement.toBigInt(event.data[5]),
+      high: FieldElement.toBigInt(event.data[6]),
+    }),
+    buyAddressDecimals,
+  );
+
+  const beneficiary = FieldElement.toHex(event.data[7]);
+
+  console.log("FINISHED HANDLING AVNUSWAP EVENT");
+
+  // Construct the swap data and message for notification
+  const message = `New swap on AvnuSwap:
       - Block: ${header.blockNumber}
       - Taker: ${takerAddress}
       - Sold ${sellAmount} ${sellToken?.ticker}
@@ -237,13 +249,13 @@ async function alert(msg: string, isAlert = false): Promise<void> {
   url.searchParams.append('text', msg);
 
   try {
-      // Perform the GET request without a body
-      const response = await fetch(url.toString());
-      const text = await response.text();
-      console.log("Notifications sent to Telegram");
-      console.log(text);
+    // Perform the GET request without a body
+    const response = await fetch(url.toString());
+    const text = await response.text();
+    console.log("Notifications sent to Telegram");
+    console.log(text);
   } catch (e) {
-      console.error("Failed to send notifications to Telegram", e);
+    console.error("Failed to send notifications to Telegram", e);
   }
 }
 
