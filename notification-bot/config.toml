@@ -7,6 +7,4 @@ url = ""
 token = ""
 
 [governance]
-gov_deployment_address = ""
-erc20 = ""
 gov_contract_address = ""

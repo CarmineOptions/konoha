@@ -24,8 +24,6 @@ const BOT_API_KEY = config.telegram?.bot_api_key;
 const CHATID = config.telegram?.chat_id;
 const CLIENT_URL = config.apibara?.url;
 const CLIENT_TOKEN = config.apibara?.token;
-const GOV_DEPPLOYMENT_ADDRESS = config.governance?.gov_deployment_address;
-const GOV_ERC20_ADDRESS = config.governance?.erc20;
 const GOV_CONTRACT_ADDRESS = config.governance?.gov_contract_address;
 const PROPOSAL_HASH = "0x01b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1"
 
