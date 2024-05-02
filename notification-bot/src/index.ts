@@ -5,9 +5,10 @@ import {
   v1alpha2,
   FieldElement,
   EventFilter,
+  FilterBuilder,
 } from "@apibara/starknet";
 
-import { RpcProvider, constants, provider, uint256 } from "starknet";
+import { RpcProvider, constants, number, provider, uint256 } from "starknet";
 import { formatUnits } from "ethers";
 import * as dotenv from "dotenv";
 import { BlockNumber } from "starknet";
@@ -20,162 +21,125 @@ const configPath = process.env.CONFIG_PATH || 'config.toml';
 const config = toml.parse(fs.readFileSync(configPath, 'utf-8'));
 
 const BOT_API_KEY = config.telegram?.bot_api_key;
-const statusChatId = config.telegram?.status_chat_id;
-const alertChatId = config.telegram?.alert_chat_id;
+const CHATID = config.telegram?.chat_id;
+const CLIENT_URL = config.apibara?.url;
+const CLIENT_TOKEN = config.apibara?.token;
+const GOV_DEPPLOYMENT_ADDRESS = config.governance?.gov_deployment_address;
+const GOV_ERC20_ADDRESS = config.governance?.erc20;
+const GOV_CONTRACT_ADDRESS = config.governance?.gov_contract_address;
+const PROPOSAL_HASH = "0x01b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1"
 
-const tokensDecimals = [
-  {
-    //ETH
-    ticker: "ETH",
-    decimals: 18,
-    address:
-      "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-  },
-  {
-    //USDT
-    ticker: "USDT",
-    decimals: 6,
-    address:
-      "0x068f5c6a61780768455de69077e07e89787839bf8166decfbf92b645209c0fb8",
-  },
-  {
-    //USDC
-    ticker: "USDC",
-    decimals: 6,
-    address:
-      "0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
-  },
-  {
-    //STRK
-    ticker: "STRK",
-    decimals: 18,
-    address:
-      "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
-  },
-];
 
+/**
+ * Initializes the StreamClient with configuration loaded from environment variables.
+ * @returns {StreamClient} Configured StreamClient instance for connecting to Apibara.
+ */
+function initializeStreamClient() {
+  return new StreamClient({
+    url: CLIENT_URL,
+    token: CLIENT_TOKEN,
+    async onReconnect(err, retryCount) {
+      console.log("reconnect", err, retryCount);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      return { reconnect: true };
+    },
+  });
+}
+
+/**
+ * Initializes the event filter configuration for the Apibara client.
+ * @returns {string} Encoded filter string used to specify which blockchain events to listen to.
+ */
+function initializeFilter() {
+  const governance_contract_address = FieldElement.fromBigInt(BigInt(GOV_CONTRACT_ADDRESS));
+  return Filter.create()
+    .withHeader({ weak: true })
+    .addEvent(new EventFilter().withFromAddress(governance_contract_address))
+    .encode();
+}
+
+/**
+ * Configures the Apibara client with a specific filter and block number.
+ * @param {StreamClient} client The Apibara client instance to configure.
+ * @param {string} filter The encoded filter specifying the events to listen for.
+ * @param {number} block_number The blockchain block number from which to start listening.
+ */
+function configureClient(client: StreamClient, filter: Uint8Array, block_number: number) {
+  client.configure({
+    filter: filter,
+    batchSize: 1,
+    cursor: StarkNetCursor.createWithBlockNumber(block_number),
+  });
+}
+
+/**
+ * Main entry point for the event monitoring script.
+ * Initializes the StreamClient and RpcProvider for connecting to the StarkNet blockchain.
+ * Configures the Apibara client to listen for specific blockchain events and processes them accordingly.
+ */
 async function main() {
   try {
     // Apibara streaming
-    const client = new StreamClient({
-      url: config.apibara.url,
-      token: "dna_HwF4zGZXGNNa1Opp579h",
-      async onReconnect(err, retryCount) {
-        console.log("reconnect", err, retryCount);
-        // Sleep for 1 second before retrying.
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        return { reconnect: true };
-      },
-    });
+    const client = initializeStreamClient();
 
     const provider = new RpcProvider({
       nodeUrl: constants.NetworkName.SN_SEPOLIA,
       chainId: constants.StarknetChainId.SN_SEPOLIA,
     });
 
-
     const hashAndBlockNumber = await provider.getBlockLatestAccepted();
-    // const block_number = hashAndBlockNumber.block_number;
-    const block_number = 63228;
-    // The address of governance deployment address 
-    const key = FieldElement.fromBigInt(
-      BigInt(
-        "0x038c20cf30ac9cf91616e66cebd703953c621ed8e588abbfae6e09c179edd105",
-      ),
-    );
-    // The address of the ERC20 contract
-    const address = FieldElement.fromBigInt(
-      BigInt(
-        "0x1b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1",
-      ),
-    );
-
-    const governance_contract_address = FieldElement.fromBigInt(
-      BigInt(
-        "0x056dfcfa3c33c7a6852479f241f0cbbd2405791164754f16c0dcd90de13da059",
-      ),
-    );
+    const block_number = hashAndBlockNumber.block_number;
 
     //Initialize the filter
-    const filter_test = Filter.create()
-      .withHeader({ weak: true })
-      .addEvent((new EventFilter().withFromAddress(governance_contract_address)))
-      //.addEvent((ev) => ev.withFromAddress(address).withKeys([key]))
-      .encode();
-
+    const filter_test = initializeFilter();
 
     // Configure the apibara client
-    client.configure({
-      filter: filter_test,
-      batchSize: 1,
-      cursor: StarkNetCursor.createWithBlockNumber(block_number),
-    });
+    configureClient(client, filter_test, block_number);
+    await listenToMessages(client);
 
-    // Start listening to messages
-    for await (const message of client) {
-      switch (message.message) {
-        case "data": {
-          // if (!message?.data) {
-          //   continue
-          // }
-          // const data = message.data;
-          // console.log(data)
-          if (!message.data?.data) {
-            continue;
-          }
-          for (const data of message.data.data) {
-            const block = v1alpha2.Block.decode(data);
-            //console.log(block);
-            // alert("Ping from Apibara server by event", false);
-            const { header, events, transactions } = block;
-            // console.log(header);
-            // console.log(transactions);
-            if (!header || !transactions) {
-              continue;
-            }
-            if (header.blockNumber == 63255) {
-              return;
-            }
-
-            // console.log("Block " + header.blockNumber);
-            // console.log("Events", events.length);
-            // console.log(transactions);
-
-
-            for (const event of events) {
-              console.log(event.event)
-              if (event.event!.keys) {
-                for (let evtkey of event.event!.keys) {
-                  console.log("key:", FieldElement.toHex(evtkey))
-                }
-              }
-              // if (event.event && event.receipt) {
-              //   handleEventAvnuSwap(header, event.event, event.receipt);
-              // }
-            }
-          }
-          break;
-        }
-        case "invalidate": {
-          break;
-        }
-        case "heartbeat": {
-          console.log("Received heartbeat");
-          // alert("Ping from Apibara server by heartbeat", false);
-          break;
-        }
-        default: {
-          console.log("Unknown message", message);
-          break;
-        }
-      }
-    }
   } catch (error) {
     console.error("Initialization failed", error);
     process.exit(1);
   }
 }
+
+/**
+ * Listens to blockchain events and handles each submit proposel event as they are received.
+ * @param {StreamClient} client The Apibara client instance from which to listen for messages.
+ */
+async function listenToMessages(client: StreamClient) {
+  for await (const message of client) {
+    if (message.message === "data" && message.data?.data) {
+      for (const data of message.data.data) {
+        const block = v1alpha2.Block.decode(data);
+
+        const { header, events, transactions } = block;
+
+        if (!header || !transactions) {
+          continue;
+        }
+
+        for (const event of events) {
+          console.log(event.event)
+          if (event.event && event.event.keys && event.event.data) {
+            for (let evtkey of event.event!.keys) {
+              let evtkey_hex = FieldElement.toHex(evtkey);
+
+              let submit_proposal_hash = PROPOSAL_HASH;
+              let isSame = evtkey_hex === submit_proposal_hash;
+
+              if (isSame) {
+                handleEventSubmitProposal(header, event.event);
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
+}
+
 
 main()
   .then(() => process.exit(0))
@@ -184,76 +148,68 @@ main()
     process.exit(1);
   });
 
-const axios = require('axios'); // Ensure axios is required at the top of your script
+/**
+ * Converts a hexadecimal string to a decimal string.
+ * @param {string | number} hex The hexadecimal string or number to convert.
+ * @returns {string} The decimal string representation of the hex input.
+ */
+function hexToDecimalString(hex: string | number): string {
+  const hexString = hex.toString().startsWith('0x') ? hex.toString().substring(2) : hex.toString();
 
-async function handleEventAvnuSwap(
-  header: v1alpha2.IBlockHeader,
-  event: v1alpha2.IEvent,
-  receipt: v1alpha2.ITransactionReceipt,
-) {
-  console.log("STARTING TO HANDLE AVNUSWAP EVENT");
+  const decimalNumber = parseInt(hexString, 16);
 
-  // Ensure the event has data to process
-  if (!event.data) return null;
-
-  // Decode token and amount details
-  const takerAddress = FieldElement.toHex(event.data[0]);
-  const sellAddress = FieldElement.toHex(event.data[1]);
-  const sellToken = tokensDecimals.find(token => token.address === sellAddress);
-  const sellAddressDecimals = sellToken?.decimals;
-
-  if (!sellAddressDecimals) return null; // Skip if sell token is not supported
-
-  // Convert amounts using token decimal places
-  const sellAmount = +formatUnits(
-    uint256.uint256ToBN({
-      low: FieldElement.toBigInt(event.data[2]),
-      high: FieldElement.toBigInt(event.data[3]),
-    }),
-    sellAddressDecimals,
-  );
-
-  const buyAddress = FieldElement.toHex(event.data[4]);
-  const buyToken = tokensDecimals.find(token => token.address === buyAddress);
-  const buyAddressDecimals = buyToken?.decimals;
-
-  if (!buyAddressDecimals) return null; // Skip if buy token is not supported
-
-  const buyAmount = +formatUnits(
-    uint256.uint256ToBN({
-      low: FieldElement.toBigInt(event.data[5]),
-      high: FieldElement.toBigInt(event.data[6]),
-    }),
-    buyAddressDecimals,
-  );
-
-  const beneficiary = FieldElement.toHex(event.data[7]);
-
-  console.log("FINISHED HANDLING AVNUSWAP EVENT");
-
-  // Construct the swap data and message for notification
-  const message = `New swap on AvnuSwap:
-      - Block: ${header.blockNumber}
-      - Taker: ${takerAddress}
-      - Sold ${sellAmount} ${sellToken?.ticker}
-      - Bought ${buyAmount} ${buyToken?.ticker}
-      - Beneficiary: ${beneficiary}`;
+  return decimalNumber.toString();
 }
 
-async function alert(msg: string, isAlert = false): Promise<void> {
-  // Determine the appropriate chat ID based on whether it's an alert or a status message
-  const chatId = isAlert ? alertChatId : statusChatId;
-  // Create the URL and append query parameters for the GET request
+/**
+ * Handles individual blockchain events, and notifies user for proposal submission events.
+ * @param {v1alpha2.IBlockHeader} header The header of the blockchain block containing the event.
+ * @param {v1alpha2.IEvent} event The event to process.
+ */
+async function handleEventSubmitProposal(
+  header: v1alpha2.IBlockHeader,
+  event: v1alpha2.IEvent,
+) {
+  console.log("STARTING TO HANDLE PROPOSAL");
+
+  console.log(event);
+
+  const sender = event.fromAddress ? FieldElement.toHex(event.fromAddress) : null;
+  const payload = event.data ? FieldElement.toHex(event.data[1]) : null;
+  const to_upgrade_hex = event.data ? FieldElement.toHex(event.data[2]) : null;
+  const prop_id_hex = event.data ? FieldElement.toHex(event.data[0]) : null;
+
+  const to_upgrade = to_upgrade_hex ? hexToDecimalString(to_upgrade_hex) : null;
+  const prop_id = prop_id_hex ? hexToDecimalString(prop_id_hex) : null;
+
+  if (sender && payload && to_upgrade) {
+    const message = `New proposal:
+      - Sender: ${sender}
+      - Payload: ${payload}
+      - Proposal ID: ${prop_id}
+      - To upgrade: ${to_upgrade}`;
+    console.log(message);
+    alert(message);
+  }
+
+  return null;
+}
+
+/**
+ * Sends a notification message via Telegram API.
+ * @param {string} msg The message to send.
+ */
+async function alert(msg: string): Promise<void> {
+  const chatId = CHATID;
+
   const url = new URL(`https://api.telegram.org/bot${BOT_API_KEY}/sendMessage`);
   url.searchParams.append('chat_id', chatId);
   url.searchParams.append('text', msg);
 
   try {
-    // Perform the GET request without a body
     const response = await fetch(url.toString());
     const text = await response.text();
-    console.log("Notifications sent to Telegram");
-    console.log(text);
+
   } catch (e) {
     console.error("Failed to send notifications to Telegram", e);
   }
