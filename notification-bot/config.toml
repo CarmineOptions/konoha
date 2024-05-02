@@ -1,2 +1,12 @@
+[telegram]
+bot_api_key = ""
+chat_id = ""
+
 [apibara]
-url = "sepolia.starknet.a5a.ch"
+url = ""
+token = ""
+
+[governance]
+gov_deployment_address = ""
+erc20 = ""
+gov_contract_address = ""
