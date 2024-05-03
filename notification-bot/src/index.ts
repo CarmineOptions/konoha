@@ -199,7 +199,7 @@ async function alert(msg: string): Promise<void> {
   try {
     const response = await fetch(url.toString());
     const text = await response.text();
-
+    response.ok ? console.log("Notification sent to Telegram") : console.error(`Failed to send notifications to Telegram.Status ${response.status}, response ${text}`);
   } catch (e) {
     console.error("Failed to send notifications to Telegram", e);
   }
