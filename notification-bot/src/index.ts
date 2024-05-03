@@ -5,16 +5,13 @@ import {
   v1alpha2,
   FieldElement,
   EventFilter,
-  FilterBuilder,
 } from "@apibara/starknet";
 
-import { RpcProvider, constants, number, provider, uint256 } from "starknet";
-import { formatUnits } from "ethers";
+import { RpcProvider, constants } from "starknet";
 import * as dotenv from "dotenv";
-import { BlockNumber } from "starknet";
 import * as fs from "fs";
 import * as toml from "toml";
-import { Logger } from 'logger';
+
 dotenv.config();
 
 const configPath = process.env.CONFIG_PATH || 'config.toml';
@@ -27,9 +24,10 @@ const CLIENT_TOKEN = config.apibara?.token;
 const GOV_CONTRACT_ADDRESS = config.governance?.gov_contract_address;
 const NODE_URL = config.starknet?.nodeUrl ?? constants.NetworkName.SN_SEPOLIA;
 const CHAIN_ID = config.starknet?.chainId ?? constants.StarknetChainId.SN_SEPOLIA;
-const PROPOSAL_HASH = "0x01b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1"
+const PROPOSED_EVENT_SELECTOR = "0x01b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1"
 
 if (!BOT_API_KEY || !CHATID || !CLIENT_URL || !CLIENT_TOKEN || !GOV_CONTRACT_ADDRESS) {
+  alert('required fields in configuration file not found')
   console.error('required fields in configuration file not found'); process.exit()
 }
 
@@ -93,6 +91,7 @@ async function main() {
 
     const hashAndBlockNumber = await provider.getBlockLatestAccepted();
     const block_number = hashAndBlockNumber.block_number;
+    // const block_number = 63250;
 
     //Initialize the filter
     const filter_test = initializeFilter();
@@ -127,8 +126,8 @@ async function listenToMessages(client: StreamClient) {
           if (event.event && event.event.keys && event.event.data) {
             for (let evtkey of event.event!.keys) {
               let evtkey_hex = FieldElement.toHex(evtkey);
-              if (evtkey_hex === PROPOSAL_HASH) { // Direct comparison
-                  handleEventSubmitProposal(header, event.event);
+              if (evtkey_hex === PROPOSED_EVENT_SELECTOR) {
+                handleEventSubmitProposal(header, event.event);
               }
             }
           }
@@ -157,17 +156,15 @@ async function handleEventSubmitProposal(
 ) {
   console.log("STARTING TO HANDLE PROPOSAL");
 
-  console.log(event);
-  
   const sender = event.fromAddress ? FieldElement.toHex(event.fromAddress) : null;
-  
+
   if (!Array.isArray(event.data) || event.data.length < 3) {
     const message = `No sufficient data found in event from Sender: ${sender}`;
     console.log(message);
     alert(message);
     return;
   }
-  
+
   const payload = FieldElement.toHex(event.data[1]);
   const to_upgrade = FieldElement.toBigInt(event.data[2]).toString()
   const prop_id = FieldElement.toBigInt(event.data[0]).toString()
@@ -180,12 +177,13 @@ async function handleEventSubmitProposal(
       - To upgrade: ${to_upgrade}`;
     console.log(message);
     alert(message);
+    return;
   }
 
   const message = `aborting proposal handling due to missing data in event`;
   alert(message);
 
-  return null;
+  return;
 }
 
 /**
