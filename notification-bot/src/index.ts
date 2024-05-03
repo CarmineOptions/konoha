@@ -23,12 +23,18 @@ const CLIENT_URL = config.apibara?.url;
 const CLIENT_TOKEN = config.apibara?.token;
 const GOV_CONTRACT_ADDRESS = config.governance?.gov_contract_address;
 const NODE_URL = config.starknet?.nodeUrl ?? constants.NetworkName.SN_SEPOLIA;
-const CHAIN_ID = config.starknet?.chainId ?? constants.StarknetChainId.SN_SEPOLIA;
+const SUPPORTED_CHAINS = { 'sepolia': constants.StarknetChainId.SN_SEPOLIA, 'mainnet': constants.StarknetChainId.SN_MAIN };
+type ChainName = keyof typeof SUPPORTED_CHAINS;
+if (!SUPPORTED_CHAINS[config.starknet?.chain as ChainName]) {
+  throw new Error('Invalid chain name in configuration file');
+}
+
+const CHAIN_ID = SUPPORTED_CHAINS[config.starknet?.chain as ChainName];
 const PROPOSED_EVENT_SELECTOR = "0x01b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1"
 
 if (!BOT_API_KEY || !CHATID || !CLIENT_URL || !CLIENT_TOKEN || !GOV_CONTRACT_ADDRESS) {
   alert('required fields in configuration file not found')
-  console.error('required fields in configuration file not found'); process.exit()
+  console.error('required fields in configuration file not found'); process.exit(1)
 }
 
 
