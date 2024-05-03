@@ -154,7 +154,7 @@ async function listenToMessages(client: StreamClient) {
             for (let evtkey of event.event!.keys) {
               let evtkey_hex = FieldElement.toHex(evtkey);
               if (evtkey_hex === conf.PROPOSED_EVENT_SELECTOR) {
-                handleEventSubmitProposal(header, event.event);
+                handleEventSubmitProposal(event.event);
               }
             }
           }
@@ -178,7 +178,6 @@ main()
  * @param {v1alpha2.IEvent} event The event to process.
  */
 async function handleEventSubmitProposal(
-  header: v1alpha2.IBlockHeader,
   event: v1alpha2.IEvent,
 ) {
   console.log("STARTING TO HANDLE PROPOSAL");
@@ -192,8 +191,8 @@ async function handleEventSubmitProposal(
   }
 
   const payload = FieldElement.toHex(event.data[1]);
-  const to_upgrade = FieldElement.toBigInt(event.data[2]).toString()
-  const prop_id = FieldElement.toBigInt(event.data[0]).toString()
+  const to_upgrade = FieldElement.toBigInt(event.data[2]).toString();
+  const prop_id = FieldElement.toBigInt(event.data[0]).toString();
 
   if (sender && payload && to_upgrade) {
     const message = `New proposal:
@@ -203,13 +202,11 @@ async function handleEventSubmitProposal(
       - To upgrade: ${to_upgrade}`;
     console.log(message);
     alert(message);
-    return;
+  } else {
+
+  alert('aborting proposal handling due to missing data in event');
+  
   }
-
-  const message = `aborting proposal handling due to missing data in event`;
-  alert(message);
-
-  return;
 }
 
 /**
