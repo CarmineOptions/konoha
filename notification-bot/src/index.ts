@@ -97,9 +97,7 @@ async function main() {
 
     const hashAndBlockNumber = await provider.getBlockLatestAccepted();
     const block_number = hashAndBlockNumber.block_number;
-    // const block_number = 63250;
 
-    //Initialize the filter
     const filter_test = initializeFilter();
 
     // Configure the apibara client
@@ -161,7 +159,6 @@ async function handleEventSubmitProposal(
   event: v1alpha2.IEvent,
 ) {
   console.log("STARTING TO HANDLE PROPOSAL");
-
   const sender = event.fromAddress ? FieldElement.toHex(event.fromAddress) : null;
 
   if (!Array.isArray(event.data) || event.data.length < 3) {
