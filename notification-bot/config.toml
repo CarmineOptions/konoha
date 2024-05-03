@@ -12,3 +12,4 @@ chain = "sepolia"
 
 [governance]
 gov_contract_address = ""
+event_selector = "0x01b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1" # ProposalSubmit

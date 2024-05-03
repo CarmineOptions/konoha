@@ -12,30 +12,53 @@ import * as dotenv from "dotenv";
 import * as fs from "fs";
 import * as toml from "toml";
 
-dotenv.config();
+function getConfig() {
+  dotenv.config();
 
-const configPath = process.env.CONFIG_PATH || 'config.toml';
-const config = toml.parse(fs.readFileSync(configPath, 'utf-8'));
+  const configPath = process.env.CONFIG_PATH || 'config.toml';
+  const config = toml.parse(fs.readFileSync(configPath, 'utf-8'));
 
-const BOT_API_KEY = config.telegram?.bot_api_key;
-const CHATID = config.telegram?.chat_id;
-const CLIENT_URL = config.apibara?.url;
-const CLIENT_TOKEN = config.apibara?.token;
-const GOV_CONTRACT_ADDRESS = config.governance?.gov_contract_address;
-const NODE_URL = config.starknet?.nodeUrl ?? constants.NetworkName.SN_SEPOLIA;
-const SUPPORTED_CHAINS = { 'sepolia': constants.StarknetChainId.SN_SEPOLIA, 'mainnet': constants.StarknetChainId.SN_MAIN };
-type ChainName = keyof typeof SUPPORTED_CHAINS;
-if (!SUPPORTED_CHAINS[config.starknet?.chain as ChainName]) {
-  throw new Error('Invalid chain name in configuration file');
+  const BOT_API_KEY = config.telegram?.bot_api_key;
+  const CHAT_ID = config.telegram?.chat_id;
+  const CLIENT_URL = config.apibara?.url;
+  const CLIENT_TOKEN = config.apibara?.token;
+  const GOV_CONTRACT_ADDRESS = config.governance?.gov_contract_address;
+  const configured_chain_name = config.starknet?.chain as ChainName;
+  if (!BOT_API_KEY || !CHAT_ID || !CLIENT_URL || !CLIENT_TOKEN || !GOV_CONTRACT_ADDRESS || !configured_chain_name) {
+    alert('required fields in configuration file not found')
+    console.error('required fields in configuration file not found'); process.exit(1)
+  }
+
+
+  const SUPPORTED_CHAINS = {
+    'sepolia': (constants.StarknetChainId.SN_SEPOLIA, constants.NetworkName.SN_SEPOLIA),
+    'mainnet': (constants.StarknetChainId.SN_MAIN, constants.NetworkName.SN_MAIN)
+  };
+  type ChainName = keyof typeof SUPPORTED_CHAINS;
+  if (!SUPPORTED_CHAINS[configured_chain_name]) {
+    throw new Error('Invalid chain name in configuration file');
+  }
+  const CHAIN_ID = SUPPORTED_CHAINS[configured_chain_name][0];
+  const NODE_URL = config.starknet?.nodeUrl ?? SUPPORTED_CHAINS[configured_chain_name][1];
+
+  const PROPOSED_EVENT_SELECTOR = config.governance!.event_selector ?? "0x01b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1";
+
+
+  const result = {
+    'BOT_API_KEY': BOT_API_KEY,
+    'CHAT_ID': CHAT_ID,
+    'CLIENT_URL': CLIENT_URL,
+    'CLIENT_TOKEN': CLIENT_TOKEN,
+    'GOV_CONTRACT_ADDRESS': GOV_CONTRACT_ADDRESS,
+    'NODE_URL': NODE_URL,
+    'CHAIN_ID': CHAIN_ID as constants.StarknetChainId, // typescript could be smarter... :/
+    'PROPOSED_EVENT_SELECTOR': PROPOSED_EVENT_SELECTOR
+  }
+
+  return result;
 }
 
-const CHAIN_ID = SUPPORTED_CHAINS[config.starknet?.chain as ChainName];
-const PROPOSED_EVENT_SELECTOR = "0x01b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1"
-
-if (!BOT_API_KEY || !CHATID || !CLIENT_URL || !CLIENT_TOKEN || !GOV_CONTRACT_ADDRESS) {
-  alert('required fields in configuration file not found')
-  console.error('required fields in configuration file not found'); process.exit(1)
-}
+const conf = getConfig();
 
 
 /**
@@ -44,8 +67,8 @@ if (!BOT_API_KEY || !CHATID || !CLIENT_URL || !CLIENT_TOKEN || !GOV_CONTRACT_ADD
  */
 function initializeStreamClient() {
   return new StreamClient({
-    url: CLIENT_URL,
-    token: CLIENT_TOKEN,
+    url: conf.CLIENT_URL,
+    token: conf.CLIENT_TOKEN,
     async onReconnect(err, retryCount) {
       console.log("reconnect", err, retryCount);
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -59,7 +82,7 @@ function initializeStreamClient() {
  * @returns {string} Encoded filter string used to specify which blockchain events to listen to.
  */
 function initializeFilter() {
-  const governance_contract_address = FieldElement.fromBigInt(GOV_CONTRACT_ADDRESS);
+  const governance_contract_address = FieldElement.fromBigInt(conf.GOV_CONTRACT_ADDRESS);
   return Filter.create()
     .withHeader({ weak: true })
     .addEvent(new EventFilter().withFromAddress(governance_contract_address))
@@ -91,8 +114,8 @@ async function main() {
     const client = initializeStreamClient();
 
     const provider = new RpcProvider({
-      nodeUrl: NODE_URL,
-      chainId: CHAIN_ID,
+      nodeUrl: conf.NODE_URL,
+      chainId: conf.CHAIN_ID,
     });
 
     const hashAndBlockNumber = await provider.getBlockLatestAccepted();
@@ -130,7 +153,7 @@ async function listenToMessages(client: StreamClient) {
           if (event.event && event.event.keys && event.event.data) {
             for (let evtkey of event.event!.keys) {
               let evtkey_hex = FieldElement.toHex(evtkey);
-              if (evtkey_hex === PROPOSED_EVENT_SELECTOR) {
+              if (evtkey_hex === conf.PROPOSED_EVENT_SELECTOR) {
                 handleEventSubmitProposal(header, event.event);
               }
             }
@@ -195,8 +218,8 @@ async function handleEventSubmitProposal(
  */
 async function alert(msg: string): Promise<void> {
 
-  const url = new URL(`https://api.telegram.org/bot${BOT_API_KEY}/sendMessage`);
-  url.searchParams.append('chat_id', CHATID);
+  const url = new URL(`https://api.telegram.org/bot${conf.BOT_API_KEY}/sendMessage`);
+  url.searchParams.append('chat_id', conf.CHAT_ID);
   url.searchParams.append('text', msg);
 
   try {
