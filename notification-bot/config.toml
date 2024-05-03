@@ -6,5 +6,9 @@ chat_id = ""
 url = ""
 token = ""
 
+[starknet]
+nodeUrl = ""
+chainId = ""
+
 [governance]
 gov_contract_address = ""

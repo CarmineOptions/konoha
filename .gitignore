@@ -17,7 +17,9 @@ Cargo.lock
 
 # Dependency directories
 vendor/
-node_modules/  # Node.js modules
+
+# Node.js modules
+node_modules/ 
 
 # OS files
 .DS_Store

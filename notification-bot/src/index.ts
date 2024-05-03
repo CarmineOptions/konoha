@@ -25,7 +25,13 @@ const CHATID = config.telegram?.chat_id;
 const CLIENT_URL = config.apibara?.url;
 const CLIENT_TOKEN = config.apibara?.token;
 const GOV_CONTRACT_ADDRESS = config.governance?.gov_contract_address;
+const NODE_URL = config.starknet?.nodeUrl ?? constants.NetworkName.SN_SEPOLIA;
+const CHAIN_ID = config.starknet?.chainId ?? constants.StarknetChainId.SN_SEPOLIA;
 const PROPOSAL_HASH = "0x01b5f21c50bf3288fb310446824298a349f0ed9e28fb480cc9a4d54d034652e1"
+
+if (!BOT_API_KEY || !CHATID || !CLIENT_URL || !CLIENT_TOKEN || !GOV_CONTRACT_ADDRESS) {
+  console.error('required fields in configuration file not found'); process.exit()
+}
 
 
 /**
@@ -49,7 +55,7 @@ function initializeStreamClient() {
  * @returns {string} Encoded filter string used to specify which blockchain events to listen to.
  */
 function initializeFilter() {
-  const governance_contract_address = FieldElement.fromBigInt(BigInt(GOV_CONTRACT_ADDRESS));
+  const governance_contract_address = FieldElement.fromBigInt(GOV_CONTRACT_ADDRESS);
   return Filter.create()
     .withHeader({ weak: true })
     .addEvent(new EventFilter().withFromAddress(governance_contract_address))
@@ -81,8 +87,8 @@ async function main() {
     const client = initializeStreamClient();
 
     const provider = new RpcProvider({
-      nodeUrl: constants.NetworkName.SN_SEPOLIA,
-      chainId: constants.StarknetChainId.SN_SEPOLIA,
+      nodeUrl: NODE_URL,
+      chainId: CHAIN_ID,
     });
 
     const hashAndBlockNumber = await provider.getBlockLatestAccepted();
@@ -102,7 +108,7 @@ async function main() {
 }
 
 /**
- * Listens to blockchain events and handles each submit proposel event as they are received.
+ * Listens to blockchain events and handles each submit proposal event as they are received.
  * @param {StreamClient} client The Apibara client instance from which to listen for messages.
  */
 async function listenToMessages(client: StreamClient) {
@@ -118,20 +124,14 @@ async function listenToMessages(client: StreamClient) {
         }
 
         for (const event of events) {
-          console.log(event.event)
           if (event.event && event.event.keys && event.event.data) {
             for (let evtkey of event.event!.keys) {
               let evtkey_hex = FieldElement.toHex(evtkey);
-
-              let submit_proposal_hash = PROPOSAL_HASH;
-              let isSame = evtkey_hex === submit_proposal_hash;
-
-              if (isSame) {
-                handleEventSubmitProposal(header, event.event);
+              if (evtkey_hex === PROPOSAL_HASH) { // Direct comparison
+                  handleEventSubmitProposal(header, event.event);
               }
             }
           }
-          break;
         }
       }
     }
@@ -142,22 +142,9 @@ async function listenToMessages(client: StreamClient) {
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error);
+    alert(error.message);
     process.exit(1);
   });
-
-/**
- * Converts a hexadecimal string to a decimal string.
- * @param {string | number} hex The hexadecimal string or number to convert.
- * @returns {string} The decimal string representation of the hex input.
- */
-function hexToDecimalString(hex: string | number): string {
-  const hexString = hex.toString().startsWith('0x') ? hex.toString().substring(2) : hex.toString();
-
-  const decimalNumber = parseInt(hexString, 16);
-
-  return decimalNumber.toString();
-}
 
 /**
  * Handles individual blockchain events, and notifies user for proposal submission events.
@@ -171,14 +158,19 @@ async function handleEventSubmitProposal(
   console.log("STARTING TO HANDLE PROPOSAL");
 
   console.log(event);
-
+  
   const sender = event.fromAddress ? FieldElement.toHex(event.fromAddress) : null;
-  const payload = event.data ? FieldElement.toHex(event.data[1]) : null;
-  const to_upgrade_hex = event.data ? FieldElement.toHex(event.data[2]) : null;
-  const prop_id_hex = event.data ? FieldElement.toHex(event.data[0]) : null;
-
-  const to_upgrade = to_upgrade_hex ? hexToDecimalString(to_upgrade_hex) : null;
-  const prop_id = prop_id_hex ? hexToDecimalString(prop_id_hex) : null;
+  
+  if (!Array.isArray(event.data) || event.data.length < 3) {
+    const message = `No sufficient data found in event from Sender: ${sender}`;
+    console.log(message);
+    alert(message);
+    return;
+  }
+  
+  const payload = FieldElement.toHex(event.data[1]);
+  const to_upgrade = FieldElement.toBigInt(event.data[2]).toString()
+  const prop_id = FieldElement.toBigInt(event.data[0]).toString()
 
   if (sender && payload && to_upgrade) {
     const message = `New proposal:
@@ -190,6 +182,9 @@ async function handleEventSubmitProposal(
     alert(message);
   }
 
+  const message = `aborting proposal handling due to missing data in event`;
+  alert(message);
+
   return null;
 }
 
@@ -198,10 +193,9 @@ async function handleEventSubmitProposal(
  * @param {string} msg The message to send.
  */
 async function alert(msg: string): Promise<void> {
-  const chatId = CHATID;
 
   const url = new URL(`https://api.telegram.org/bot${BOT_API_KEY}/sendMessage`);
-  url.searchParams.append('chat_id', chatId);
+  url.searchParams.append('chat_id', CHATID);
   url.searchParams.append('text', msg);
 
   try {
