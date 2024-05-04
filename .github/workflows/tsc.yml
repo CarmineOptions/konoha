@@ -25,4 +25,4 @@ jobs:
           with:
             node-version: '22'
         - name: Run tsc
-          run: npx tsc --project notification-bot
+          run: npm install -g typescript; tsc --project notification-bot
