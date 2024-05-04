@@ -9,14 +9,14 @@ on:
       - 'package.json'
 
 jobs:
-    compile:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout (GitHub)
-              uses: actions/checkout@v4
-            - name: Install Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: '22'
-            - name: Run tsc
-              run: npx tsc --project notification-bot
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout (GitHub)
+          uses: actions/checkout@v4
+        - name: Install Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: '22'
+        - name: Run tsc
+          run: npx tsc --project notification-bot
