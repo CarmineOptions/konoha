@@ -20,6 +20,7 @@ vendor/
 
 # Node.js modules
 node_modules/ 
+*.js
 
 # OS files
 .DS_Store
