@@ -7,6 +7,12 @@ on:
       - '.github/'
       - 'tsconfig.json'
       - 'package.json'
+  pull_request:
+    paths:
+      - '**.ts'
+      - '.github/'
+      - 'tsconfig.json'
+      - 'package.json'
 
 jobs:
   compile:
