@@ -26,8 +26,8 @@ trait IVesting<TContractState> {
 mod vesting {
     use starknet::syscalls::get_block_timestamp;
 
-    use governance::traits::IGovernanceTokenDispatcher;
-    use governance::traits::IGovernanceTokenDispatcherTrait;
+    use konoha::traits::IGovernanceTokenDispatcher;
+    use konoha::traits::IGovernanceTokenDispatcherTrait;
 
     #[storage]
     struct Storage {

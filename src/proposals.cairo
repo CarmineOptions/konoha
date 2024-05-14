@@ -1,6 +1,6 @@
 // Proposals component. Does not depend on anything. Holds governance token address.
 
-use governance::types::{ContractType, PropDetails, VoteStatus};
+use konoha::types::{ContractType, PropDetails, VoteStatus};
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -23,7 +23,7 @@ trait IProposals<TContractState> {
 
 #[starknet::component]
 mod proposals {
-    use governance::contract::IGovernance;
+    use konoha::contract::IGovernance;
     use traits::TryInto;
     use option::OptionTrait;
     use traits::Into;
@@ -52,15 +52,14 @@ mod proposals {
     use starknet::class_hash::class_hash_try_from_felt252;
     use starknet::contract_address::contract_address_to_felt252;
 
-    use governance::types::BlockNumber;
-    use governance::types::ContractType;
-    use governance::types::PropDetails;
-    use governance::types::VoteStatus;
-    use governance::types::CustomProposalConfig;
-    use governance::traits::IERC20Dispatcher;
-    use governance::traits::IERC20DispatcherTrait;
-    use governance::traits::get_governance_token_address_self;
-    use governance::constants;
+    use konoha::types::BlockNumber;
+    use konoha::types::ContractType;
+    use konoha::types::PropDetails;
+    use konoha::types::VoteStatus;
+    use konoha::traits::IERC20Dispatcher;
+    use konoha::traits::IERC20DispatcherTrait;
+    use konoha::traits::get_governance_token_address_self;
+    use konoha::constants;
 
     #[storage]
     struct Storage {

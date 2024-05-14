@@ -3,7 +3,7 @@
 // – first generating FutureOption, then generating everything from Pragma data
 
 mod Options {
-    use governance::contract::IGovernance;
+    use konoha::contract::IGovernance;
     use traits::{Into, TryInto};
     use array::{ArrayTrait, SpanTrait};
     use option::OptionTrait;
@@ -20,22 +20,22 @@ mod Options {
 
     use cubit::f128::types::{Fixed, FixedTrait};
 
-    use governance::contract::Governance::{amm_address, proposal_initializer_run};
-    use governance::constants::{
+    use konoha::contract::konoha::{amm_address, proposal_initializer_run};
+    use konoha::constants::{
         OPTION_CALL, OPTION_PUT, TRADE_SIDE_LONG, TRADE_SIDE_SHORT, OPTION_TOKEN_CLASS_HASH
     };
-    use governance::traits::{
+    use konoha::traits::{
         IAMMDispatcher, IAMMDispatcherTrait, IOptionTokenDispatcher, IOptionTokenDispatcherTrait
     };
-    use governance::types::OptionSide;
-    use governance::contract::Governance;
-    use governance::types::OptionType;
-    use governance::contract::Governance::proposal_initializer_runContractMemberStateTrait;
+    use konoha::types::OptionSide;
+    use konoha::contract::Governance;
+    use konoha::types::OptionType;
+    use konoha::contract::konoha::proposal_initializer_runContractMemberStateTrait;
 
     fn add_options(mut options: Span<FutureOption>) {
         // TODO use block hash from block_hash syscall as salt // actually doable with the new syscall
         let governance_address = get_contract_address();
-        let state = Governance::unsafe_new_contract_state();
+        let state = konoha::unsafe_new_contract_state();
         let amm_address = state.get_amm_address();
         loop {
             match options.pop_front() {

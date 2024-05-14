@@ -1,11 +1,9 @@
 use super::basic::submit_44_signal_proposals;
 
-use governance::traits::IAMM;
-use governance::contract::IGovernanceDispatcher;
-use governance::contract::IGovernanceDispatcherTrait;
-use governance::traits::{
-    IAMMDispatcher, IAMMDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait
-};
+use konoha::traits::IAMM;
+use konoha::contract::IGovernanceDispatcher;
+use konoha::contract::IGovernanceDispatcherTrait;
+use konoha::traits::{IAMMDispatcher, IAMMDispatcherTrait, IERC20Dispatcher, IERC20DispatcherTrait};
 
 use starknet::{ContractAddress, get_block_timestamp};
 

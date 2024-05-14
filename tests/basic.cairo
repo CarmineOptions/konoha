@@ -4,12 +4,12 @@ use debug::PrintTrait;
 use starknet::ContractAddress;
 use snforge_std::{BlockId, declare, ContractClassTrait, ContractClass, start_prank, CheatTarget};
 
-use governance::contract::IGovernanceDispatcher;
-use governance::contract::IGovernanceDispatcherTrait;
-use governance::proposals::IProposalsDispatcher;
-use governance::proposals::IProposalsDispatcherTrait;
-use governance::upgrades::IUpgradesDispatcher;
-use governance::upgrades::IUpgradesDispatcherTrait;
+use konoha::contract::IGovernanceDispatcher;
+use konoha::contract::IGovernanceDispatcherTrait;
+use konoha::proposals::IProposalsDispatcher;
+use konoha::proposals::IProposalsDispatcherTrait;
+use konoha::upgrades::IUpgradesDispatcher;
+use konoha::upgrades::IUpgradesDispatcherTrait;
 
 //#[test]
 //#[fork(url: "https://rpc.starknet-testnet.lava.build", block_id: BlockId::Number(904597))]

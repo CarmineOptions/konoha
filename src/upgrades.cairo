@@ -19,19 +19,19 @@ mod upgrades {
     use starknet::ContractAddress;
     use starknet::class_hash;
 
-    use governance::types::{CustomProposalConfig, PropDetails};
-    use governance::contract::Governance;
-    use governance::contract::Governance::ContractState;
+    use konoha::types::PropDetails;
+    use konoha::contract::Governance;
+    use konoha::contract::Governance::ContractState;
 
-    use governance::proposals::proposals as proposals_component;
-    use governance::proposals::proposals::ProposalsImpl;
-    use governance::airdrop::airdrop as airdrop_component;
-    use governance::traits::IAMMDispatcher;
-    use governance::traits::IAMMDispatcherTrait;
-    use governance::traits::IGovernanceTokenDispatcher;
-    use governance::traits::IGovernanceTokenDispatcherTrait;
-    use governance::traits::get_amm_address_self;
-    use governance::traits::get_governance_token_address_self;
+    use konoha::proposals::proposals as proposals_component;
+    use konoha::proposals::proposals::ProposalsImpl;
+    use konoha::airdrop::airdrop as airdrop_component;
+    use konoha::traits::IAMMDispatcher;
+    use konoha::traits::IAMMDispatcherTrait;
+    use konoha::traits::IGovernanceTokenDispatcher;
+    use konoha::traits::IGovernanceTokenDispatcherTrait;
+    use konoha::traits::get_amm_address_self;
+    use konoha::traits::get_governance_token_address_self;
 
     #[storage]
     struct Storage {
@@ -64,7 +64,7 @@ mod upgrades {
             let status = proposals_comp
                 .get_proposal_status(
                     prop_id
-                ); // needs use governance::proposals::proposals::ProposalsImpl;
+                ); // needs use konoha::proposals::proposals::ProposalsImpl;
             assert(status == 1, 'prop not passed');
             let applied = self.proposal_applied.read(prop_id);
             assert(!applied, 'Proposal already applied');
