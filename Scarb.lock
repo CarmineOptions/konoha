@@ -8,7 +8,7 @@ source = "git+https://github.com/influenceth/cubit.git#8eacc2b1d952d6266f9725776
 
 [[package]]
 name = "konoha"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "cubit",
  "openzeppelin",
