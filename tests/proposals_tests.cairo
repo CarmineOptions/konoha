@@ -7,8 +7,7 @@ use snforge_std::{
     BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget
 };
 
-mod setup;
-use setup::{
+use governance::testing::setup::{
     deploy_governance, deploy_and_distribute_gov_tokens, test_vote_upgrade_root, check_if_healthy
 };
 use governance::contract::IGovernanceDispatcher;
@@ -22,10 +21,6 @@ use starknet::get_block_timestamp;
 
 
 const GOV_TOKEN_INITIAL_SUPPLY: felt252 = 1000000000000000000;
-
-const first_address: ContractAddress = 0x1.try_into().unwrap();
-const second_address: ContractAddress = 0x2.try_into().unwrap();
-const admin_addr: ContractAddress = 0x3.try_into().unwrap();
 
 
 fn test_express_proposal() {
@@ -41,7 +36,7 @@ fn test_express_proposal() {
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr);
     dispatcher.vote(prop_id, 1);
 
-    assert(dispatcher.get_proposal_status(prop_id) == 1, "proposal not passed!");
+    assert!(dispatcher.get_proposal_status(prop_id) == 1, "proposal not passed!");
 }
 
 #[should_panic]
@@ -82,4 +77,3 @@ fn test_vote_on_expired_proposal() {
     start_prank(CheatTarget::One(gov_contract_addr), first_address);
     dispatcher.vote(prop_id, 1);
 }
-
