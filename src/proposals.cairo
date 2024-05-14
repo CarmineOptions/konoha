@@ -1,6 +1,6 @@
 // Proposals component. Does not depend on anything. Holds governance token address.
 
-use konoha::types::{ContractType, PropDetails, VoteStatus};
+use konoha::types::{ContractType, PropDetails, VoteStatus, CustomProposalConfig};
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -19,6 +19,7 @@ trait IProposals<TContractState> {
     fn submit_custom_proposal(
         ref self: TContractState, custom_proposal_type: u32, calldata: Span<felt252>
     ) -> u32;
+    fn get_custom_proposal_type(self: @TContractState, i: u32) -> CustomProposalConfig;
 }
 
 #[starknet::component]
@@ -241,6 +242,26 @@ mod proposals {
             let total_supply = IERC20Dispatcher { contract_address: govtoken_addr }.totalSupply();
             let res: u256 = (caller_balance * constants::NEW_PROPOSAL_QUORUM).into();
             assert(total_supply < res, 'not enough tokens to submit');
+        }
+
+        fn _find_free_custom_proposal_type(self: @ComponentState<TContractState>) -> u32 {
+            let mut i = 0;
+            let mut res = self.custom_proposal_type.read(i);
+            while (res.target.is_non_zero()) {
+                i += 1;
+                res = self.custom_proposal_type.read(i);
+            };
+            i
+        }
+
+        fn add_custom_proposal_config(
+            ref self: ComponentState<TContractState>, config: CustomProposalConfig
+        ) -> u32 {
+            let idx = self._find_free_custom_proposal_type();
+            assert(config.target.is_non_zero(), 'target must be nonzero');
+            assert(config.selector.is_non_zero(), 'selector must be nonzero');
+            self.custom_proposal_type.write(idx, config);
+            idx
         }
     }
 
@@ -493,6 +514,12 @@ mod proposals {
             } else {
                 return constants::MINUS_ONE; // yay_tally < nay_tally
             }
+        }
+
+        fn get_custom_proposal_type(
+            self: @ComponentState<TContractState>, i: u32
+        ) -> CustomProposalConfig {
+            self.custom_proposal_type.read(i)
         }
     }
 }
