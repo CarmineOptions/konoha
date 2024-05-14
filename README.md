@@ -17,7 +17,7 @@ We're rewarding contributors with fiat and STRK tokens through [OnlyDust](https:
 
 ## Frontend
 
-A demo frontend accessing a deployment on Sepolia is available at http://34.171.48.97/
+A demo frontend accessing a deployment on Sepolia is available at https://konoha.vote/
 
 ## Proposal notification service
 
