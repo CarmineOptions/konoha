@@ -22,7 +22,8 @@ use snforge_std::{
     stop_roll,
 };
 use konoha::treasury::{ITreasuryDispatcher, ITreasuryDispatcherTrait};
-use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait, IAMMDispatcher, IAMMDispatcherTrait};
+use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
+use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
 use openzeppelin::access::ownable::interface::{
     IOwnableTwoStep, IOwnableTwoStepDispatcherTrait, IOwnableTwoStepDispatcher
 };
