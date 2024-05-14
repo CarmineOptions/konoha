@@ -26,11 +26,6 @@ mod upgrades {
     use konoha::proposals::proposals as proposals_component;
     use konoha::proposals::proposals::ProposalsImpl;
     use konoha::airdrop::airdrop as airdrop_component;
-    use konoha::traits::IAMMDispatcher;
-    use konoha::traits::IAMMDispatcherTrait;
-    use konoha::traits::IGovernanceTokenDispatcher;
-    use konoha::traits::IGovernanceTokenDispatcherTrait;
-    use konoha::traits::get_amm_address_self;
     use konoha::traits::get_governance_token_address_self;
 
     #[storage]
@@ -79,9 +74,7 @@ mod upgrades {
             // Apply the upgrade
             match contract_type {
                 0 => {
-                    let amm_addr: ContractAddress = get_amm_address_self();
-                    IAMMDispatcher { contract_address: amm_addr }
-                        .upgrade(impl_hash.try_into().unwrap());
+                    panic!("Carmine Options AMM upgrade not supported, use generic proposals");
                 },
                 1 => {
                     let impl_hash_classhash: ClassHash = impl_hash.try_into().unwrap();
@@ -89,9 +82,7 @@ mod upgrades {
                     res.expect('upgrade failed');
                 },
                 2 => {
-                    let govtoken_addr = get_governance_token_address_self();
-                    IGovernanceTokenDispatcher { contract_address: govtoken_addr }
-                        .upgrade(impl_hash);
+                    panic!("CARM upgrade not supported, use generic proposals");
                 },
                 3 => {
                     let mut airdrop_comp = get_dep_component_mut!(ref self, Airdrop);

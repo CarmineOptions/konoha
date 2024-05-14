@@ -1,8 +1,4 @@
 use starknet::{ClassHash, ContractAddress};
-
-use konoha::types::OptionSide;
-use konoha::types::OptionType;
-
 use core::starknet::SyscallResultTrait;
 
 
