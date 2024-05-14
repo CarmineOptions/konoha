@@ -81,9 +81,7 @@ mod upgrades {
                     let res = syscalls::replace_class_syscall(impl_hash_classhash);
                     res.expect('upgrade failed');
                 },
-                2 => {
-                    panic!("CARM upgrade not supported, use generic proposals");
-                },
+                2 => { panic!("CARM upgrade not supported, use generic proposals"); },
                 3 => {
                     let mut airdrop_comp = get_dep_component_mut!(ref self, Airdrop);
                     airdrop_comp.merkle_root.write(impl_hash);

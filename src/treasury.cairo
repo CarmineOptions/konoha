@@ -41,9 +41,7 @@ mod Treasury {
     use starknet::{ContractAddress, get_caller_address, get_contract_address, ClassHash};
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use konoha::treasury_types::carmine::{
-        IAMMDispatcher, IAMMDispatcherTrait
-    };
+    use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
