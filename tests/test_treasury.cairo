@@ -21,10 +21,8 @@ use snforge_std::{
     BlockId, declare, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, start_roll,
     stop_roll,
 };
-use governance::treasury::{ITreasuryDispatcher, ITreasuryDispatcherTrait};
-use governance::traits::{
-    IERC20Dispatcher, IERC20DispatcherTrait, IAMMDispatcher, IAMMDispatcherTrait
-};
+use konoha::treasury::{ITreasuryDispatcher, ITreasuryDispatcherTrait};
+use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait, IAMMDispatcher, IAMMDispatcherTrait};
 use openzeppelin::access::ownable::interface::{
     IOwnableTwoStep, IOwnableTwoStepDispatcherTrait, IOwnableTwoStepDispatcher
 };

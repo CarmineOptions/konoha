@@ -1,7 +1,7 @@
 use starknet::{ClassHash, ContractAddress};
 
-use governance::types::OptionSide;
-use governance::types::OptionType;
+use konoha::types::OptionSide;
+use konoha::types::OptionType;
 
 use core::starknet::SyscallResultTrait;
 use cubit::f128::types::{Fixed, FixedTrait};

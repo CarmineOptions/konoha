@@ -2,7 +2,7 @@
 // When Components arrive in Cairo 2.?, it will be refactored to take advantage of them. Random change to rerun CI
 
 use starknet::ContractAddress;
-use governance::types::{ContractType, PropDetails, VoteStatus};
+use konoha::types::{ContractType, PropDetails, VoteStatus};
 
 #[starknet::interface]
 trait IGovernance<TContractState> {
@@ -25,13 +25,13 @@ trait IGovernance<TContractState> {
 
 #[starknet::contract]
 mod Governance {
-    use governance::types::BlockNumber;
-    use governance::types::VoteStatus;
-    use governance::types::ContractType;
-    use governance::types::PropDetails;
-    use governance::proposals::proposals as proposals_component;
-    use governance::upgrades::upgrades as upgrades_component;
-    use governance::airdrop::airdrop as airdrop_component;
+    use konoha::types::BlockNumber;
+    use konoha::types::VoteStatus;
+    use konoha::types::ContractType;
+    use konoha::types::PropDetails;
+    use konoha::proposals::proposals as proposals_component;
+    use konoha::upgrades::upgrades as upgrades_component;
+    use konoha::airdrop::airdrop as airdrop_component;
 
     use starknet::ContractAddress;
 
