@@ -1,6 +1,6 @@
 [package]
 name = "konoha"
-description = "A flexible monolithic governance contract, developed for use with Carmine Options AMM"
+description = "Flexible monolithic governance components for Starknet"
 version = "0.4.0"
 cairo-version = "2.6.3"
 
