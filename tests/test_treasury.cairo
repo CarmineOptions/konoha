@@ -13,7 +13,6 @@ use core::serde::Serde;
 use core::option::OptionTrait;
 use core::traits::{TryInto, Into};
 use core::byte_array::ByteArray;
-use cubit::f128::types::{Fixed, FixedTrait};
 use array::ArrayTrait;
 use debug::PrintTrait;
 use starknet::ContractAddress;
