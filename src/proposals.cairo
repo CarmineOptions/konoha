@@ -450,9 +450,9 @@ mod proposals {
 
             let caller_balance_u256: u256 = IERC20Dispatcher { contract_address: gov_token_addr }
                 .balanceOf(caller_addr);
-            assert(caller_balance_u256.high == 0, 'CARM balance > u128');
+            assert(caller_balance_u256.high == 0, 'voting token balance > u128');
             let caller_balance: u128 = caller_balance_u256.low;
-            assert(caller_balance != 0, 'CARM balance is zero');
+            assert(caller_balance != 0, 'voting token balance is zero');
 
             let caller_voting_power = caller_balance + self.total_delegated_to.read(caller_addr);
 
