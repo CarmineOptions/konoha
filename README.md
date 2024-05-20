@@ -11,7 +11,9 @@ Currently, this is being developed mainly with community-wide use in mind.
 
 Reach out to us via [Telegram](https://t.me/+_BpaFo4iarszZmQ0)
 
-## Contribute and earn
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contributor guidelines
 
 We're rewarding contributors with fiat and STRK tokens through [OnlyDust](https://app.onlydust.com/p/carmine-options-amm).
 
