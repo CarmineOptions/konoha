@@ -8,7 +8,8 @@ use snforge_std::{
 };
 
 use governance::testing::setup::{
-    admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens, test_vote_upgrade_root, check_if_healthy
+    admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens,
+    test_vote_upgrade_root, check_if_healthy
 };
 use governance::contract::IGovernanceDispatcher;
 use governance::contract::IGovernanceDispatcherTrait;
