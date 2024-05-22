@@ -13,7 +13,7 @@ Reach out to us via [Telegram](https://t.me/+_BpaFo4iarszZmQ0)
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contributor guidelines
+See [CONTRIBUTING.md](docs/src/CONTRIBUTING.md) for contributor guidelines
 
 We're rewarding contributors with fiat and STRK tokens through [OnlyDust](https://app.onlydust.com/p/carmine-options-amm).
 
