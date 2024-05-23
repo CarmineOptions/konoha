@@ -1,6 +1,6 @@
 // Proposals component. Does not depend on anything. Holds governance token address.
 
-use konoha::types::{ContractType, PropDetails, VoteStatus};
+use konoha::types::{ContractType, PropDetails, VoteStatus, CustomProposalConfig};
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -16,6 +16,10 @@ trait IProposals<TContractState> {
     fn get_user_voted(
         self: @TContractState, user_address: ContractAddress, prop_id: felt252
     ) -> VoteStatus;
+    fn submit_custom_proposal(
+        ref self: TContractState, custom_proposal_type: u32, calldata: Span<felt252>
+    ) -> u32;
+    fn get_custom_proposal_type(self: @TContractState, i: u32) -> CustomProposalConfig;
 }
 
 #[starknet::component]
@@ -34,11 +38,13 @@ mod proposals {
     use hash::LegacyHash;
 
     use starknet::contract_address::ContractAddressZeroable;
+    use starknet::class_hash::ClassHashZeroable;
     use starknet::get_block_info;
     use starknet::get_block_timestamp;
     use starknet::get_caller_address;
     use starknet::BlockInfo;
     use starknet::ContractAddress;
+    use starknet::ClassHash;
     use starknet::contract_address_const;
     use starknet::event::EventEmitter;
     use starknet::get_contract_address;
@@ -51,6 +57,7 @@ mod proposals {
     use konoha::types::ContractType;
     use konoha::types::PropDetails;
     use konoha::types::VoteStatus;
+    use konoha::types::CustomProposalConfig;
     use konoha::traits::IERC20Dispatcher;
     use konoha::traits::IERC20DispatcherTrait;
     use konoha::traits::get_governance_token_address_self;
@@ -67,6 +74,10 @@ mod proposals {
         proposal_applied: LegacyMap::<felt252, felt252>, // should be Bool after migration
         delegate_hash: LegacyMap::<ContractAddress, felt252>,
         total_delegated_to: LegacyMap::<ContractAddress, u128>,
+        custom_proposal_type: LegacyMap::<u32, CustomProposalConfig>, // custom proposal type 
+        custom_proposal_payload: LegacyMap::<
+            (u32, u32), felt252
+        > // mapping from prop_id and index to calldata
     }
 
     #[derive(starknet::Event, Drop)]
@@ -91,7 +102,7 @@ mod proposals {
     }
 
     fn assert_correct_contract_type(contract_type: ContractType) {
-        assert(contract_type <= 4, 'invalid contract type')
+        assert(contract_type <= 6, 'invalid contract type')
     }
 
     fn hashing(
@@ -221,6 +232,37 @@ mod proposals {
                     .update_calldata(to_addr, new_amount, calldata_span, new_list, index + 1_usize);
             }
         }
+
+        fn assert_eligible_to_propose(self: @ComponentState<TContractState>) {
+            let user_address = get_caller_address();
+            let govtoken_addr = get_governance_token_address_self();
+            let caller_balance: u128 = IERC20Dispatcher { contract_address: govtoken_addr }
+                .balanceOf(user_address)
+                .low;
+            let total_supply = IERC20Dispatcher { contract_address: govtoken_addr }.totalSupply();
+            let res: u256 = (caller_balance * constants::NEW_PROPOSAL_QUORUM).into();
+            assert(total_supply < res, 'not enough tokens to submit');
+        }
+
+        fn _find_free_custom_proposal_type(self: @ComponentState<TContractState>) -> u32 {
+            let mut i = 0;
+            let mut res = self.custom_proposal_type.read(i);
+            while (res.target.is_non_zero()) {
+                i += 1;
+                res = self.custom_proposal_type.read(i);
+            };
+            i
+        }
+
+        fn add_custom_proposal_config(
+            ref self: ComponentState<TContractState>, config: CustomProposalConfig
+        ) -> u32 {
+            let idx = self._find_free_custom_proposal_type();
+            assert(config.target.is_non_zero(), 'target must be nonzero');
+            assert(config.selector.is_non_zero(), 'selector must be nonzero');
+            self.custom_proposal_type.write(idx, config);
+            idx
+        }
     }
 
     #[embeddable_as(ProposalsImpl)]
@@ -275,15 +317,7 @@ mod proposals {
             ref self: ComponentState<TContractState>, payload: felt252, to_upgrade: ContractType
         ) -> felt252 {
             assert_correct_contract_type(to_upgrade);
-            let govtoken_addr = get_governance_token_address_self();
-            let caller = get_caller_address();
-            let caller_balance: u128 = IERC20Dispatcher { contract_address: govtoken_addr }
-                .balanceOf(caller)
-                .low;
-            let total_supply = IERC20Dispatcher { contract_address: govtoken_addr }.totalSupply();
-            let res: u256 = (caller_balance * constants::NEW_PROPOSAL_QUORUM)
-                .into(); // TODO use such multiplication that u128 * u128 = u256
-            assert(total_supply < res, 'not enough tokens to submit');
+            self.assert_eligible_to_propose();
 
             let prop_id = self.get_free_prop_id_timestamp();
             let prop_details = PropDetails { payload: payload, to_upgrade: to_upgrade.into() };
@@ -294,6 +328,47 @@ mod proposals {
             self.proposal_vote_end_timestamp.write(prop_id, end_timestamp);
 
             self.emit(Proposed { prop_id, payload, to_upgrade });
+            prop_id
+        }
+
+        fn submit_custom_proposal(
+            ref self: ComponentState<TContractState>,
+            custom_proposal_type: u32,
+            mut calldata: Span<felt252>
+        ) -> u32 {
+            let config: CustomProposalConfig = self.custom_proposal_type.read(custom_proposal_type);
+            assert(
+                config.target.is_non_zero(), 'custom prop classhash 0'
+            ); // wrong custom proposal type?
+            assert(
+                config.selector.is_non_zero(), 'custom prop selector 0'
+            ); // wrong custom proposal type?
+            self.assert_eligible_to_propose();
+
+            let prop_id_felt = self.get_free_prop_id_timestamp();
+            let prop_id: u32 = prop_id_felt.try_into().unwrap();
+            let payload = custom_proposal_type.into();
+            let prop_details = PropDetails {
+                payload, to_upgrade: 5
+            }; // to_upgrade = 5 – custom proposal type.
+            self.proposal_details.write(prop_id_felt, prop_details);
+
+            let current_timestamp: u64 = get_block_timestamp();
+            let end_timestamp: u64 = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
+            self.proposal_vote_end_timestamp.write(prop_id_felt, end_timestamp);
+            self.emit(Proposed { prop_id: prop_id_felt, payload, to_upgrade: 5 });
+
+            self.custom_proposal_payload.write((prop_id, 0), calldata.len().into());
+            let mut i: u32 = 1;
+            loop {
+                match calldata.pop_front() {
+                    Option::Some(argument) => {
+                        self.custom_proposal_payload.write((prop_id, i), *argument);
+                        i += 1;
+                    },
+                    Option::None(()) => { break (); }
+                }
+            };
             prop_id
         }
 
@@ -439,6 +514,12 @@ mod proposals {
             } else {
                 return constants::MINUS_ONE; // yay_tally < nay_tally
             }
+        }
+
+        fn get_custom_proposal_type(
+            self: @ComponentState<TContractState>, i: u32
+        ) -> CustomProposalConfig {
+            self.custom_proposal_type.read(i)
         }
     }
 }
