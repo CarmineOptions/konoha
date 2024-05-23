@@ -17,6 +17,9 @@ snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag 
 
 [[target.starknet-contract]]
 
+[scripts]
+test = "snforge test"
+
 [[tool.snforge.fork]]
 name = "MAINNET"
 url = "http://34.22.208.73:6060/v0_7"
