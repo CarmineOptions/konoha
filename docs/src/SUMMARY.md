@@ -7,6 +7,7 @@
 - [Upgrades](./upgrades.md)
 - [Treasury](./treasury.md)
 - [Staking](./staking.md)
+- [Airdrop](./airdrop.md)
 
 # Development
 - [Contributor guide](./CONTRIBUTING.md)
