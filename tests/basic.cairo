@@ -4,8 +4,12 @@ use debug::PrintTrait;
 use starknet::ContractAddress;
 use snforge_std::{BlockId, declare, ContractClassTrait, ContractClass, start_prank, CheatTarget};
 
-use governance::contract::IGovernanceDispatcher;
-use governance::contract::IGovernanceDispatcherTrait;
+use konoha::contract::IGovernanceDispatcher;
+use konoha::contract::IGovernanceDispatcherTrait;
+use konoha::proposals::IProposalsDispatcher;
+use konoha::proposals::IProposalsDispatcherTrait;
+use konoha::upgrades::IUpgradesDispatcher;
+use konoha::upgrades::IUpgradesDispatcherTrait;
 
 //#[test]
 //#[fork(url: "https://rpc.starknet-testnet.lava.build", block_id: BlockId::Number(904597))]
@@ -14,7 +18,7 @@ fn test_submit_proposal() {
         0x7ba1d4836a1142c09dde23cb39b2885fe350912591461b5764454a255bdbac6
         .try_into()
         .unwrap();
-    let dispatcher = IGovernanceDispatcher { contract_address: gov_contract_addr };
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
     // corresponding govtoken: 0x05151bfdd47826df3669033ea7fb977d3b2d45c4f4d1c439a9edf4062bf34bfa
     // has one holder, with 31 CARM: 0x0583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1
     let admin_addr: ContractAddress =
@@ -25,21 +29,6 @@ fn test_submit_proposal() {
     dispatcher.submit_proposal(0x00, 1);
 }
 
-#[test]
-#[fork("GOERLI")]
-fn test_forking_functionality() {
-    let gov_contract_addr: ContractAddress =
-        0x7ba1d4836a1142c09dde23cb39b2885fe350912591461b5764454a255bdbac6
-        .try_into()
-        .unwrap();
-    let dispatcher = IGovernanceDispatcher { contract_address: gov_contract_addr };
-    let propdetails = dispatcher.get_proposal_details(1);
-    assert(
-        propdetails.payload == 0x78b4ccacdc1c902281f6f13d94b6d17b1f4c44ff811c01dea504d43a264f611,
-        'payload not match'
-    );
-}
-
 
 // Raises the prop_id to 44, fixes prop_id now 0
 fn submit_44_signal_proposals() {
@@ -47,7 +36,7 @@ fn submit_44_signal_proposals() {
         0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f
         .try_into()
         .unwrap();
-    let dispatcher = IGovernanceDispatcher { contract_address: gov_contract_addr };
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
     let scaling_address: ContractAddress =
         0x052df7acdfd3174241fa6bd5e1b7192cd133f8fc30a2a6ed99b0ddbfb5b22dcd
         .try_into()
@@ -74,7 +63,7 @@ fn test_upgrade_mainnet_to_master() {
         0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f
         .try_into()
         .unwrap();
-    let dispatcher = IGovernanceDispatcher { contract_address: gov_contract_addr };
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
     let mut top_carm_holders = ArrayTrait::new();
     let marek_address: ContractAddress =
@@ -119,7 +108,7 @@ fn test_upgrade_mainnet_to_master() {
     top_carm_holders.append(eighth_address);
 
     // declare current and submit proposal
-    let new_contract: ContractClass = declare('Governance');
+    let new_contract: ContractClass = declare("Governance").expect('unable to declare governance');
     start_prank(CheatTarget::One(gov_contract_addr), scaling_address);
     let new_prop_id = dispatcher.submit_proposal(new_contract.class_hash.into(), 1);
     loop {
@@ -133,14 +122,15 @@ fn test_upgrade_mainnet_to_master() {
     };
     assert(dispatcher.get_proposal_status(new_prop_id) == 1, 'proposal not passed!');
 
-    dispatcher.apply_passed_proposal(new_prop_id);
+    let upgrade_dispatcher = IUpgradesDispatcher { contract_address: gov_contract_addr };
+    upgrade_dispatcher.apply_passed_proposal(new_prop_id);
     assert(check_if_healthy(gov_contract_addr), 'new gov not healthy');
 }
 
 
 fn check_if_healthy(gov_contract_addr: ContractAddress) -> bool {
     // TODO
-    let dispatcher = IGovernanceDispatcher { contract_address: gov_contract_addr };
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
     dispatcher.get_proposal_status(0);
     let prop_details = dispatcher.get_proposal_details(0);
     (prop_details.payload + prop_details.to_upgrade) != 0

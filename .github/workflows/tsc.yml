@@ -1,0 +1,28 @@
+name: Typescript
+
+on:
+  push:
+    paths:
+      - '**.ts'
+      - '.github/'
+      - 'tsconfig.json'
+      - 'package.json'
+  pull_request:
+    paths:
+      - '**.ts'
+      - '.github/'
+      - 'tsconfig.json'
+      - 'package.json'
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout (GitHub)
+          uses: actions/checkout@v4
+        - name: Install Node.js
+          uses: actions/setup-node@v4
+          with:
+            node-version: '22'
+        - name: Run tsc
+          run: cd notification-bot; npm install --save-dev; tsc --project .

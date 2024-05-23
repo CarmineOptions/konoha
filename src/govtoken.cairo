@@ -26,9 +26,6 @@ mod MyToken {
     impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
 
     #[abi(embed_v0)]
-    impl SafeAllowanceImpl = ERC20Component::SafeAllowanceImpl<ContractState>;
-
-    #[abi(embed_v0)]
     impl ERC20CamelOnlyImpl = ERC20Component::ERC20CamelOnlyImpl<ContractState>;
 
     impl ERC20InternalImpl = ERC20Component::InternalImpl<ContractState>;
@@ -68,9 +65,8 @@ mod MyToken {
         self.ownable.initializer(owner);
     }
 
-    #[external(v0)]
-    #[generate_trait]
-    impl VeCARMImpl of IveCARM {
+    #[abi(embed_v0)]
+    impl VeCARMImpl of super::IveCARM<ContractState> {
         // Did not import Erc20MetaData, so we can change decimals
         // so we need to define name, symbol and decimals ourselves
         fn name(self: @ContractState) -> felt252 {

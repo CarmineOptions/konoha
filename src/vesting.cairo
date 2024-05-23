@@ -25,15 +25,11 @@ trait IVesting<TContractState> {
 
 #[starknet::component]
 mod vesting {
-    use governance::contract::IGovernance;
-    use starknet::get_block_timestamp;
     use starknet::ContractAddress;
-    use starknet::{get_caller_address, get_contract_address};
-
-    use governance::contract::Governance;
-    use governance::contract::Governance::ContractState;
-    use governance::traits::IGovernanceTokenDispatcher;
-    use governance::traits::IGovernanceTokenDispatcherTrait;
+    use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
+    use konoha::contract::Governance;
+    use konoha::contract::{IGovernanceDispatcher, IGovernanceDispatcherTrait};
+    use konoha::traits::{IGovernanceTokenDispatcher, IGovernanceTokenDispatcherTrait};
 
     #[storage]
     struct Storage {
@@ -73,8 +69,8 @@ mod vesting {
             let amt_to_vest = self.milestone.read((vested_timestamp, grantee));
             assert(amt_to_vest != 0, 'nothing to vest');
             assert(get_block_timestamp() > vested_timestamp, 'not yet eligible');
-            let state = Governance::unsafe_new_contract_state();
-            IGovernanceTokenDispatcher { contract_address: state.get_governance_token_address() }
+            let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
+            IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() }
                 .mint(grantee, amt_to_vest.into());
             self.milestone.write((vested_timestamp, grantee), 0);
             self
