@@ -8,25 +8,26 @@ use snforge_std::{
     BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget
 };
 
-use governance::vesting::{IVestingDispatcher, IVestingDispatcherTrait, IVesting};
+use konoha::vesting::{IVestingDispatcher, IVestingDispatcherTrait, IVesting};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
 // returns gov addr, token addr
 fn test_setup() -> (ContractAddress, ContractAddress) {
-    let new_gov_contract: ContractClass = declare('Governance');
-    let new_token_contract: ContractClass = declare('MyToken');
+    let new_gov_contract: ContractClass = declare("Governance")
+        .expect('unable to declare Governance');
+    let new_token_contract: ContractClass = declare("MyToken").expect('unable to declare MyToken');
     let new_gov_addr: ContractAddress =
         0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f
         .try_into()
         .unwrap();
     let mut token_constructor = ArrayTrait::new();
     token_constructor.append(new_gov_addr.into()); // Owner
-    let token_address = new_token_contract
+    let (token_address, _) = new_token_contract
         .deploy(@token_constructor)
         .expect('unable to deploy token');
     let mut gov_constructor: Array<felt252> = ArrayTrait::new();
     gov_constructor.append(token_address.into());
-    let gov_address = new_gov_contract
+    let (gov_address, _) = new_gov_contract
         .deploy_at(@gov_constructor, new_gov_addr)
         .expect('unable to deploy gov');
 
@@ -36,7 +37,7 @@ fn test_setup() -> (ContractAddress, ContractAddress) {
 #[test]
 #[should_panic(expected: ('not self-call',))]
 fn test_unauthorized_add_vesting_schedule() {
-    let (gov_address, token_address) = test_setup();
+    let (gov_address, _) = test_setup();
 
     let gov_vesting = IVestingDispatcher { contract_address: gov_address };
 
@@ -48,7 +49,7 @@ fn test_unauthorized_add_vesting_schedule() {
 #[test]
 #[should_panic(expected: ('not yet eligible',))]
 fn test_unauthorized_vest_early() {
-    let (gov_address, token_address) = test_setup();
+    let (gov_address, _) = test_setup();
 
     let gov_vesting = IVestingDispatcher { contract_address: gov_address };
 
@@ -65,7 +66,7 @@ fn test_unauthorized_vest_early() {
 #[test]
 #[should_panic(expected: ('nothing to vest',))]
 fn test_vest_twice() {
-    let (gov_address, token_address) = test_setup();
+    let (gov_address, _) = test_setup();
 
     let gov_vesting = IVestingDispatcher { contract_address: gov_address };
 
