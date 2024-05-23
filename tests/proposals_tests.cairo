@@ -7,17 +7,16 @@ use snforge_std::{
     BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget
 };
 
-use konoha::testing::setup::{
-    admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens,
-    test_vote_upgrade_root, check_if_healthy
+use governance::testing::setup::{
+    admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens, test_vote_upgrade_root, check_if_healthy
 };
-use konoha::contract::IGovernanceDispatcher;
-use konoha::contract::IGovernanceDispatcherTrait;
-use konoha::proposals::IProposalsDispatcher;
-use konoha::proposals::IProposalsDispatcherTrait;
-use konoha::upgrades::IUpgradesDispatcher;
-use konoha::upgrades::IUpgradesDispatcherTrait;
-use konoha::constants;
+use governance::contract::IGovernanceDispatcher;
+use governance::contract::IGovernanceDispatcherTrait;
+use governance::proposals::IProposalsDispatcher;
+use governance::proposals::IProposalsDispatcherTrait;
+use governance::upgrades::IUpgradesDispatcher;
+use governance::upgrades::IUpgradesDispatcherTrait;
+use governance::constants;
 use starknet::get_block_timestamp;
 
 
@@ -40,7 +39,7 @@ fn test_express_proposal() {
     assert!(dispatcher.get_proposal_status(prop_id) == 1, "proposal not passed!");
 }
 
-#[should_panic]
+#[test]
 fn test_proposal_expiry() {
     let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
     let gov_contract = deploy_governance(token_contract.contract_address);
@@ -57,9 +56,11 @@ fn test_proposal_expiry() {
     start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
 
     let status = dispatcher.get_proposal_status(prop_id);
+    assert!(dispatcher.get_proposal_status(prop_id) == constants::MINUS_ONE, "proposal not expired!");
 }
 
-#[should_panic]
+#[test]
+#[should_panic(expected: ('Cannot vote on an expired proposal',))]
 fn test_vote_on_expired_proposal() {
     let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
     let gov_contract = deploy_governance(token_contract.contract_address);

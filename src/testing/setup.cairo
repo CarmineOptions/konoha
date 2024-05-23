@@ -49,6 +49,8 @@ fn deploy_and_distribute_gov_tokens(recipient: ContractAddress) -> IERC20Dispatc
 
     start_prank(CheatTarget::One(token_addr), admin_addr.try_into().unwrap());
 
+    token.mint(admin_addr.try_into().unwrap(), GOV_TOKEN_INITIAL_SUPPLY);
+
     token.transfer(first_address.try_into().unwrap(), 100000);
     token.transfer(second_address.try_into().unwrap(), 100000);
     token
