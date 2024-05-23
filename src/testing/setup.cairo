@@ -9,13 +9,13 @@ use snforge_std::{
 };
 
 
-use governance::contract::IGovernanceDispatcher;
-use governance::contract::IGovernanceDispatcherTrait;
-use governance::proposals::IProposalsDispatcher;
-use governance::proposals::IProposalsDispatcherTrait;
-use governance::upgrades::IUpgradesDispatcher;
-use governance::upgrades::IUpgradesDispatcherTrait;
-use governance::constants;
+use konoha::contract::IGovernanceDispatcher;
+use konoha::contract::IGovernanceDispatcherTrait;
+use konoha::proposals::IProposalsDispatcher;
+use konoha::proposals::IProposalsDispatcherTrait;
+use konoha::upgrades::IUpgradesDispatcher;
+use konoha::upgrades::IUpgradesDispatcherTrait;
+use konoha::constants;
 use openzeppelin::token::erc20::interface::IERC20;
 use starknet::get_block_timestamp;
 

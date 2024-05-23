@@ -19,7 +19,7 @@ mod upgrades {
     use starknet::ContractAddress;
     use starknet::class_hash;
 
-    use konoha::types::PropDetails;
+    use konoha::types::{CustomProposalConfig, PropDetails};
     use konoha::contract::Governance;
     use konoha::contract::Governance::ContractState;
 
