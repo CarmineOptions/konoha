@@ -222,36 +222,32 @@ fn test_deposit_withdraw_carmine() {
     assert(
         transfer_dispatcher.balanceOf(treasury_contract_address) >= to_deposit, 'balance too low??'
     );
-    prank(CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
 
     transfer_dispatcher.approve(treasury_contract_address, to_deposit);
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
-    prank(CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2));
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
+    );
     let usdc_addr: ContractAddress =
-    0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
-    .try_into()
-    .unwrap();
+        0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
+        .try_into()
+        .unwrap();
     treasury_dispatcher
-        .provide_liquidity_to_carm_AMM(
-            eth_addr,
-            usdc_addr,
-            eth_addr,
-            0,
-            to_deposit.into()
-        );
-    
+        .provide_liquidity_to_carm_AMM(eth_addr, usdc_addr, eth_addr, 0, to_deposit.into());
+
     roll(
         CheatTarget::All, get_block_number() + 1, CheatSpan::Indefinite
     ); // to bypass sandwich guard
     treasury_dispatcher
         .withdraw_liquidity(
-            eth_addr,
-            usdc_addr,
-            eth_addr,
-            0,
-            (to_deposit-100000000000000000).into()
+            eth_addr, usdc_addr, eth_addr, 0, (to_deposit - 100000000000000000).into()
         );
-    assert(transfer_dispatcher.balanceOf(treasury_contract_address) >= to_deposit, 'balance too low??');
+    assert(
+        transfer_dispatcher.balanceOf(treasury_contract_address) >= to_deposit, 'balance too low??'
+    );
 }
 
 #[test]
@@ -259,12 +255,14 @@ fn test_upgrade_treasury_contract() {
     let (gov_contract_address, _AMM_contract_address, treasury_contract_address) =
         get_important_addresses();
 
-    let new_class_hash: ClassHash = 0x03eb5d443f730133de67b82901cd4b038098c814ad21d811baef9cbd5daeafec
+    let new_class_hash: ClassHash =
+        0x03eb5d443f730133de67b82901cd4b038098c814ad21d811baef9cbd5daeafec
         .try_into()
         .unwrap();
 
     // Ensure only the owner (governance) can upgrade the contract
-    prank(CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
-    IUpgradeableDispatcher { contract_address: treasury_contract_address }
-        .upgrade(new_class_hash);
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    IUpgradeableDispatcher { contract_address: treasury_contract_address }.upgrade(new_class_hash);
 }
