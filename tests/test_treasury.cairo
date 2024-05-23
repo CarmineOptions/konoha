@@ -13,7 +13,6 @@ use core::serde::Serde;
 use core::option::OptionTrait;
 use core::traits::{TryInto, Into};
 use core::byte_array::ByteArray;
-use cubit::f128::types::{Fixed, FixedTrait};
 use array::ArrayTrait;
 use debug::PrintTrait;
 use starknet::ContractAddress;
@@ -22,7 +21,8 @@ use snforge_std::{
     stop_roll,
 };
 use konoha::treasury::{ITreasuryDispatcher, ITreasuryDispatcherTrait};
-use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait, IAMMDispatcher, IAMMDispatcherTrait};
+use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
+use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
 use openzeppelin::access::ownable::interface::{
     IOwnableTwoStep, IOwnableTwoStepDispatcherTrait, IOwnableTwoStepDispatcher
 };
@@ -35,7 +35,7 @@ fn get_important_addresses() -> (ContractAddress, ContractAddress, ContractAddre
     let AMM_contract_address: ContractAddress = testStorage::AMM_CONTRACT_ADDRESS
         .try_into()
         .unwrap();
-    let contract = declare("Treasury");
+    let contract = declare("Treasury").expect('unable to declare');
     let mut calldata = ArrayTrait::new();
     gov_contract_address.serialize(ref calldata);
     AMM_contract_address.serialize(ref calldata);
@@ -44,7 +44,7 @@ fn get_important_addresses() -> (ContractAddress, ContractAddress, ContractAddre
     let contract_address = contract.precalculate_address(@calldata);
 
     prank(CheatTarget::One(contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
-    let deployed_contract = contract.deploy(@calldata).unwrap();
+    let (deployed_contract, _) = contract.deploy(@calldata).unwrap();
 
     return (gov_contract_address, AMM_contract_address, deployed_contract,);
 }
