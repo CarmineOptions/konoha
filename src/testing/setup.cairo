@@ -41,7 +41,6 @@ fn deploy_and_distribute_gov_tokens(recipient: ContractAddress) -> IERC20Dispatc
     calldata.append(GOV_TOKEN_INITIAL_SUPPLY);
     calldata.append(recipient.into());
 
-
     let gov_token_contract = declare("FloatingToken").expect('unable to declare FloatingToken');
     let (token_addr, _) = gov_token_contract
         .deploy(@calldata)
