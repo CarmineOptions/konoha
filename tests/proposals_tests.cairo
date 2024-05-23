@@ -7,17 +7,17 @@ use snforge_std::{
     BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget
 };
 
-use governance::testing::setup::{
+use konoha::testing::setup::{
     admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens,
     test_vote_upgrade_root, check_if_healthy
 };
-use governance::contract::IGovernanceDispatcher;
-use governance::contract::IGovernanceDispatcherTrait;
-use governance::proposals::IProposalsDispatcher;
-use governance::proposals::IProposalsDispatcherTrait;
-use governance::upgrades::IUpgradesDispatcher;
-use governance::upgrades::IUpgradesDispatcherTrait;
-use governance::constants;
+use konoha::contract::IGovernanceDispatcher;
+use konoha::contract::IGovernanceDispatcherTrait;
+use konoha::proposals::IProposalsDispatcher;
+use konoha::proposals::IProposalsDispatcherTrait;
+use konoha::upgrades::IUpgradesDispatcher;
+use konoha::upgrades::IUpgradesDispatcherTrait;
+use konoha::constants;
 use starknet::get_block_timestamp;
 
 
