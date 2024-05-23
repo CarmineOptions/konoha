@@ -10,7 +10,7 @@ on:
 
 env:
   SCARB_VERSION: 2.6.4
-  FOUNDRY_VERSION: 0.20.1
+  FOUNDRY_VERSION: 0.23.0
 
 jobs:
   build:
