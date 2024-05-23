@@ -108,7 +108,7 @@ fn test_upgrade_mainnet_to_master() {
     top_carm_holders.append(eighth_address);
 
     // declare current and submit proposal
-    let new_contract: ContractClass = declare("Governance");
+    let new_contract: ContractClass = declare("Governance").expect('unable to declare governance');
     start_prank(CheatTarget::One(gov_contract_addr), scaling_address);
     let new_prop_id = dispatcher.submit_proposal(new_contract.class_hash.into(), 1);
     loop {

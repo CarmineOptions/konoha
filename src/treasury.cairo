@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use konoha::types::OptionType;
+use konoha::treasury_types::carmine::OptionType;
 
 #[starknet::interface]
 trait ITreasury<TContractState> {
@@ -40,9 +40,8 @@ mod Treasury {
     use openzeppelin::upgrades::interface::IUpgradeable;
     use starknet::{ContractAddress, get_caller_address, get_contract_address, ClassHash};
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
-    use konoha::traits::{
-        IERC20Dispatcher, IERC20DispatcherTrait, IAMMDispatcher, IAMMDispatcherTrait
-    };
+    use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 

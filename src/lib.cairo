@@ -1,6 +1,6 @@
 mod airdrop;
-mod amm_types {
-    mod basic;
+mod treasury_types {
+    mod carmine;
 }
 mod constants;
 mod contract;

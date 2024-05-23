@@ -13,7 +13,6 @@ trait IGovernance<TContractState> {
     // UPGRADES
 
     fn get_governance_token_address(self: @TContractState) -> ContractAddress;
-    fn get_amm_address(self: @TContractState) -> ContractAddress;
 // fn apply_passed_proposal(ref self: TContractState, prop_id: felt252);
 // AIRDROPS
 
@@ -53,7 +52,6 @@ mod Governance {
     struct Storage {
         proposal_initializer_run: LegacyMap::<u64, bool>,
         governance_token_address: ContractAddress,
-        amm_address: ContractAddress,
         #[substorage(v0)]
         proposals: proposals_component::Storage,
         #[substorage(v0)]
@@ -98,10 +96,6 @@ mod Governance {
     impl Governance of super::IGovernance<ContractState> {
         fn get_governance_token_address(self: @ContractState) -> ContractAddress {
             self.governance_token_address.read()
-        }
-
-        fn get_amm_address(self: @ContractState) -> ContractAddress {
-            self.amm_address.read()
         }
     }
 }
