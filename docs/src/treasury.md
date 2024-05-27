@@ -217,7 +217,6 @@ The `Treasury` component defines several error messages for assertion checks:
 ## Customization
 
 The `Treasury` component can be customized by:
-- Changing the AMM address using `update_AMM_address`.
 - Managing the ownership of the contract through OpenZeppelin's `OwnableComponent`.
 - Upgrading the contract using OpenZeppelin's `UpgradeableComponent`.
 
@@ -230,22 +229,17 @@ The `Treasury` component can be customized by:
     let success = treasury.send_tokens_to_address(receiver_address, amount, token_address);
     ```
 
-3. **Updating AMM Address**:
-    ```cairo
-    treasury.update_AMM_address(new_amm_address);
-    ```
-
-4. **Providing Liquidity**:
+3. **Providing Liquidity**:
     ```cairo
     treasury.provide_liquidity_to_carm_AMM(pooled_token_addr, quote_token_address, base_token_address, option_type, amount);
     ```
 
-5. **Withdrawing Liquidity**:
+4. **Withdrawing Liquidity**:
     ```cairo
     treasury.withdraw_liquidity(pooled_token_addr, quote_token_address, base_token_address, option_type, lp_token_amount);
     ```
 
-6. **Getting AMM Address**:
+5. **Getting AMM Address**:
     ```cairo
     let amm_address = treasury.get_amm_address();
     ```
