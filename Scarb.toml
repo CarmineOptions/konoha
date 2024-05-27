@@ -7,11 +7,11 @@ cairo-version = "2.6.3"
 [dependencies]
 starknet = ">=2.0.0"
 openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.10.0" }
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.23.0" }
 
 
 # can be fixed by doing import super::testing from tests
-# [dev-dependencies] sadly can't use this because we have testing in src/
+[dev-dependencies]
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.23.0" }
 
 [lib]
 

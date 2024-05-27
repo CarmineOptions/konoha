@@ -21,7 +21,7 @@ use openzeppelin::token::erc20::interface::IERC20;
 use starknet::get_block_timestamp;
 
 
-const GOV_TOKEN_INITIAL_SUPPLY: felt252 = 1000000000000000000;
+const GOV_TOKEN_INITIAL_SUPPLY: u256 = 1000000000000000000;
 
 const first_address: felt252 = 0x1;
 const second_address: felt252 = 0x2;
@@ -38,22 +38,15 @@ fn deploy_governance(token_address: ContractAddress) -> IGovernanceDispatcher {
 
 fn deploy_and_distribute_gov_tokens(recipient: ContractAddress) -> IERC20Dispatcher {
     let mut calldata = ArrayTrait::new();
-    calldata.append(GOV_TOKEN_INITIAL_SUPPLY);
+    calldata.append(GOV_TOKEN_INITIAL_SUPPLY.low.into());
+    calldata.append(GOV_TOKEN_INITIAL_SUPPLY.high.into());
     calldata.append(recipient.into());
 
     let gov_token_contract = declare("FloatingToken").expect('unable to declare FloatingToken');
     let (token_addr, _) = gov_token_contract
         .deploy(@calldata)
         .expect('unable to deploy FloatingToken');
-    let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token_addr };
-
-    start_prank(CheatTarget::One(token_addr), admin_addr.try_into().unwrap());
-
-    token.mint(admin_addr.try_into().unwrap(), GOV_TOKEN_INITIAL_SUPPLY);
-
-    token.transfer(first_address.try_into().unwrap(), 100000);
-    token.transfer(second_address.try_into().unwrap(), 100000);
-    token
+    IERC20Dispatcher { contract_address: token_addr }
 }
 
 

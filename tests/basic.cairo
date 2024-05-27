@@ -21,7 +21,7 @@ fn test_submit_proposal() {
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
     // corresponding govtoken: 0x05151bfdd47826df3669033ea7fb977d3b2d45c4f4d1c439a9edf4062bf34bfa
     // has one holder, with 31 CARM: 0x0583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1
-    let admin_addr: ContractAddress =
+    let _admin_addr: ContractAddress =
         0x0583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1
         .try_into()
         .unwrap();

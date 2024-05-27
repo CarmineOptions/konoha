@@ -13,6 +13,3 @@ mod treasury;
 mod types;
 mod upgrades;
 mod voting_token;
-mod testing {
-    mod setup;
-}
