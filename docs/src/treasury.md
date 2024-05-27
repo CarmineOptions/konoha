@@ -1,6 +1,6 @@
 # Treasury Documentation
 
-This guide explains how to use and customize the `Treasury` component in your smart contract. The `Treasury` component is designed to manage liquidity, handle token transfers, and interact with an Automated Market Maker (AMM) on the StarkNet platform.
+This documentation explains how to use and customize the `Treasury` component in your smart contract. The `Treasury` component is designed to manage liquidity, handle token transfers, and interact with an Automated Market Maker (AMM) on the StarkNet platform.
 
 ## Overview
 
