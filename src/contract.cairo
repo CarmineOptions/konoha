@@ -18,6 +18,9 @@ trait IGovernance<TContractState> {
 
 // in component
 
+// VESTING
+
+// in component
 // OPTIONS / ONE-OFF
 }
 
@@ -31,17 +34,21 @@ mod Governance {
     use konoha::proposals::proposals as proposals_component;
     use konoha::upgrades::upgrades as upgrades_component;
     use konoha::airdrop::airdrop as airdrop_component;
+    use konoha::vesting::vesting as vesting_component;
 
     use starknet::ContractAddress;
 
 
     component!(path: airdrop_component, storage: airdrop, event: AirdropEvent);
+    component!(path: vesting_component, storage: vesting, event: VestingEvent);
     component!(path: proposals_component, storage: proposals, event: ProposalsEvent);
     component!(path: upgrades_component, storage: upgrades, event: UpgradesEvent);
 
     #[abi(embed_v0)]
     impl Airdrop = airdrop_component::AirdropImpl<ContractState>;
 
+    #[abi(embed_v0)]
+    impl Vesting = vesting_component::VestingImpl<ContractState>;
     #[abi(embed_v0)]
     impl Proposals = proposals_component::ProposalsImpl<ContractState>;
 
@@ -53,9 +60,11 @@ mod Governance {
         proposal_initializer_run: LegacyMap::<u64, bool>,
         governance_token_address: ContractAddress,
         #[substorage(v0)]
-        proposals: proposals_component::Storage,
-        #[substorage(v0)]
         airdrop: airdrop_component::Storage,
+        #[substorage(v0)]
+        vesting: vesting_component::Storage,
+        #[substorage(v0)]
+        proposals: proposals_component::Storage,
         #[substorage(v0)]
         upgrades: upgrades_component::Storage
     }
@@ -66,7 +75,7 @@ mod Governance {
     struct Proposed {
         prop_id: felt252,
         payload: felt252,
-        to_upgrade: ContractType
+        to_upgrade: ContractType,
     }
 
     #[derive(starknet::Event, Drop)]
@@ -82,6 +91,7 @@ mod Governance {
         Proposed: Proposed,
         Voted: Voted,
         AirdropEvent: airdrop_component::Event,
+        VestingEvent: vesting_component::Event,
         ProposalsEvent: proposals_component::Event,
         UpgradesEvent: upgrades_component::Event
     }

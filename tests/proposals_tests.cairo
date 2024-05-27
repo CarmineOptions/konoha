@@ -2,13 +2,18 @@ use array::ArrayTrait;
 use core::traits::TryInto;
 use debug::PrintTrait;
 use starknet::ContractAddress;
-use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait, IERC20CamelOnlyDispatcher, IERC20CamelOnlyDispatcherTrait};
+use openzeppelin::token::erc20::interface::{
+    IERC20Dispatcher, IERC20DispatcherTrait, IERC20CamelOnlyDispatcher,
+    IERC20CamelOnlyDispatcherTrait
+};
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget, prank, CheatSpan
+    BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget,
+    prank, CheatSpan
 };
 
 use super::setup::{
-    admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens, test_vote_upgrade_root, check_if_healthy
+    admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens,
+    test_vote_upgrade_root, check_if_healthy
 };
 use konoha::contract::IGovernanceDispatcher;
 use konoha::contract::IGovernanceDispatcherTrait;
@@ -76,8 +81,11 @@ fn test_vote_on_expired_proposal() {
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
     start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
 
-
-    prank(CheatTarget::One(token_contract.contract_address), admin_addr.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    prank(
+        CheatTarget::One(token_contract.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
     token_contract.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
     start_prank(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
@@ -91,13 +99,25 @@ fn test_vote_on_quorum_not_met() {
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
-    prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
     let prop_id = dispatcher.submit_proposal(42, 1);
 
-    prank(CheatTarget::One(token_contract.contract_address), admin_addr.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    prank(
+        CheatTarget::One(token_contract.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
     token_contract.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
 
-    prank(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
     dispatcher.vote(prop_id, 1);
 
     let (yay_votes, nay_votes) = dispatcher.get_vote_counts(prop_id);
@@ -113,7 +133,10 @@ fn test_vote_on_quorum_not_met() {
     let current_timestamp = get_block_timestamp();
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
     start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
-    assert(dispatcher.get_proposal_status(prop_id) == constants::MINUS_ONE, 'Proposal pass & quorum not met');
+    assert(
+        dispatcher.get_proposal_status(prop_id) == constants::MINUS_ONE,
+        'Proposal pass & quorum not met'
+    );
 }
 
 #[test]
@@ -125,9 +148,17 @@ fn test_submit_proposal_under_quorum() {
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
-    prank(CheatTarget::One(token_contract.contract_address), admin_addr.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    prank(
+        CheatTarget::One(token_contract.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
     token_contract.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
 
-    prank(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap(), CheatSpan::TargetCalls(1));
-    dispatcher.submit_proposal(42,1);
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    dispatcher.submit_proposal(42, 1);
 }
