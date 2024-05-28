@@ -1,12 +1,11 @@
 # Treasury Documentation
 
-This documentation explains how to use and customize the `Treasury` component in your smart contract. The `Treasury` component is designed to manage liquidity, handle token transfers, and interact with an Automated Market Maker (AMM) on the StarkNet platform.
+This documentation explains how to use and customize the `Treasury` component in your smart contract. The Treasury contract in Konoha manages liquidity, handles token transfers, and interacts with AMMs on Starknet. It's an independent contract that works with various governance solutions like multisigs, Ekubo, and SnapshotX.
 
 ## Overview
 
 The `Treasury` component includes functions for:
 - Sending tokens to an address
-- Updating the AMM address
 - Providing liquidity to the Carmine AMM
 - Withdrawing liquidity from the Carmine AMM
 - Retrieving the current AMM address
@@ -243,4 +242,8 @@ The `Treasury` component can be customized by:
     ```cairo
     let amm_address = treasury.get_amm_address();
     ```
+## Upcoming Features
+
+- Support for zkLend and Nostra AMMs is under development
+- Integration with the Airdrop component for distributing protocol revenue to stakers/tokenholders
 
