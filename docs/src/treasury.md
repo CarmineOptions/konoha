@@ -244,4 +244,3 @@ The `Treasury` component can be customized by:
     let amm_address = treasury.get_amm_address();
     ```
 
-The Treasury component is a useful tool for managing liquidity, handling token transfers, and interacting with an AMM on StarkNet. It includes essential functions for sending tokens, updating the AMM address, providing and withdrawing liquidity, and retrieving the current AMM address. With integrated ownership and upgradability features from OpenZeppelin, this component ensures secure and flexible contract management
