@@ -1,16 +1,28 @@
 # Treasury Documentation
-
-This documentation explains how to use and customize the `Treasury` component in your smart contract. The Treasury contract in Konoha manages liquidity, handles token transfers, and interacts with AMMs on Starknet. It's an independent contract that works with various governance solutions like multisigs, Ekubo, and SnapshotX.
+This documentation explains how to use and customize the Treasury contract in your smart contract. The Treasury contract in Konoha manages liquidity, handles token transfers, and interacts with Automated Market Makers (AMMs) on Starknet. It's an independent contract that works with various governance solutions like multisigs, Ekubo, and SnapshotX.
 
 ## Overview
+The Treasury component includes functions for:
 
-The `Treasury` component includes functions for:
 - Sending tokens to an address
 - Providing liquidity to the Carmine AMM
 - Withdrawing liquidity from the Carmine AMM
 - Retrieving the current AMM address
+- Additionally, it integrates ownership and upgradability features using OpenZeppelin's OwnableComponent and UpgradeableComponent.
 
-Additionally, it integrates ownership and upgradability features using OpenZeppelin's `OwnableComponent` and `UpgradeableComponent`.
+## Key Features
+### Independence from Governance
+The Treasury contract is designed to operate independently of any specific governance structure. This means it can be used standalone or in conjunction with different governance contracts, providing flexibility for various project needs.
+
+### Governance Options
+The ownership of the Treasury contract can be managed by various types of governance contracts:
+
+- Konoha Governance Contract: The default governance structure.
+- Multisig Wallets: Allows multiple parties to manage the contract.
+- Ekubo and SnapshotX: Advanced governance solutions for decentralized management.
+## Upcoming Integrations
+- zkLend and Nostra AMMs: Integration with these AMMs is currently under development, which will expand the contract's liquidity management capabilities.
+- Airdrop Component: Plans to integrate with the Airdrop component, enabling distribution of protocol revenue to stakers or tokenholders directly from the treasury.
 
 ## Contract Interface
 
