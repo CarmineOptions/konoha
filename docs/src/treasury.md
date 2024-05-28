@@ -252,7 +252,6 @@ The `Treasury` component can be customized by:
     let amm_address = treasury.get_amm_address();
     ```
 ## Upcoming Features
-
 - Support for zkLend and Nostra is under development
 - Integration with the Airdrop component for distributing protocol revenue to stakers/tokenholders
 
