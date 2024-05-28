@@ -20,9 +20,6 @@ The ownership of the Treasury contract can be managed by various types of govern
 - Konoha Governance Contract: The default governance structure.
 - Multisig Wallets: Allows multiple parties to manage the contract.
 - Ekubo and SnapshotX: Advanced governance solutions for decentralized management.
-## Upcoming Integrations
-- zkLend and Nostra AMMs: Integration with these AMMs is currently under development, which will expand the contract's liquidity management capabilities.
-- Airdrop Component: Plans to integrate with the Airdrop component, enabling distribution of protocol revenue to stakers or tokenholders directly from the treasury.
 
 ## Contract Interface
 
@@ -256,6 +253,6 @@ The `Treasury` component can be customized by:
     ```
 ## Upcoming Features
 
-- Support for zkLend and Nostra AMMs is under development
+- Support for zkLend and Nostra is under development
 - Integration with the Airdrop component for distributing protocol revenue to stakers/tokenholders
 
