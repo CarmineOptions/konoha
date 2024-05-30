@@ -162,3 +162,24 @@ fn test_submit_proposal_under_quorum() {
     );
     dispatcher.submit_proposal(42, 1);
 }
+
+#[test]
+fn test_successful_proposal_submission() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    let prop_id_1 = dispatcher.submit_proposal(42, 1);
+    let prop_id_2 = dispatcher.submit_proposal(43,1);
+
+    assert!(prop_id_1 != prop_id_2, "Proposals should have unique ids");
+
+    let prop_details_1 = dispatcher.get_proposal_details(prop_id_1);
+    let prop_details_2 = dispatcher.get_proposal_details(prop_id_2);
+
+    assert!(prop_details_1.payload == 42, "wrong payload first proposal");
+    assert!(prop_details_2.payload == 43, "wrong payload second proposal");
+}
