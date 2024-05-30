@@ -276,7 +276,16 @@ mod Treasury {
             self.emit(LiquidityProvidedToZklend { token_address: token, amount });
         }
 
-        fn withdraw_from_zklend(ref self: ContractState, token: ContractAddress, amount: u256) {}
+        fn withdraw_from_zklend(ref self: ContractState, token: ContractAddress, amount: u256) {
+            self.ownable.assert_only_owner();
+            let zklend_market: IMarketDispatcher = IMarketDispatcher {
+                contract_address: self.zklend_market_contract_address.read()
+            };
+
+            zklend_market.withdraw(token, amount.try_into().unwrap());
+
+            self.emit(LiquidityWithdrawnFromZklend { token_address: token, amount });
+        }
     }
 
 
