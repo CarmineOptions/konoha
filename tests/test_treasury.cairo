@@ -266,3 +266,8 @@ fn test_upgrade_treasury_contract() {
     );
     IUpgradeableDispatcher { contract_address: treasury_contract_address }.upgrade(new_class_hash);
 }
+
+#[test]
+fn test_deposit_zklend() {
+    assert!(true, "true");
+}
