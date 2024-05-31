@@ -13,3 +13,4 @@ mod types;
 mod upgrades;
 mod vesting;
 mod voting_token;
+mod discussion;
