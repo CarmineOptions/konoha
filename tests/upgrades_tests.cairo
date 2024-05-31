@@ -66,15 +66,30 @@ fn test_apply_an_already_passed_proposal() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected: ('prop not passed',))]
 fn test_apply_a_failed_proposal() {
-    assert_eq!(1, 1, "TODO");
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    snf::start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    let prop_id = dispatcher.submit_proposal(42, 4); // no op
+    dispatcher.vote(prop_id, 2);
+
+    IUpgradesDispatcher { contract_address: gov_contract_addr }.apply_passed_proposal(prop_id);
 }
 
 #[test]
 #[should_panic]
 fn test_apply_a_non_existent_proposal() {
-    assert_eq!(1, 1, "TODO");
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+    let prop_id = 4269;
+    snf::start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+
+    IUpgradesDispatcher { contract_address: gov_contract_addr }.apply_passed_proposal(prop_id);
 }
 
 

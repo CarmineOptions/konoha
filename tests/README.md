@@ -101,11 +101,11 @@ Test that a proposal marked as passed is correctly applied, including the approp
 
 Ensure the contract rejects applying a proposal that has already been applied.
 
-[] Apply failed proposal
+[x] Apply failed proposal
 
 Ensure the contract rejects applying a proposal that did not pass.
 
-[] Apply non-existent proposal
+[x] Apply non-existent proposal
 
 Ensure the contract rejects applying a proposal that does not exist.
 
