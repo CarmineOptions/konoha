@@ -1,13 +1,20 @@
 {
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/app.js"
+  },
   "dependencies": {
-    "@helia/http": "^1.0.9",
-    "axios": "^1.7.2",
-    "express": "^4.19.2"
+    "@helia/dag-json": "^3.0.4",
+    "express": "^4.19.2",
+    "helia": "^4.0.1",
+    "starknet": "^5.29.0",
+    "starknetid.js": "^3.2.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^20.12.12",
-    "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
   }
 }

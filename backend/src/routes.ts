@@ -1,8 +1,8 @@
-import { Router } from 'express';
-import { submitProposal } from './ipfs';
+import { Router } from "express";
+import { submitProposal } from "./ipfs.js";
 
 const router = Router();
 
-router.post('/submit', submitProposal);
+router.post("/submit", submitProposal);
 
 export default router;

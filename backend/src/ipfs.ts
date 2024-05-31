@@ -1,59 +1,64 @@
-import { Request, Response } from 'express';
-import { createHeliaHTTP } from '@helia/http';
-import { getStarknetId } from './starknet';
-import axios from 'axios';
+import { Request, Response } from "express";
+import { createHelia, Helia } from "helia";
+import { dagJson } from "@helia/dag-json";
+import { getStarknetId } from "./starknet.js";
 
-const PINATA_API_KEY = 'your_api_key';
-const PINATA_SECRET_API_KEY = 'your_secret_api_key';
+const PINATA_JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJmYjMxZmY2Ny0wNGZmLTQ2YWYtOTc1NC00MDZiNTQ5MDhlOWYiLCJlbWFpbCI6ImVqZW1iaW9jaGU1MEBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJpZCI6IkZSQTEiLCJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MX0seyJpZCI6Ik5ZQzEiLCJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MX1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiMjQ1ZDhkMmExMjg1ZWM1YWZlNjAiLCJzY29wZWRLZXlTZWNyZXQiOiI3OWI1NWM3MzZkZjBkODI2MjNiOWMxZDBhMzkxMjNlOTljNjhiNjE0ZDgwZGI2ZWI5OGM0MzIzZWM3MzI1OWUzIiwiaWF0IjoxNzE3MTAxNjU2fQ.N3pHXlmJsN0HZpkHUp2RMYF49C90WmwzNBTSjLxNzNc";
 
-const pinToPinata = async (ipfsHash: string) => {
+const pinByCID = async (ipfsHash: string) => {
   const url = "https://api.pinata.cloud/pinning/pinByHash";
-  const headers = {
-    "pinata_api_key": PINATA_API_KEY,
-    "pinata_secret_api_key": PINATA_SECRET_API_KEY
-  };
-  const payload = {
-    "hashToPin": ipfsHash
-  };
-  return axios.post(url, payload, { headers });
+
+  const data = JSON.stringify({
+    hashToPin: ipfsHash,
+  });
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${PINATA_JWT}`,
+    },
+    body: data,
+  });
+
+  console.log(await response.json());
 };
 
-let helia: any;
-
-export const initializeHelia = async () => {
-  helia = await createHeliaHTTP();
-};
+let helia: Helia;
 
 export const submitProposal = async (req: Request, res: Response) => {
   const { text, address } = req.body;
 
   if (!text || !address) {
-    return res.status(400).json({ error: 'Missing text or address' });
+    return res.status(400).json({ error: "Missing text or address" });
   }
 
-  const starknetId = await getStarknetId(address);
   const proposalData: any = {
     text,
-    address
+    address,
   };
 
-  if (starknetId) {
-    proposalData.starknet_id = starknetId;
-  }
+  // const starknetId = await getStarknetId(address);
+
+  // if (starknetId) {
+  //   proposalData.starknet_id = starknetId;
+  // }
 
   try {
-    const buffer = Buffer.from(JSON.stringify(proposalData));
-    const cid = await helia.add(buffer);
+    helia = await createHelia();
+    const d = dagJson(helia);
+    const cid = await d.add(proposalData);
     const ipfsHash = cid.toString();
 
     // Asynchronously pin the hash
-    pinToPinata(ipfsHash).catch(err => {
-      console.error('Failed to pin to Pinata', err);
+    pinByCID(ipfsHash).catch((err) => {
+      console.error("Failed to pin", err);
     });
 
     return res.json({ ipfs_hash: ipfsHash });
   } catch (error) {
-    console.error('Error uploading to IPFS', error);
-    return res.status(500).json({ error: 'Error uploading to IPFS' });
+    console.error("Error uploading to IPFS", error);
+    return res.status(500).json({ error: "Error uploading to IPFS" });
   }
 };
