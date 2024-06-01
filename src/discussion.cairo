@@ -11,6 +11,9 @@ mod discussion {
 
     use core::box::Box;
 
+    // Storage implementation entails comments and comment_count
+    // Comments is mapping of (proposal id, index) to ipfs hash
+    // While the comment_count is a mapping of proposal id to number of comments
     #[storage]
     struct Storage {
         comments: LegacyMap::<(felt252, u64), felt252>,
@@ -22,22 +25,21 @@ mod discussion {
     enum Event {}
 
     #[embeddable_as(DiscussionImpl)]
-    impl Discussions<TContractState, +HasComponent<TContractState>
+    impl Discussions<TContractState, +HasComponent<TContractState>, +IProposals<TContractState>
     > of super::IDiscussion<ComponentState<TContractState>> {
         fn add_comment(ref self: ComponentState<TContractState>, prop_id: felt252, ipfs_hash: felt252) {
-            //TODO
             //Check if proposal is live 
-            // let is_live = self.is_proposal_live(prop_id);
+            let is_live = self.is_proposal_live(prop_id);
 
-            // assert(is_live != 1, 'Proposal is not live!');
+            assert!(is_live == 1, "Proposal is not live!");
 
             //get current comment count 
             let count: u64 = self.comment_count.read(prop_id);
 
-            //store new comment at next index
+            //store new comment/ipfs_hash at next index
             self.comments.write((prop_id, count), ipfs_hash);
 
-            //Increment comment count
+            //Increment comment count for proposal by one
             self.comment_count.write(prop_id, count + 1);
             
         }
@@ -90,19 +92,13 @@ mod discussion {
                 }
 
                 match live_proposals.get(i) {
-                    Option::Some(_prop_id) => is_live = 1,
+                    Option::Some(_prop_id) => {
+                        is_live = 1;
+                        break;
+                    },
                     Option::None => i += 1
                 }
-
-                // let cur = live_proposals.get(i);
-
-                // if cur = prop_id {
-                //     is_live = 1;
-                // } else {
-                //     i += 1;
-                // }
             };
-
             is_live
         }
     }
