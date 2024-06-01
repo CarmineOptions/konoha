@@ -48,17 +48,14 @@ mod discussion {
         fn add_comment(ref self: ComponentState<TContractState>, prop_id: felt252, ipfs_hash: felt252) {
             //Check if proposal is live 
             let is_live = self.is_proposal_live(prop_id);
-            assert!(is_live == 1, "Proposal is not live!");
+            assert(is_live == 1, 'Proposal is not live!');
 
             //Check if caller is a CRAM token holder
             let user_address = get_caller_address();
             let govtoken_addr = get_governance_token_address_self();
             let caller_balance : u256 = IERC20Dispatcher { contract_address: govtoken_addr }
                 .balanceOf(user_address);
-
-            if caller_balance.high == 0 && caller_balance.low == 0 {
-                panic!("CARM balance is Zero!");
-            }
+            assert(caller_balance.high != 0 || caller_balance.low != 0, 'Govtoken balance is zero');
 
             //get current comment count 
             let count: u64 = self.comment_count.read(prop_id);
