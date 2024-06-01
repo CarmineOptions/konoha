@@ -2,11 +2,11 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/app.js"
+    "start": "npx tsx src/app.ts"
   },
   "dependencies": {
     "@helia/dag-json": "^3.0.4",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "helia": "^4.0.1",
     "starknet": "^5.29.0",
@@ -15,6 +15,7 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^20.12.12",
+    "tsx": "^4.11.0",
     "typescript": "^5.4.5"
   }
 }

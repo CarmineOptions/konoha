@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { submitProposal } from "./ipfs.js";
+import { submitProposal } from "./ipfs";
 
 const router = Router();
 

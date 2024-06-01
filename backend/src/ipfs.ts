@@ -1,10 +1,12 @@
 import { Request, Response } from "express";
+import * as dotenv from "dotenv";
 import { createHelia, Helia } from "helia";
 import { dagJson } from "@helia/dag-json";
-import { getStarknetId } from "./starknet.js";
+import { getStarknetId } from "./starknet";
 
-const PINATA_JWT =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJmYjMxZmY2Ny0wNGZmLTQ2YWYtOTc1NC00MDZiNTQ5MDhlOWYiLCJlbWFpbCI6ImVqZW1iaW9jaGU1MEBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJpZCI6IkZSQTEiLCJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MX0seyJpZCI6Ik5ZQzEiLCJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MX1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiMjQ1ZDhkMmExMjg1ZWM1YWZlNjAiLCJzY29wZWRLZXlTZWNyZXQiOiI3OWI1NWM3MzZkZjBkODI2MjNiOWMxZDBhMzkxMjNlOTljNjhiNjE0ZDgwZGI2ZWI5OGM0MzIzZWM3MzI1OWUzIiwiaWF0IjoxNzE3MTAxNjU2fQ.N3pHXlmJsN0HZpkHUp2RMYF49C90WmwzNBTSjLxNzNc";
+dotenv.config();
+
+const PINATA_JWT = process.env.PINATA_JWT || "";
 
 const pinByCID = async (ipfsHash: string) => {
   const url = "https://api.pinata.cloud/pinning/pinByHash";
