@@ -1,5 +1,6 @@
 use array::ArrayTrait;
 use core::traits::TryInto;
+use core::traits::Into;
 use debug::PrintTrait;
 use starknet::ContractAddress;
 use openzeppelin::token::erc20::interface::{
@@ -8,7 +9,7 @@ use openzeppelin::token::erc20::interface::{
 };
 use snforge_std::{
     BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget,
-    prank, CheatSpan
+    prank, CheatSpan, stop_prank
 };
 
 use super::setup::{
@@ -22,6 +23,8 @@ use konoha::proposals::IProposalsDispatcherTrait;
 use konoha::upgrades::IUpgradesDispatcher;
 use konoha::upgrades::IUpgradesDispatcherTrait;
 use konoha::constants;
+use konoha::discussion::IDiscussionDispatcher;
+use konoha::discussion::IDiscussionDispatcherTrait;
 use starknet::get_block_timestamp;
 
 
@@ -162,3 +165,89 @@ fn test_submit_proposal_under_quorum() {
     );
     dispatcher.submit_proposal(42, 1);
 }
+
+#[test]
+#[should_panic(expected: ('Proposal is not live!',))]
+fn test_add_comment_on_non_live_proposal() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+    let ipfs_hash = 1234567;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(3)
+    );
+    let prop_id = dispatcher.submit_proposal(42, 1);
+
+    //simulate passage of time
+    let current_timestamp = get_block_timestamp();
+    let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
+    start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
+
+    IDiscussionDispatcher { contract_address: gov_contract_addr }.add_comment(prop_id, ipfs_hash.into());
+}
+
+#[test]
+#[should_panic(expected: ('Govtoken balance is zero',))]
+fn test_add_comment_when_token_balance_is_zero() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+    let ipfs_hash = 1234567;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let prop_id = dispatcher.submit_proposal(42, 1);
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+
+    IDiscussionDispatcher { contract_address: gov_contract_addr }.add_comment(prop_id, ipfs_hash.into());
+}
+
+#[test]
+fn test_add_comment() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+    let ipfs_hash = 1234567;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let prop_id = dispatcher.submit_proposal(42, 1);
+
+    prank(
+        CheatTarget::One(token_contract.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    token_contract.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+
+    IDiscussionDispatcher { contract_address: gov_contract_addr }.add_comment(prop_id, ipfs_hash.try_into().unwrap()); 
+}
+
+//TODO
+//Test get_comment
