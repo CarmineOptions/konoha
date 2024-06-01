@@ -175,7 +175,7 @@ fn test_successful_proposal_submission() {
     let prop_id_1 = dispatcher.submit_proposal(42, 1);
     let prop_id_2 = dispatcher.submit_proposal(43, 1);
 
-    assert!(prop_id_1 != prop_id_2, "Proposals should have unique ids");
+    assert!(prop_id_1 < prop_id_2, "Proposals should have unique ids");
 
     let prop_details_1 = dispatcher.get_proposal_details(prop_id_1);
     let prop_details_2 = dispatcher.get_proposal_details(prop_id_2);
