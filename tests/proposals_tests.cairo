@@ -172,13 +172,13 @@ fn test_successful_proposal_submission() {
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
-    let prop_id_1 = dispatcher.submit_proposal(42, 1);
-    let prop_id_2 = dispatcher.submit_proposal(43, 1);
+    let prop_id_1: u128 = dispatcher.submit_proposal(42, 1).try_into().unwrap();
+    let prop_id_2: u128 = dispatcher.submit_proposal(43, 1).try_into().unwrap();
 
     assert!(prop_id_1 < prop_id_2, "Proposals should have unique ids");
 
-    let prop_details_1 = dispatcher.get_proposal_details(prop_id_1);
-    let prop_details_2 = dispatcher.get_proposal_details(prop_id_2);
+    let prop_details_1 = dispatcher.get_proposal_details(prop_id_1.try_into().unwrap());
+    let prop_details_2 = dispatcher.get_proposal_details(prop_id_2.try_into().unwrap());
 
     assert!(prop_details_1.payload == 42, "wrong payload first proposal");
     assert!(prop_details_2.payload == 43, "wrong payload second proposal");
