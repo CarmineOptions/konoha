@@ -1,7 +1,9 @@
+use starknet::ContractAddress;
+
 #[starknet::interface]
 trait IDiscussion<TContractState> {
     fn add_comment(ref self: TContractState, prop_id: felt252, ipfs_hash: felt252);
-    fn get_comment(self: @TContractState, prop_id: felt252) -> Array<felt252>;
+    fn get_comment(self: @TContractState, prop_id: felt252) -> Array<(ContractAddress, felt252)>;
 } 
 
 #[starknet::component]
@@ -20,7 +22,7 @@ mod discussion {
     use konoha::traits::get_governance_token_address_self;
 
     // Storage implementation entails comments and comment_count
-    // Comments is mapping of (proposal id, index) to ipfs hash
+    // Comments is mapping of (proposal id, index) to comment
     // While the comment_count is a mapping of proposal id to number of comments
     #[storage]
     struct Storage {
@@ -28,7 +30,7 @@ mod discussion {
         comment_count: LegacyMap::<felt252, u64>
     }
 
-    #[derive(Drop, Serde, starknet::Store)]
+    #[derive(Copy, Drop, Serde, starknet::Store)]
     pub struct Comment {
         user: ContractAddress,
         ipfs_hash: felt252,
@@ -70,12 +72,12 @@ mod discussion {
             
         }
 
-        fn get_comment(self: @ComponentState<TContractState>, prop_id: felt252) -> Array<felt252> {
+        fn get_comment(self: @ComponentState<TContractState>, prop_id: felt252) -> Array<(ContractAddress, felt252)> {
             //Get comment counts 
             let count: u64 = self.comment_count.read(prop_id);
 
             //Initialize an array of comments
-            let mut arr = ArrayTrait::<Comment>::new();
+            let mut arr = ArrayTrait::<(ContractAddress, felt252)>::new();
 
             //if no comments, return empty array
             if count == 0 {
@@ -91,7 +93,7 @@ mod discussion {
 
                 //collect comment at position i
                 let com: Comment = self.comments.read((prop_id, i));
-                arr.append(com);
+                arr.append((com.user, com.ipfs_hash));
                 i += 1;  
             };
 
