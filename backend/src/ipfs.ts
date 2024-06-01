@@ -1,33 +1,37 @@
 import { Request, Response } from "express";
 import * as dotenv from "dotenv";
-import { createHelia, Helia } from "helia";
-import { dagJson } from "@helia/dag-json";
 import { getStarknetId } from "./starknet";
 
 dotenv.config();
 
+interface Proposal {
+  text: string;
+  address: string;
+}
+
 const PINATA_JWT = process.env.PINATA_JWT || "";
 
-const pinByCID = async (ipfsHash: string) => {
-  const url = "https://api.pinata.cloud/pinning/pinByHash";
+const pinToIPFS = async (proposal: Proposal) => {
+  const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
 
-  const data = JSON.stringify({
-    hashToPin: ipfsHash,
+  const blob = new Blob([JSON.stringify(proposal, null, 2)], {
+    type: "application/json"
   });
+
+  const file = new File([blob], `${proposal.address}.txt`);
+  const data = new FormData();
+  data.append("file", file);
 
   const response = await fetch(url, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${PINATA_JWT}`,
+      Authorization: `Bearer ${PINATA_JWT}`
     },
-    body: data,
+    body: data
   });
 
-  console.log(await response.json());
+  return await response.json();
 };
-
-let helia: Helia;
 
 export const submitProposal = async (req: Request, res: Response) => {
   const { text, address } = req.body;
@@ -36,9 +40,9 @@ export const submitProposal = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Missing text or address" });
   }
 
-  const proposalData: any = {
+  const proposalData: Proposal = {
     text,
-    address,
+    address
   };
 
   // const starknetId = await getStarknetId(address);
@@ -48,17 +52,9 @@ export const submitProposal = async (req: Request, res: Response) => {
   // }
 
   try {
-    helia = await createHelia();
-    const d = dagJson(helia);
-    const cid = await d.add(proposalData);
-    const ipfsHash = cid.toString();
+    const pin = await pinToIPFS(proposalData);
 
-    // Asynchronously pin the hash
-    pinByCID(ipfsHash).catch((err) => {
-      console.error("Failed to pin", err);
-    });
-
-    return res.json({ ipfs_hash: ipfsHash });
+    return res.json({ ipfs_hash: pin.IpfsHash });
   } catch (error) {
     console.error("Error uploading to IPFS", error);
     return res.status(500).json({ error: "Error uploading to IPFS" });
