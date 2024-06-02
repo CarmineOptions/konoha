@@ -10,8 +10,8 @@ interface Proposal {
   starknet_id?: string;
 }
 
-const ADDRES_REGEX: RegExp = /^0x0[0-9a-fA-F]{63}$/;
-const MAX_LENGTH: number = 200;
+const ADDRES_REGEX: RegExp = /^0x[0-9a-fA-F]+$/;
+const MAX_LENGTH: number = 10000;
 const PINATA_JWT: string = process.env.PINATA_JWT || "";
 
 const pinToIPFS = async (proposal: Proposal) => {
