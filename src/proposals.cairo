@@ -30,13 +30,15 @@ trait IProposals<TContractState> {
         ref self: TContractState,
         to_addr: ContractAddress,
         calldata: Array<(ContractAddress, u128)>,
-        amount: u128
+        amount: u128,
+        prop_id: felt252,
     );
     fn get_total_delegated_to(self: @TContractState, to_addr: ContractAddress) -> u128;
 }
 
 #[starknet::component]
 mod proposals {
+    use konoha::proposals::IProposals;
     use konoha::contract::IGovernance;
     use konoha::contract::IGovernanceDispatcher;
     use konoha::contract::IGovernanceDispatcherTrait;
@@ -420,7 +422,7 @@ mod proposals {
             let already_delegated = self.find_already_delegated(to_addr, calldata_span, 0);
             assert(caller_balance - already_delegated >= amount, 'Not enough funds');
 
-            let updated_list: Array<(ContractAddress, u128)> = array![];
+            let updated_list: Array<(ContractAddress, u128)> = array![(to_addr, amount)];
             let updated_list_span = updated_list.span();
 
             self
@@ -436,12 +438,16 @@ mod proposals {
             ref self: ComponentState<TContractState>,
             to_addr: ContractAddress,
             calldata: Array<(ContractAddress, u128)>,
-            amount: u128
+            amount: u128,
+            prop_id: felt252,
         ) {
             let caller_addr = get_caller_address();
             let stored_hash = self.delegate_hash.read(caller_addr);
             let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
             assert(stored_hash == hashing(0, calldata_span, 0), 'incorrect delegate list');
+
+            let user_already_voted = self.get_user_voted(to_addr, prop_id);
+            assert(user_already_voted == 0, 'user already voted');
 
             let max_power_to_withdraw: u128 = self
                 .find_already_delegated(to_addr, calldata_span, 0);
@@ -449,7 +455,7 @@ mod proposals {
 
             let updated_list: Array<(ContractAddress, u128)> = ArrayTrait::new();
             let updated_list_span = updated_list.span();
-            let minus_amount = 0 - amount;
+            let minus_amount = max_power_to_withdraw - amount;
             self.update_calldata(to_addr, minus_amount, calldata_span, updated_list, 0);
 
             self.delegate_hash.write(caller_addr, hashing(0, updated_list_span, 0));
