@@ -46,6 +46,7 @@ amount=1000
 
 To execute the vesting process for a grantee at a specified timestamp, use the vest function. This function will check if the conditions are met and, if so, mint the vested tokens to the grantee. Only only one milestone is vested at a time.
 
+
 #### Example usage of vesting tokens
 
 ```
@@ -86,6 +87,15 @@ grantee=ContractAddress
 - increments_count: The number of vesting increments.
 - total_amount: The total amount of tokens to be vested.
 - grantee: The address of the grantee.
+
+#### Cliff Period
+
+A cliff period is the initial period in a vesting schedule during which no tokens are vested. Tokens start to vest only after the cliff period ends. This is useful for ensuring that the grantee remains with the project for a minimum period before receiving any tokens.
+
+##### How Cliff Works
+When using the add_linear_vesting_schedule method, you can set the cliff period by adjusting the first_vest parameter. The first_vest timestamp should be set to a date in the future, representing the end of the cliff period.
+
+* For example, if the current date is January 1, 2024, and you want a 6-month cliff period, the first_vest timestamp should be set to July 1, 2024. Tokens will start vesting only after this date.
 
 ## Customization
 
