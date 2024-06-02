@@ -1,11 +1,17 @@
 import { StarknetIdNavigator } from "starknetid.js";
 import { RpcProvider, constants } from "starknet";
+import * as dotenv from "dotenv";
+
+dotenv.config();
+
+const NODE_URL: string = process.env.NODE_URL || "";
 
 export const getStarknetId = async (
   address: string
 ): Promise<string | null> => {
   const provider = new RpcProvider({
-    nodeUrl: "your_mainnet_node_url",
+    nodeUrl: NODE_URL,
+    chainId: constants.StarknetChainId.SN_MAIN
   });
 
   const starknetIdNavigator = new StarknetIdNavigator(
@@ -13,7 +19,7 @@ export const getStarknetId = async (
     constants.StarknetChainId.SN_MAIN
   );
 
-  const domain = await provider.getStarkName(address);
+  const domain = await starknetIdNavigator.getStarkName(address);
   const id = await starknetIdNavigator.getStarknetId(domain);
 
   return id;

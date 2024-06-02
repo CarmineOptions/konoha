@@ -7,9 +7,12 @@ dotenv.config();
 interface Proposal {
   text: string;
   address: string;
+  starknet_id?: string;
 }
 
-const PINATA_JWT = process.env.PINATA_JWT || "";
+const ADDRES_REGEX: RegExp = /^0x0[0-9a-fA-F]{63}$/;
+const MAX_LENGTH: number = 200;
+const PINATA_JWT: string = process.env.PINATA_JWT || "";
 
 const pinToIPFS = async (proposal: Proposal) => {
   const url = "https://api.pinata.cloud/pinning/pinFileToIPFS";
@@ -34,10 +37,20 @@ const pinToIPFS = async (proposal: Proposal) => {
 };
 
 export const submitProposal = async (req: Request, res: Response) => {
-  const { text, address } = req.body;
+  const { text, address }: { text: string; address: string } = req.body;
 
   if (!text || !address) {
     return res.status(400).json({ error: "Missing text or address" });
+  }
+
+  if (text.length > MAX_LENGTH) {
+    return res.status(400).json({
+      error: `Text exceeds maximum length of ${MAX_LENGTH} characters`
+    });
+  }
+
+  if (!ADDRES_REGEX.test(address)) {
+    return res.status(400).json({ error: "Invalid address" });
   }
 
   const proposalData: Proposal = {
@@ -45,11 +58,11 @@ export const submitProposal = async (req: Request, res: Response) => {
     address
   };
 
-  // const starknetId = await getStarknetId(address);
+  const starknetId = await getStarknetId(address);
 
-  // if (starknetId) {
-  //   proposalData.starknet_id = starknetId;
-  // }
+  if (starknetId) {
+    proposalData.starknet_id = starknetId;
+  }
 
   try {
     const pin = await pinToIPFS(proposalData);
