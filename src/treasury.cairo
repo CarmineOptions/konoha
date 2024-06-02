@@ -253,8 +253,7 @@ mod Treasury {
             self.amm_address.read()
         }
 
-        // Market
-
+        // Deposit token to ZKLend Market
         fn deposit_to_zklend(ref self: ContractState, token: ContractAddress, amount: u256) {
             self.ownable.assert_only_owner();
             let pooled_token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token };
@@ -276,6 +275,7 @@ mod Treasury {
             self.emit(LiquidityProvidedToZklend { token_address: token, amount });
         }
 
+        // Withdraw token from ZKLend Market
         fn withdraw_from_zklend(ref self: ContractState, token: ContractAddress, amount: u256) {
             self.ownable.assert_only_owner();
             let zklend_market: IMarketDispatcher = IMarketDispatcher {

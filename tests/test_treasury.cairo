@@ -6,6 +6,8 @@ mod testStorage {
         0x0304256e5fade73a6fc8f49ed7c1c43ac34e6867426601b01204e1f7ba05b53d;
     const CARMINE_AMM_CONTRACT_ADDRESS: felt252 =
         0x047472e6755afc57ada9550b6a3ac93129cc4b5f98f51c73e0644d129fd208d9;
+    const ZKLEND_MARKET_C0NTRACT_ADDRESS: felt252 =
+        0x04c0a5193d58f74fbace4b74dcf65481e734ed1714121bdc571da345540efa05;
 }
 
 use core::result::ResultTrait;
@@ -21,23 +23,31 @@ use snforge_std::{
 };
 use konoha::treasury::{ITreasuryDispatcher, ITreasuryDispatcherTrait};
 use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
+use konoha::treasury_types::zklend::interfaces::{IMarketDispatcher, IMarketDispatcherTrait};
 use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
 use openzeppelin::access::ownable::interface::{
     IOwnableTwoStep, IOwnableTwoStepDispatcherTrait, IOwnableTwoStepDispatcher
 };
 use openzeppelin::upgrades::interface::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 
-fn get_important_addresses() -> (ContractAddress, ContractAddress, ContractAddress) {
+fn get_important_addresses() -> (
+    ContractAddress, ContractAddress, ContractAddress, ContractAddress
+) {
     let gov_contract_address: ContractAddress = testStorage::GOV_CONTRACT_ADDRESS
         .try_into()
         .unwrap();
     let AMM_contract_address: ContractAddress = testStorage::CARMINE_AMM_CONTRACT_ADDRESS
         .try_into()
         .unwrap();
+    let zklend_market_contract_address: ContractAddress =
+        testStorage::ZKLEND_MARKET_C0NTRACT_ADDRESS
+        .try_into()
+        .unwrap();
     let contract = declare("Treasury").expect('unable to declare');
     let mut calldata = ArrayTrait::new();
     gov_contract_address.serialize(ref calldata);
     AMM_contract_address.serialize(ref calldata);
+    zklend_market_contract_address.serialize(ref calldata);
 
     // Precalculate the address to obtain the contract address before the constructor call (deploy) itself
     let contract_address = contract.precalculate_address(@calldata);
@@ -45,14 +55,19 @@ fn get_important_addresses() -> (ContractAddress, ContractAddress, ContractAddre
     prank(CheatTarget::One(contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
     let (deployed_contract, _) = contract.deploy(@calldata).unwrap();
 
-    return (gov_contract_address, AMM_contract_address, deployed_contract,);
+    return (
+        gov_contract_address,
+        AMM_contract_address,
+        deployed_contract,
+        zklend_market_contract_address
+    );
 }
 
 
 #[test]
 #[fork("SEPOLIA")]
 fn test_transfer_token() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
         get_important_addresses();
     let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
         .try_into()
@@ -84,7 +99,7 @@ fn test_transfer_token() {
 #[should_panic(expected: ('Caller is not the owner',))]
 #[fork("SEPOLIA")]
 fn test_send_tokens_to_address_by_unauthorized_caller() {
-    let (_gov_contract_address, _AMM_contract_address, treasury_contract_address) =
+    let (_gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
         get_important_addresses();
     let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
         .try_into()
@@ -112,7 +127,7 @@ fn test_send_tokens_to_address_by_unauthorized_caller() {
 
 #[test]
 fn test_update_AMM_contract() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
         get_important_addresses();
     let new_AMM_contract: ContractAddress = '0xnewAMMcontract'.try_into().unwrap();
 
@@ -130,7 +145,7 @@ fn test_update_AMM_contract() {
 #[test]
 #[should_panic(expected: ('Caller is not the owner',))]
 fn test_update_AMM_contract_by_unauthorized_caller() {
-    let (_gov_contract_address, _AMM_contract_address, treasury_contract_address) =
+    let (_gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
         get_important_addresses();
     let user2: ContractAddress = '0xUser2'.try_into().unwrap();
     let new_AMM_contract: ContractAddress = '0xnewAMMcontract'.try_into().unwrap();
@@ -142,7 +157,7 @@ fn test_update_AMM_contract_by_unauthorized_caller() {
 
 #[test]
 fn test_ownership_transfer() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
         get_important_addresses();
     let user2: ContractAddress = '0xUser2'.try_into().unwrap();
 
@@ -168,7 +183,7 @@ fn test_ownership_transfer() {
 #[test]
 #[should_panic(expected: ('Caller is not the pending owner',))]
 fn test_revoked_ownership_transfer() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
         get_important_addresses();
     let user2: ContractAddress = '0xUser2'.try_into().unwrap();
 
@@ -203,7 +218,7 @@ fn test_revoked_ownership_transfer() {
 #[test]
 #[fork("MAINNET")]
 fn test_deposit_withdraw_carmine() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
         get_important_addresses();
     let eth_addr: ContractAddress =
         0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
@@ -252,7 +267,7 @@ fn test_deposit_withdraw_carmine() {
 
 #[test]
 fn test_upgrade_treasury_contract() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
         get_important_addresses();
 
     let new_class_hash: ClassHash =
@@ -268,6 +283,47 @@ fn test_upgrade_treasury_contract() {
 }
 
 #[test]
-fn test_deposit_zklend() {
-    assert!(true, "true");
+#[fork("MAINNET")]
+fn test_deposit_withdraw_zklend() {
+    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
+    let usdc_addr: ContractAddress =
+        0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
+        .try_into()
+        .unwrap();
+    let random_whale: ContractAddress =
+        0x4267ae838da77a52384283f3321a0746557023d24cb823115d2da5c8c4f1a42
+        .try_into()
+        .unwrap();
+    let usdc_dispatcher = IERC20Dispatcher { contract_address: usdc_addr };
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    // Transfer USDC from random whale to Treasury contract
+    prank(CheatTarget::One(usdc_addr), random_whale, CheatSpan::TargetCalls(1));
+    let deposit_amt = 2000000; // 2 USDC
+    usdc_dispatcher.transfer(treasury_contract_address, deposit_amt);
+    assert(usdc_dispatcher.balanceOf(treasury_contract_address) >= deposit_amt, 'usdc bal too low');
+
+    // Deposit to ZKLend Market
+    let bal_before_deposit = usdc_dispatcher.balanceOf(treasury_contract_address);
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
+    );
+    treasury_dispatcher.deposit_to_zklend(usdc_addr, deposit_amt);
+
+    let bal_after_deposit = usdc_dispatcher.balanceOf(treasury_contract_address);
+
+    assert(bal_before_deposit == bal_after_deposit + deposit_amt, 'deposit to zklend failed');
+
+    roll(
+        CheatTarget::All, get_block_number() + 1, CheatSpan::Indefinite
+    ); // to bypass sandwich guard
+
+    // Withdraw from ZKLend Market
+    let bal_before_withdraw = usdc_dispatcher.balanceOf(treasury_contract_address);
+
+    treasury_dispatcher.withdraw_from_zklend(usdc_addr, deposit_amt);
+
+    let bal_after_withdraw = usdc_dispatcher.balanceOf(treasury_contract_address);
+
+    assert(bal_before_withdraw == bal_after_withdraw - deposit_amt, 'deposit to zklend failed');
 }
