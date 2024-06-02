@@ -162,3 +162,21 @@ fn test_submit_proposal_under_quorum() {
     );
     dispatcher.submit_proposal(42, 1);
 }
+
+#[test]
+#[should_panic(expected: ('incorrect delegate list',))]
+fn test_delegate_vote_with_incorrect_calldata() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    let mut calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    let addr: felt252 = 0x4;
+    calldata.append((addr.try_into().unwrap(), 50000));
+    dispatcher
+        .delegate_vote(first_address.try_into().unwrap(), calldata, 50000.try_into().unwrap());
+}
+
