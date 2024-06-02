@@ -20,8 +20,19 @@ trait IProposals<TContractState> {
         ref self: TContractState, custom_proposal_type: u32, calldata: Span<felt252>
     ) -> u32;
     fn get_custom_proposal_type(self: @TContractState, i: u32) -> CustomProposalConfig;
-    fn delegate_vote(ref self: TContractState, to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>, amount: u128);
-    fn withdraw_delegation(ref self: TContractState, to_addr: ContractAddress, calldata: Array<(ContractAddress, u128)>, amount: u128);
+    fn delegate_vote(
+        ref self: TContractState,
+        to_addr: ContractAddress,
+        calldata: Array<(ContractAddress, u128)>,
+        amount: u128
+    );
+    fn withdraw_delegation(
+        ref self: TContractState,
+        to_addr: ContractAddress,
+        calldata: Array<(ContractAddress, u128)>,
+        amount: u128
+    );
+    fn get_total_delegated_to(self: @TContractState, to_addr: ContractAddress) -> u128;
 }
 
 #[starknet::component]
@@ -318,6 +329,12 @@ mod proposals {
             self.proposal_voted_by.read((prop_id, user_address))
         }
 
+        fn get_total_delegated_to(
+            self: @ComponentState<TContractState>, to_addr: ContractAddress
+        ) -> u128 {
+            self.total_delegated_to.read(to_addr)
+        }
+
         fn submit_proposal(
             ref self: ComponentState<TContractState>, payload: felt252, to_upgrade: ContractType
         ) -> felt252 {
@@ -390,10 +407,10 @@ mod proposals {
             assert(stored_hash == hashing(0, calldata_span, 0), 'incorrect delegate list');
 
             let curr_total_delegated_to = self.total_delegated_to.read(to_addr);
-            let converted_addr = contract_address_to_felt252(caller_addr);
 
             // let gov_token_addr = self.get_governance_token_address();
-            let gov_token_addr = IGovernanceDispatcher { contract_address: get_contract_address() }.get_governance_token_address();
+            let gov_token_addr = IGovernanceDispatcher { contract_address: get_contract_address() }
+                .get_governance_token_address();
             let caller_balance_u256: u256 = IERC20Dispatcher { contract_address: gov_token_addr }
                 .balanceOf(caller_addr);
             assert(caller_balance_u256.high == 0, 'CARM balance > u128');
@@ -406,7 +423,10 @@ mod proposals {
             let updated_list: Array<(ContractAddress, u128)> = array![];
             let updated_list_span = updated_list.span();
 
-            self.update_calldata(to_addr, already_delegated + amount, calldata_span, updated_list, 0);
+            self
+                .update_calldata(
+                    to_addr, already_delegated + amount, calldata_span, updated_list, 0
+                );
 
             self.delegate_hash.write(caller_addr, hashing(0, updated_list_span, 0));
             self.total_delegated_to.write(to_addr, curr_total_delegated_to + amount);
@@ -423,7 +443,8 @@ mod proposals {
             let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
             assert(stored_hash == hashing(0, calldata_span, 0), 'incorrect delegate list');
 
-            let max_power_to_withdraw: u128 = self.find_already_delegated(to_addr, calldata_span, 0);
+            let max_power_to_withdraw: u128 = self
+                .find_already_delegated(to_addr, calldata_span, 0);
             assert(max_power_to_withdraw >= amount, 'amount has to be lower');
 
             let updated_list: Array<(ContractAddress, u128)> = ArrayTrait::new();
