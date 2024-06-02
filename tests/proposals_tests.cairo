@@ -249,5 +249,44 @@ fn test_add_comment() {
     IDiscussionDispatcher { contract_address: gov_contract_addr }.add_comment(prop_id, ipfs_hash.try_into().unwrap()); 
 }
 
-//TODO
-//Test get_comment
+#[test]
+fn test_get_comment() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+    let ipfs_hash = 1234567;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let prop_id = dispatcher.submit_proposal(42, 1);
+
+    prank(
+        CheatTarget::One(token_contract.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    token_contract.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(2)
+    );
+
+    IDiscussionDispatcher { contract_address: gov_contract_addr }.add_comment(prop_id, ipfs_hash);
+
+    // GET comment
+   let res = IDiscussionDispatcher { contract_address: gov_contract_addr }.get_comment(prop_id);
+
+   let comment = *res.at(0);
+
+   let (user_address, ipfs_h) = comment;
+
+   assert_eq!(user_address, first_address.try_into().unwrap());
+   assert_eq!(ipfs_h, ipfs_hash.try_into().unwrap());
+}
