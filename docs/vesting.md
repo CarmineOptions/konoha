@@ -2,8 +2,14 @@
 
 ## Overview
 
-The Vesting contract provides functionality for managing vesting schedules and milestones within the Konoha ecosystem. This documentation outlines how to use the Vesting contract and how to customize it for specific protocol requirements.
-This component allows protocols to define linear vesting schedules and specific vesting milestones for grantees, ensuring that tokens are vested in a controlled and predictable manner.
+The Vesting contract provides functionality for managing vesting schedules and milestones within the Konoha ecosystem. It is designed to ensure that tokens are distributed according to predefined schedules, enhancing transparency and security. This documentation outlines how to use the Vesting contract and how to customize it for specific protocol requirements.
+The component allows protocols to define linear vesting schedules and specific vesting milestones for grantees, ensuring that tokens are vested in a controlled and predictable manner.
+
+## Key Features
+
+- Linear Vesting Schedule: Allows for gradual release of tokens over a specified period.
+- Vesting Milestones: Enables setting specific vesting milestones with predefined amounts.
+- Event Emission: Tracks and emits events for vesting milestones and completed vesting actions.
 
 ## Usage
 
@@ -20,11 +26,15 @@ To add a single vesting milestone, we use the add_vesting_milestone function. Th
 
 #### Example usage of adding a vesting milestone
 
+```
+
 contract_instance.add_vesting_milestone(
 vesting_timestamp=1632555600,
 grantee=ContractAddress,
 amount=1000
 );
+
+```
 
 ### Parameters
 
@@ -38,10 +48,13 @@ To execute the vesting process for a grantee at a specified timestamp, use the v
 
 #### Example usage of vesting tokens
 
+```
+
 contract_instance.vest(
 grantee=ContractAddress,
 vested_timestamp=1650000000
 );
+```
 
 ### Parameters
 
@@ -54,6 +67,8 @@ To add a linear vesting schedule, we use the add_linear_vesting_schedule functio
 
 #### Example usage of adding a Linear vesting schedule
 
+```
+
 contract_instance.add_linear_vesting_schedule(
 first_vest=1650000000,
 period=2592000, // 30 days in seconds
@@ -61,6 +76,8 @@ increments_count=10,
 total_amount=1200,
 grantee=ContractAddress
 );
+
+```
 
 ### Parameters
 
@@ -74,17 +91,19 @@ grantee=ContractAddress
 
 To customize the Vesting contract for specific protocol’s need, use the methods defined below;
 
-1. Custom Proposals: To add new vesting schedules, the component should be part of a custom proposal that calls either add_linear_vesting_schedule or add_vesting_milestone.
-2. Contract Integration: The vest function should be exported externally from the contract to allow protocols to execute the vesting process.
+- Custom Proposals: To add new vesting schedules, the component should be part of a custom proposal that calls either add_linear_vesting_schedule or add_vesting_milestone.
+- Contract Integration: The vest function should be exported externally from the contract to allow protocols to execute the vesting process.
 
 The Vesting contract is composed of the following:
 
-1. VestingImpl: Implementation of the IVesting trait for managing vesting operations.
-2. Storage: Storage component for storing vesting milestones.
+- VestingImpl: Implementation of the IVesting trait for managing vesting operations.
+- Storage: Storage component for storing vesting milestones.
 
 ### Events
 
 The Vesting contract emits the following events:
 
-1. VestingMilestoneAdded: This indicates the addition of a new vesting milestone.
-2. Vested: This indicates that tokens have been vested for a grantee.
+- VestingMilestoneAdded: This indicates the addition of a new vesting milestone.
+- Vested: This indicates that tokens have been vested for a grantee.
+
+Note that the methods `add_vesting_milestone ` and `add_linear_vesting_schedule` can only be called by the contract itself to prevent unauthorized modifications.
