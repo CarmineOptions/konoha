@@ -1,6 +1,7 @@
 mod airdrop;
 mod treasury_types {
     mod carmine;
+    mod nostra;
 }
 mod constants;
 mod contract;

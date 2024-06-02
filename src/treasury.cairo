@@ -1,5 +1,6 @@
 use starknet::ContractAddress;
 use konoha::treasury_types::carmine::OptionType;
+use konoha::treasury_types::nostra::NostraPair;
 
 #[starknet::interface]
 trait ITreasury<TContractState> {
@@ -27,6 +28,23 @@ trait ITreasury<TContractState> {
         lp_token_amount: u256
     );
     fn get_amm_address(self: @TContractState) -> ContractAddress;
+    fn get_nostra_router_address(self: @TContractState) -> ContractAddress;
+    fn get_nostra_pair_address(self: @TContractState, nostra_pair: NostraPair) -> ContractAddress;
+    fn add_liquidity_to_nostra(
+        ref self: TContractState,
+        nostra_pair: NostraPair,
+        amount_0_desired: u256,
+        amount_1_desired: u256,
+        amount_0_min: u256,
+        amount_1_min: u256
+    ) -> (u256, u256, u256);
+    fn remove_liquidity_from_nostra(
+        ref self: TContractState,
+        nostra_pair: NostraPair,
+        liquidity: u256,
+        amount_0_min: u256,
+        amount_1_min: u256
+    ) -> (u256, u256);
 }
 
 #[starknet::contract]
@@ -38,10 +56,14 @@ mod Treasury {
     use openzeppelin::access::ownable::interface::IOwnableTwoStep;
     use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address, ClassHash};
+    use starknet::{ContractAddress, get_contract_address, ClassHash, contract_address_const, get_block_timestamp};
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
     use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
+    use konoha::treasury_types::nostra::{
+        INostraRouterDispatcher, INostraRouterDispatcherTrait, NostraPair, INostraPairDispatcher,
+        INostraPairDispatcherTrait
+    };
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
@@ -109,6 +131,11 @@ mod Treasury {
         const ADDRESS_ZERO_AMM: felt252 = 'AMM addr is zero address';
         const ADDRESS_ALREADY_CHANGED: felt252 = 'New Address same as Previous';
     }
+
+    const NOSTRA_ROUTER_CONTRACT_ADDRESS: felt252 =
+        0x049ff5b3a7d38e2b50198f408fa8281635b5bc81ee49ab87ac36c8324c214427;
+    const NOSTRA_PAIR_STRK_ETH_CONTRACT_ADDRESS: felt252 =
+        0x068400056dccee818caa7e8a2c305f9a60d255145bac22d6c5c9bf9e2e046b71;
 
     #[constructor]
     fn constructor(
@@ -223,6 +250,64 @@ mod Treasury {
 
         fn get_amm_address(self: @ContractState) -> ContractAddress {
             self.amm_address.read()
+        }
+
+        fn get_nostra_router_address(self: @ContractState) -> ContractAddress {
+            contract_address_const::<NOSTRA_ROUTER_CONTRACT_ADDRESS>()
+        }
+
+        fn get_nostra_pair_address(self: @ContractState, nostra_pair: NostraPair) -> ContractAddress {
+            match(nostra_pair) {
+                NostraPair::STRK_ETH => {
+                    contract_address_const::<NOSTRA_PAIR_STRK_ETH_CONTRACT_ADDRESS>()
+                }
+            }
+        }
+
+        fn add_liquidity_to_nostra(
+            ref self: ContractState,
+            nostra_pair: NostraPair,
+            amount_0_desired: u256,
+            amount_1_desired: u256,
+            amount_0_min: u256,
+            amount_1_min: u256
+        ) -> (u256, u256, u256) {
+            self.ownable.assert_only_owner();
+            let router = INostraRouterDispatcher {
+                contract_address: self.get_nostra_router_address()
+            };
+            let (amount_0_added, amount_1_added, amount_lp) = router.add_liquidity(
+                self.get_nostra_pair_address(nostra_pair),
+                amount_0_desired,
+                amount_1_desired,
+                amount_0_min,
+                amount_1_min,
+                get_contract_address(),
+                get_block_timestamp()
+            );
+            (amount_0_added, amount_1_added, amount_lp)
+        }
+
+        fn remove_liquidity_from_nostra(
+            ref self: ContractState,
+            nostra_pair: NostraPair,
+            liquidity: u256,
+            amount_0_min: u256,
+            amount_1_min: u256
+        ) -> (u256, u256) {
+            self.ownable.assert_only_owner();
+            let router = INostraRouterDispatcher {
+                contract_address: self.get_nostra_router_address()
+            };
+            let (amount_0_removed, amount_1_removed) = router.remove_liquidity(
+                self.get_nostra_pair_address(nostra_pair),
+                liquidity,
+                amount_0_min,
+                amount_1_min,
+                get_contract_address(),
+                get_block_timestamp()
+            );
+            (amount_0_removed, amount_1_removed)
         }
     }
 
