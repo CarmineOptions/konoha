@@ -1,7 +1,8 @@
-import React, {  } from "react";
+import React, { useMemo } from "react";
 import toast from "react-hot-toast";
-import { useAccount } from "@starknet-react/core";
+import { useAccount, useContractWrite } from "@starknet-react/core";
 import { submitCommentApi } from "../api/apiService";
+import { CONTRACT_ADDR } from "../lib/config";
 
 export default function NewcommentCommentForm({
     setIsModalOpen,
@@ -9,94 +10,79 @@ export default function NewcommentCommentForm({
     setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
     const { isConnected, address } = useAccount();
-    // State variables for the payload and to_upgrade
     const [comment, setComment] = React.useState<string>("");
     const [isLoading, setIsLoading] = React.useState<boolean>(false);
 
+    const calls = useMemo(() => {
+        const tx = {
+            contractAddress: CONTRACT_ADDR,
+            entrypoint: "add_comment",
+            calldata: [comment.toString()],
+        };
+        return [tx];
+    }, [comment, submitComment]);
 
-    // Create a call to submit a comment
-    // const calls = useMemo(() => {
-    //     const tx = {
-    //         contractAddress: "",
-    //         entrypoint: "",
-    //         calldata: [payload.toString()],
-    //     };
-    //     return [tx];
-    // }, [payload, submitComment]);
-
-    // Use the useContractWrite hook to write the comment
-    // const { writeAsync } = useContractWrite({ calls });
+    const { writeAsync } = useContractWrite({ calls });
 
     async function submitComment(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
 
-        // Check if the user is connected
         if (!isConnected) {
             toast.error("Please connect your wallet");
             return;
         }
 
-        if (!comment ) {
+        if (!comment) {
             toast.error("Please fill out all fields");
             return;
         }
 
         const payload = {
             text: comment,
-            address: address
-        }
+            address: address,
+        };
 
+        setIsLoading(true);
 
         try {
-            setIsLoading(true)
             await submitCommentApi(payload);
             toast.success("Comment submitted successfully");
-            setIsLoading(false)
 
-        } catch (e) {
-            setIsLoading(false)
+            try {
+                await writeAsync();
+                toast.success("Proposal updated successfully");
+            } catch (error) {
+                toast.error("Unable to update proposal with comment");
+                console.error(error);
+            }
+        } catch (error) {
             toast.error("Something went wrong");
-            console.error(e);
+            console.error(error);
         } finally {
-            setIsLoading(false)
+            setIsLoading(false);
             setIsModalOpen(false);
         }
-        
-        // Call the write function to submit the comment
-        // writeAsync()
-        //     .then(() => {
-        //         toast.success("Comment submitted successfully");
-        //     })
-        //     .catch((e) => {
-        //         toast.error("Something went wrong");
-        //         console.error(e);
-        //     })
-        //     .finally(() => {
-        //         setIsModalOpen(false);
-        //     });
     }
 
     return (
         <div className="w-[35rem]">
-          <form onSubmit={submitComment}>
-            <label htmlFor="#comment">Comment</label>
-            <input
-                id="#comment"
-                type="text"
-                placeholder="Leave a comment here"
-                className="w-full p-2 mb-2 border rounded-lg border-slate-300"
-                onChange={(e) => setComment(e.target.value)}
-            />
-         
-            <button
-                type="submit"
-                className="w-full p-2 mt-4 text-white bg-blue-500 rounded-lg"
-            >
-                {
-                    isLoading ? "Loading...": "Submit"
-                }
-            </button>
-        </form>
+            <form onSubmit={submitComment}>
+                <label htmlFor="#comment">Comment</label>
+                <input
+                    id="#comment"
+                    type="text"
+                    placeholder="Leave a comment here"
+                    className="w-full p-2 mb-2 border rounded-lg border-slate-300"
+                    onChange={(e) => setComment(e.target.value)}
+                />
+
+                <button
+                    type="submit"
+                    className="w-full p-2 mt-4 text-white bg-blue-500 rounded-lg"
+                >
+                    {isLoading ? "Loading..." : "Submit"}
+                </button>
+            </form>
         </div>
     );
 }
