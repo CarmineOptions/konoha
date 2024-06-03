@@ -26,6 +26,11 @@ trait INostraRouter<TContractState> {
 #[derive(Copy, Drop, Serde)]
 enum NostraPair {
     STRK_ETH,
+    STRK_USDC,
+    USDC_USDT,
+    ETH_USDC,
+    ETH_USDT,
+    WBTC_ETH,
 }
 
 #[starknet::interface]

@@ -56,7 +56,10 @@ mod Treasury {
     use openzeppelin::access::ownable::interface::IOwnableTwoStep;
     use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
-    use starknet::{ContractAddress, get_contract_address, ClassHash, contract_address_const, get_block_timestamp};
+    use starknet::{
+        ContractAddress, get_contract_address, ClassHash, contract_address_const,
+        get_block_timestamp
+    };
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
     use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
@@ -66,7 +69,6 @@ mod Treasury {
     };
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
-
 
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
@@ -110,6 +112,22 @@ mod Treasury {
         lp_token_amount: u256
     }
 
+    #[derive(starknet::Event, Drop)]
+    struct NostraLiquidityAdded {
+        nostra_pair: NostraPair,
+        amount_0_added: u256,
+        amount_1_added: u256,
+        amount_lp: u256
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct NostraLiquidityRemoved {
+        nostra_pair: NostraPair,
+        amount_lp_removed: u256,
+        amount_0_removed: u256,
+        amount_1_removed: u256
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -117,6 +135,8 @@ mod Treasury {
         AMMAddressUpdated: AMMAddressUpdated,
         LiquidityProvided: LiquidityProvided,
         LiquidityWithdrawn: LiquidityWithdrawn,
+        NostraLiquidityAdded: NostraLiquidityAdded,
+        NostraLiquidityRemoved: NostraLiquidityRemoved,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         #[flat]
@@ -136,6 +156,16 @@ mod Treasury {
         0x049ff5b3a7d38e2b50198f408fa8281635b5bc81ee49ab87ac36c8324c214427;
     const NOSTRA_PAIR_STRK_ETH_CONTRACT_ADDRESS: felt252 =
         0x068400056dccee818caa7e8a2c305f9a60d255145bac22d6c5c9bf9e2e046b71;
+    const NOSTRA_PAIR_STRK_USDC_CONTRACT_ADDRESS: felt252 =
+        0x07ae43abf704f4981094a4f3457d1abe6b176844f6cdfbb39c0544a635ef56b0;
+    const NOSTRA_PAIR_USDC_USDT_CONTRACT_ADDRESS: felt252 =
+        0x00c318445d5a5096e2ad086452d5c97f65a9d28cafe343345e0fa70da0841295;
+    const NOSTRA_PAIR_ETH_USDC_CONTRACT_ADDRESS: felt252 =
+        0x05ef8800d242c5d5e218605d6a10e81449529d4144185f95bf4b8fb669424516;
+    const NOSTRA_PAIR_ETH_USDT_CONTRACT_ADDRESS: felt252 =
+        0x052b136b37a7e6ea52ce1647fb5edc64efe23d449fc1561d9994a9f8feaa6753;
+    const NOSTRA_PAIR_WBTC_ETH_CONTRACT_ADDRESS: felt252 =
+        0x0285aa1c4bbeef8a183fb7245f096ddc4c99c6b2fedd1c1af52a634c83842804;
 
     #[constructor]
     fn constructor(
@@ -256,11 +286,28 @@ mod Treasury {
             contract_address_const::<NOSTRA_ROUTER_CONTRACT_ADDRESS>()
         }
 
-        fn get_nostra_pair_address(self: @ContractState, nostra_pair: NostraPair) -> ContractAddress {
-            match(nostra_pair) {
+        fn get_nostra_pair_address(
+            self: @ContractState, nostra_pair: NostraPair
+        ) -> ContractAddress {
+            match (nostra_pair) {
                 NostraPair::STRK_ETH => {
                     contract_address_const::<NOSTRA_PAIR_STRK_ETH_CONTRACT_ADDRESS>()
-                }
+                },
+                NostraPair::STRK_USDC => {
+                    contract_address_const::<NOSTRA_PAIR_STRK_USDC_CONTRACT_ADDRESS>()
+                },
+                NostraPair::USDC_USDT => {
+                    contract_address_const::<NOSTRA_PAIR_USDC_USDT_CONTRACT_ADDRESS>()
+                },
+                NostraPair::ETH_USDC => {
+                    contract_address_const::<NOSTRA_PAIR_ETH_USDC_CONTRACT_ADDRESS>()
+                },
+                NostraPair::ETH_USDT => {
+                    contract_address_const::<NOSTRA_PAIR_ETH_USDT_CONTRACT_ADDRESS>()
+                },
+                NostraPair::WBTC_ETH => {
+                    contract_address_const::<NOSTRA_PAIR_WBTC_ETH_CONTRACT_ADDRESS>()
+                },
             }
         }
 
@@ -276,15 +323,20 @@ mod Treasury {
             let router = INostraRouterDispatcher {
                 contract_address: self.get_nostra_router_address()
             };
-            let (amount_0_added, amount_1_added, amount_lp) = router.add_liquidity(
-                self.get_nostra_pair_address(nostra_pair),
-                amount_0_desired,
-                amount_1_desired,
-                amount_0_min,
-                amount_1_min,
-                get_contract_address(),
-                get_block_timestamp()
-            );
+            let (amount_0_added, amount_1_added, amount_lp) = router
+                .add_liquidity(
+                    self.get_nostra_pair_address(nostra_pair),
+                    amount_0_desired,
+                    amount_1_desired,
+                    amount_0_min,
+                    amount_1_min,
+                    get_contract_address(),
+                    get_block_timestamp()
+                );
+            self
+                .emit(
+                    NostraLiquidityAdded { nostra_pair, amount_0_added, amount_1_added, amount_lp }
+                );
             (amount_0_added, amount_1_added, amount_lp)
         }
 
@@ -299,14 +351,24 @@ mod Treasury {
             let router = INostraRouterDispatcher {
                 contract_address: self.get_nostra_router_address()
             };
-            let (amount_0_removed, amount_1_removed) = router.remove_liquidity(
-                self.get_nostra_pair_address(nostra_pair),
-                liquidity,
-                amount_0_min,
-                amount_1_min,
-                get_contract_address(),
-                get_block_timestamp()
-            );
+            let (amount_0_removed, amount_1_removed) = router
+                .remove_liquidity(
+                    self.get_nostra_pair_address(nostra_pair),
+                    liquidity,
+                    amount_0_min,
+                    amount_1_min,
+                    get_contract_address(),
+                    get_block_timestamp()
+                );
+            self
+                .emit(
+                    NostraLiquidityRemoved {
+                        nostra_pair,
+                        amount_lp_removed: liquidity,
+                        amount_0_removed,
+                        amount_1_removed
+                    }
+                );
             (amount_0_removed, amount_1_removed)
         }
     }

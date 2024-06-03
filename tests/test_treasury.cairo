@@ -17,9 +17,10 @@ use array::ArrayTrait;
 use debug::PrintTrait;
 use starknet::{ContractAddress, get_block_number, ClassHash, contract_address_const};
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, roll
+    BlockId, declare, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, roll,
+    spy_events, SpyOn, EventSpy, EventAssertions
 };
-use konoha::treasury::{ITreasuryDispatcher, ITreasuryDispatcherTrait};
+use konoha::treasury::{Treasury, ITreasuryDispatcher, ITreasuryDispatcherTrait};
 use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
 use konoha::treasury_types::nostra::{NostraPair, INostraPairDispatcher, INostraPairDispatcherTrait};
 use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -258,8 +259,9 @@ fn test_deposit_withdraw_nostra() {
         get_important_addresses();
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
     // random whale
-    let sequencer_address =
-        contract_address_const::<0x01176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8>();
+    let sequencer_address = contract_address_const::<
+        0x01176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8
+    >();
     let router_address = treasury_dispatcher.get_nostra_router_address();
     let pair_address = treasury_dispatcher.get_nostra_pair_address(NostraPair::STRK_ETH);
     let pair = INostraPairDispatcher { contract_address: pair_address };
@@ -271,7 +273,7 @@ fn test_deposit_withdraw_nostra() {
     prank(CheatTarget::One(token_0_address), sequencer_address, CheatSpan::TargetCalls(1));
     token_0.transfer(treasury_contract_address, 4000000000000000000000);
     prank(CheatTarget::One(token_1_address), sequencer_address, CheatSpan::TargetCalls(1));
-    token_1.transfer(treasury_contract_address,    1000000000000000000);
+    token_1.transfer(treasury_contract_address, 1000000000000000000);
     //
     let token_0_initial_balance = token_0.balanceOf(treasury_contract_address);
     let token_1_initial_balance = token_1.balanceOf(treasury_contract_address);
@@ -286,13 +288,25 @@ fn test_deposit_withdraw_nostra() {
     prank(
         CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
     );
-    let (amount_0_added, amount_1_added, amount_lp) = treasury_dispatcher.add_liquidity_to_nostra(
-        NostraPair::STRK_ETH,
-        amount_0_desired,
-        amount_1_desired,
-        1,
-        1,
-    );
+    let mut spy = spy_events(SpyOn::One(treasury_contract_address));
+    let (amount_0_added, amount_1_added, amount_lp) = treasury_dispatcher
+        .add_liquidity_to_nostra(NostraPair::STRK_ETH, amount_0_desired, amount_1_desired, 1, 1,);
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    treasury_contract_address,
+                    Treasury::Event::NostraLiquidityAdded(
+                        Treasury::NostraLiquidityAdded {
+                            nostra_pair: NostraPair::STRK_ETH,
+                            amount_0_added,
+                            amount_1_added,
+                            amount_lp
+                        }
+                    )
+                )
+            ]
+        );
     let token_0_intermediate_balance = token_0.balanceOf(treasury_contract_address);
     assert_eq!(amount_0_added, token_0_initial_balance - token_0_intermediate_balance);
     let token_1_intermediate_balance = token_1.balanceOf(treasury_contract_address);
@@ -305,12 +319,24 @@ fn test_deposit_withdraw_nostra() {
     prank(
         CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
     );
-    let (amount_0_removed, amount_1_removed) = treasury_dispatcher.remove_liquidity_from_nostra(
-        NostraPair::STRK_ETH,
-        lp_balance,
-        1,
-        1,
-    );
+    let (amount_0_removed, amount_1_removed) = treasury_dispatcher
+        .remove_liquidity_from_nostra(NostraPair::STRK_ETH, lp_balance, 1, 1,);
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    treasury_contract_address,
+                    Treasury::Event::NostraLiquidityRemoved(
+                        Treasury::NostraLiquidityRemoved {
+                            nostra_pair: NostraPair::STRK_ETH,
+                            amount_lp_removed: lp_balance,
+                            amount_0_removed,
+                            amount_1_removed
+                        }
+                    )
+                )
+            ]
+        );
     let token_0_final_balance = token_0.balanceOf(treasury_contract_address);
     assert_eq!(amount_0_removed, token_0_final_balance - token_0_intermediate_balance);
     let token_1_final_balance = token_1.balanceOf(treasury_contract_address);
