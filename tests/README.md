@@ -30,7 +30,7 @@ successfully
 
 ### Usual proposal functionalities
 
-[] Successful proposal submission : ensure the proposal submission is registered with a unique proposal id
+[x] Successful proposal submission : ensure the proposal submission is registered with a unique proposal id
 
 [x] Proposal expiry : check that the proposal is correctly flagged as expired after its voting deadline
 
