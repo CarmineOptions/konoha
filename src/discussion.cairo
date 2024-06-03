@@ -2,8 +2,8 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 trait IDiscussion<TContractState> {
-    fn add_comment(ref self: TContractState, prop_id: felt252, ipfs_hash: felt252);
-    fn get_comment(self: @TContractState, prop_id: felt252) -> Array<(ContractAddress, felt252)>;
+    fn add_comment(ref self: TContractState, prop_id: u32, ipfs_hash: ByteArray );
+    fn get_comments(self: @TContractState, prop_id: u32) -> Array<(ContractAddress, ByteArray)>;
 } 
 
 #[starknet::component]
@@ -26,14 +26,14 @@ mod discussion {
     // While the comment_count is a mapping of proposal id to number of comments
     #[storage]
     struct Storage {
-        comments: LegacyMap::<(felt252, u64), Comment>,
-        comment_count: LegacyMap::<felt252, u64>
+        comments: LegacyMap::<(u32, u64), Comment>,
+        comment_count: LegacyMap::<u32, u64>
     }
 
-    #[derive(Copy, Drop, Serde, starknet::Store)]
+    #[derive(Drop, Serde, starknet::Store)]
     pub struct Comment {
         user: ContractAddress,
-        ipfs_hash: felt252,
+        ipfs_hash: ByteArray,
     }
 
     #[event]
@@ -45,7 +45,7 @@ mod discussion {
     +Drop<TContractState>,
     impl Proposals: proposals_component::HasComponent<TContractState>,
     > of super::IDiscussion<ComponentState<TContractState>> {
-        fn add_comment(ref self: ComponentState<TContractState>, prop_id: felt252, ipfs_hash: felt252) {
+        fn add_comment(ref self: ComponentState<TContractState>, prop_id: u32, ipfs_hash: ByteArray ) {
             //Check if proposal is live 
             let is_live = self.is_proposal_live(prop_id);
             assert(is_live == 1, 'Proposal is not live!');
@@ -69,12 +69,12 @@ mod discussion {
             
         }
 
-        fn get_comment(self: @ComponentState<TContractState>, prop_id: felt252) -> Array<(ContractAddress, felt252)> {
+        fn get_comments(self: @ComponentState<TContractState>, prop_id: u32) -> Array<(ContractAddress, ByteArray )> {
             //Get comment counts 
             let count: u64 = self.comment_count.read(prop_id);
 
             //Initialize an array of comments
-            let mut arr = ArrayTrait::<(ContractAddress, felt252)>::new();
+            let mut arr = ArrayTrait::<(ContractAddress, ByteArray)>::new();
 
             //if no comments, return empty array
             if count == 0 {
@@ -104,11 +104,10 @@ mod discussion {
     +Drop<TContractState>,
     impl Proposals: proposals_component::HasComponent<TContractState>,
     > of InternalTrait<TContractState> {
-        fn is_proposal_live(ref self: ComponentState<TContractState>, prop_id: felt252 ) -> u8 {
+        fn is_proposal_live(ref self: ComponentState<TContractState>, prop_id: u32 ) -> u8 {
 
             let proposals_comp = get_dep_component!(@self, Proposals);
 
-            //Get live proposals
             let live_proposals = proposals_comp.get_live_proposals();
 
             // Initialize is_live to 0 (0 = false , 1 = true)
