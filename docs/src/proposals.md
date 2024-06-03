@@ -11,13 +11,31 @@ It includes functions for voting on proposals, submitting new proposals, and man
 
 The Proposals component offers the following functionalities:
 
-- Submit Proposal: This allows the user to submit a new proposal with the provided payload and upgrade type.
-- Vote on Proposal: Allows users to vote on existing proposals.
-- Get Proposal Details: This allows for the Retrieval of the details of a specific proposal based on it's ID.
-- Get Vote Counts: Retrieves the vote counts (yay and nay) for a specific proposal.
-- Get Proposal Status: This checks the current status of a proposal (active, passed, or failed).
-- Get Live Proposals: This returns all active proposals in an array of IDs.
-- Check User Vote: Checks if a specific user has voted on a specific proposal and their voting status.
+- `Submit Proposal`: This allows the user to submit a new proposal with the provided payload and upgrade type.
+- `Vote on Proposal`: The Vote on Proposal component allows users to vote on existing proposals.
+- `Get Proposal Details`: This allows for the Retrieval of the details of a specific proposal based on it's ID.
+- `Get Vote Counts`: The `Get Vote Counts` component is used to Retrieve the vote counts (yay and nay) for a specific proposal.
+- `Get Proposal Status`: This checks the current status of a proposal (active, passed, or failed).
+- `Get Live Proposals`: This returns all active proposals in an array of IDs.
+- `Check User Vote`: This checks a specific user voting status and if they have voted on a specific proposal.
+
+## Structures
+
+- The `PropDetails` represents the details of a proposal.
+  It consists of the `payload` which is the data associated with the proposal and `to_upgrade` which is the type of contract upgrade proposed.
+
+- The `VoteStatus` indicates the voting status of a user on a proposal.
+  It consists of the following possible values:
+
+* 0: No vote cast.
+* 1: Voted in favor.
+* 2: Voted against.
+
+- The `CustomProposalConfig` indicates the Configuration for custom proposals.
+  It consists of the following Fields:
+
+* target: The target contract for the custom proposal.
+* selector: The function selector for the custom proposal.
 
 # Integration
 
