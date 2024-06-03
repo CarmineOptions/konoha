@@ -1,6 +1,5 @@
 use starknet::ContractAddress;
 use konoha::treasury_types::carmine::OptionType;
-use konoha::treasury_types::nostra::NostraPair;
 
 #[starknet::interface]
 trait ITreasury<TContractState> {
@@ -28,11 +27,13 @@ trait ITreasury<TContractState> {
         lp_token_amount: u256
     );
     fn get_amm_address(self: @TContractState) -> ContractAddress;
+    fn update_nostra_router_address(
+        ref self: TContractState, nostra_router_address: ContractAddress
+    );
     fn get_nostra_router_address(self: @TContractState) -> ContractAddress;
-    fn get_nostra_pair_address(self: @TContractState, nostra_pair: NostraPair) -> ContractAddress;
     fn add_liquidity_to_nostra(
         ref self: TContractState,
-        nostra_pair: NostraPair,
+        nostra_pair_address: ContractAddress,
         amount_0_desired: u256,
         amount_1_desired: u256,
         amount_0_min: u256,
@@ -40,7 +41,7 @@ trait ITreasury<TContractState> {
     ) -> (u256, u256, u256);
     fn remove_liquidity_from_nostra(
         ref self: TContractState,
-        nostra_pair: NostraPair,
+        nostra_pair_address: ContractAddress,
         liquidity: u256,
         amount_0_min: u256,
         amount_1_min: u256
@@ -56,15 +57,12 @@ mod Treasury {
     use openzeppelin::access::ownable::interface::IOwnableTwoStep;
     use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
-    use starknet::{
-        ContractAddress, get_contract_address, ClassHash, contract_address_const,
-        get_block_timestamp
-    };
+    use starknet::{ContractAddress, get_contract_address, ClassHash, get_block_timestamp};
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
     use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
     use konoha::treasury_types::nostra::{
-        INostraRouterDispatcher, INostraRouterDispatcherTrait, NostraPair, INostraPairDispatcher,
+        INostraRouterDispatcher, INostraRouterDispatcherTrait, INostraPairDispatcher,
         INostraPairDispatcherTrait
     };
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -78,6 +76,7 @@ mod Treasury {
     #[storage]
     struct Storage {
         amm_address: ContractAddress,
+        nostra_router_address: ContractAddress,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
@@ -114,7 +113,7 @@ mod Treasury {
 
     #[derive(starknet::Event, Drop)]
     struct NostraLiquidityAdded {
-        nostra_pair: NostraPair,
+        nostra_pair_address: ContractAddress,
         amount_0_added: u256,
         amount_1_added: u256,
         amount_lp: u256
@@ -122,7 +121,7 @@ mod Treasury {
 
     #[derive(starknet::Event, Drop)]
     struct NostraLiquidityRemoved {
-        nostra_pair: NostraPair,
+        nostra_pair_address: ContractAddress,
         amount_lp_removed: u256,
         amount_0_removed: u256,
         amount_1_removed: u256
@@ -151,21 +150,6 @@ mod Treasury {
         const ADDRESS_ZERO_AMM: felt252 = 'AMM addr is zero address';
         const ADDRESS_ALREADY_CHANGED: felt252 = 'New Address same as Previous';
     }
-
-    const NOSTRA_ROUTER_CONTRACT_ADDRESS: felt252 =
-        0x049ff5b3a7d38e2b50198f408fa8281635b5bc81ee49ab87ac36c8324c214427;
-    const NOSTRA_PAIR_STRK_ETH_CONTRACT_ADDRESS: felt252 =
-        0x068400056dccee818caa7e8a2c305f9a60d255145bac22d6c5c9bf9e2e046b71;
-    const NOSTRA_PAIR_STRK_USDC_CONTRACT_ADDRESS: felt252 =
-        0x07ae43abf704f4981094a4f3457d1abe6b176844f6cdfbb39c0544a635ef56b0;
-    const NOSTRA_PAIR_USDC_USDT_CONTRACT_ADDRESS: felt252 =
-        0x00c318445d5a5096e2ad086452d5c97f65a9d28cafe343345e0fa70da0841295;
-    const NOSTRA_PAIR_ETH_USDC_CONTRACT_ADDRESS: felt252 =
-        0x05ef8800d242c5d5e218605d6a10e81449529d4144185f95bf4b8fb669424516;
-    const NOSTRA_PAIR_ETH_USDT_CONTRACT_ADDRESS: felt252 =
-        0x052b136b37a7e6ea52ce1647fb5edc64efe23d449fc1561d9994a9f8feaa6753;
-    const NOSTRA_PAIR_WBTC_ETH_CONTRACT_ADDRESS: felt252 =
-        0x0285aa1c4bbeef8a183fb7245f096ddc4c99c6b2fedd1c1af52a634c83842804;
 
     #[constructor]
     fn constructor(
@@ -282,38 +266,20 @@ mod Treasury {
             self.amm_address.read()
         }
 
-        fn get_nostra_router_address(self: @ContractState) -> ContractAddress {
-            contract_address_const::<NOSTRA_ROUTER_CONTRACT_ADDRESS>()
+        fn update_nostra_router_address(
+            ref self: ContractState, nostra_router_address: ContractAddress
+        ) {
+            self.ownable.assert_only_owner();
+            self.nostra_router_address.write(nostra_router_address);
         }
 
-        fn get_nostra_pair_address(
-            self: @ContractState, nostra_pair: NostraPair
-        ) -> ContractAddress {
-            match (nostra_pair) {
-                NostraPair::STRK_ETH => {
-                    contract_address_const::<NOSTRA_PAIR_STRK_ETH_CONTRACT_ADDRESS>()
-                },
-                NostraPair::STRK_USDC => {
-                    contract_address_const::<NOSTRA_PAIR_STRK_USDC_CONTRACT_ADDRESS>()
-                },
-                NostraPair::USDC_USDT => {
-                    contract_address_const::<NOSTRA_PAIR_USDC_USDT_CONTRACT_ADDRESS>()
-                },
-                NostraPair::ETH_USDC => {
-                    contract_address_const::<NOSTRA_PAIR_ETH_USDC_CONTRACT_ADDRESS>()
-                },
-                NostraPair::ETH_USDT => {
-                    contract_address_const::<NOSTRA_PAIR_ETH_USDT_CONTRACT_ADDRESS>()
-                },
-                NostraPair::WBTC_ETH => {
-                    contract_address_const::<NOSTRA_PAIR_WBTC_ETH_CONTRACT_ADDRESS>()
-                },
-            }
+        fn get_nostra_router_address(self: @ContractState) -> ContractAddress {
+            self.nostra_router_address.read()
         }
 
         fn add_liquidity_to_nostra(
             ref self: ContractState,
-            nostra_pair: NostraPair,
+            nostra_pair_address: ContractAddress,
             amount_0_desired: u256,
             amount_1_desired: u256,
             amount_0_min: u256,
@@ -325,7 +291,7 @@ mod Treasury {
             };
             let (amount_0_added, amount_1_added, amount_lp) = router
                 .add_liquidity(
-                    self.get_nostra_pair_address(nostra_pair),
+                    nostra_pair_address,
                     amount_0_desired,
                     amount_1_desired,
                     amount_0_min,
@@ -335,14 +301,16 @@ mod Treasury {
                 );
             self
                 .emit(
-                    NostraLiquidityAdded { nostra_pair, amount_0_added, amount_1_added, amount_lp }
+                    NostraLiquidityAdded {
+                        nostra_pair_address, amount_0_added, amount_1_added, amount_lp
+                    }
                 );
             (amount_0_added, amount_1_added, amount_lp)
         }
 
         fn remove_liquidity_from_nostra(
             ref self: ContractState,
-            nostra_pair: NostraPair,
+            nostra_pair_address: ContractAddress,
             liquidity: u256,
             amount_0_min: u256,
             amount_1_min: u256
@@ -353,7 +321,7 @@ mod Treasury {
             };
             let (amount_0_removed, amount_1_removed) = router
                 .remove_liquidity(
-                    self.get_nostra_pair_address(nostra_pair),
+                    nostra_pair_address,
                     liquidity,
                     amount_0_min,
                     amount_1_min,
@@ -363,7 +331,7 @@ mod Treasury {
             self
                 .emit(
                     NostraLiquidityRemoved {
-                        nostra_pair,
+                        nostra_pair_address,
                         amount_lp_removed: liquidity,
                         amount_0_removed,
                         amount_1_removed

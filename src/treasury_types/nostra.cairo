@@ -23,16 +23,6 @@ trait INostraRouter<TContractState> {
     ) -> (u256, u256);
 }
 
-#[derive(Copy, Drop, Serde)]
-enum NostraPair {
-    STRK_ETH,
-    STRK_USDC,
-    USDC_USDT,
-    ETH_USDC,
-    ETH_USDT,
-    WBTC_ETH,
-}
-
 #[starknet::interface]
 trait INostraPair<TContractState> {
     fn token_0(self: @TContractState) -> ContractAddress;

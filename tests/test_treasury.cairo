@@ -6,6 +6,10 @@ mod testStorage {
         0x0304256e5fade73a6fc8f49ed7c1c43ac34e6867426601b01204e1f7ba05b53d;
     const CARMINE_AMM_CONTRACT_ADDRESS: felt252 =
         0x047472e6755afc57ada9550b6a3ac93129cc4b5f98f51c73e0644d129fd208d9;
+    const NOSTRA_ROUTER_CONTRACT_ADDRESS: felt252 =
+        0x049ff5b3a7d38e2b50198f408fa8281635b5bc81ee49ab87ac36c8324c214427;
+    const NOSTRA_STRK_ETH_PAIR_CONTRACT_ADDRESS: felt252 =
+        0x068400056dccee818caa7e8a2c305f9a60d255145bac22d6c5c9bf9e2e046b71;
 }
 
 use core::result::ResultTrait;
@@ -22,7 +26,7 @@ use snforge_std::{
 };
 use konoha::treasury::{Treasury, ITreasuryDispatcher, ITreasuryDispatcherTrait};
 use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
-use konoha::treasury_types::nostra::{NostraPair, INostraPairDispatcher, INostraPairDispatcherTrait};
+use konoha::treasury_types::nostra::{INostraPairDispatcher, INostraPairDispatcherTrait};
 use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
 use openzeppelin::access::ownable::interface::{
     IOwnableTwoStep, IOwnableTwoStepDispatcherTrait, IOwnableTwoStepDispatcher
@@ -262,12 +266,21 @@ fn test_deposit_withdraw_nostra() {
     let sequencer_address = contract_address_const::<
         0x01176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8
     >();
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher
+        .update_nostra_router_address(
+            contract_address_const::<testStorage::NOSTRA_ROUTER_CONTRACT_ADDRESS>()
+        );
     let router_address = treasury_dispatcher.get_nostra_router_address();
-    let pair_address = treasury_dispatcher.get_nostra_pair_address(NostraPair::STRK_ETH);
-    let pair = INostraPairDispatcher { contract_address: pair_address };
-    let token_0_address = pair.token_0();
+    let nostra_pair_address = contract_address_const::<
+        testStorage::NOSTRA_STRK_ETH_PAIR_CONTRACT_ADDRESS
+    >();
+    let nostra_pair = INostraPairDispatcher { contract_address: nostra_pair_address };
+    let token_0_address = nostra_pair.token_0();
     let token_0 = IERC20Dispatcher { contract_address: token_0_address };
-    let token_1_address = pair.token_1();
+    let token_1_address = nostra_pair.token_1();
     let token_1 = IERC20Dispatcher { contract_address: token_1_address };
     // transfer pair liquidity to treasury
     prank(CheatTarget::One(token_0_address), sequencer_address, CheatSpan::TargetCalls(1));
@@ -290,7 +303,7 @@ fn test_deposit_withdraw_nostra() {
     );
     let mut spy = spy_events(SpyOn::One(treasury_contract_address));
     let (amount_0_added, amount_1_added, amount_lp) = treasury_dispatcher
-        .add_liquidity_to_nostra(NostraPair::STRK_ETH, amount_0_desired, amount_1_desired, 1, 1,);
+        .add_liquidity_to_nostra(nostra_pair_address, amount_0_desired, amount_1_desired, 1, 1,);
     spy
         .assert_emitted(
             @array![
@@ -298,10 +311,7 @@ fn test_deposit_withdraw_nostra() {
                     treasury_contract_address,
                     Treasury::Event::NostraLiquidityAdded(
                         Treasury::NostraLiquidityAdded {
-                            nostra_pair: NostraPair::STRK_ETH,
-                            amount_0_added,
-                            amount_1_added,
-                            amount_lp
+                            nostra_pair_address, amount_0_added, amount_1_added, amount_lp
                         }
                     )
                 )
@@ -311,16 +321,18 @@ fn test_deposit_withdraw_nostra() {
     assert_eq!(amount_0_added, token_0_initial_balance - token_0_intermediate_balance);
     let token_1_intermediate_balance = token_1.balanceOf(treasury_contract_address);
     assert_eq!(amount_1_added, token_1_initial_balance - token_1_intermediate_balance);
-    let lp_balance = pair.balance_of(treasury_contract_address);
+    let lp_balance = nostra_pair.balance_of(treasury_contract_address);
     assert_eq!(amount_lp, lp_balance);
     // test withdraw
-    prank(CheatTarget::One(pair_address), treasury_contract_address, CheatSpan::TargetCalls(1));
-    pair.approve(router_address, lp_balance);
+    prank(
+        CheatTarget::One(nostra_pair_address), treasury_contract_address, CheatSpan::TargetCalls(1)
+    );
+    nostra_pair.approve(router_address, lp_balance);
     prank(
         CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
     );
     let (amount_0_removed, amount_1_removed) = treasury_dispatcher
-        .remove_liquidity_from_nostra(NostraPair::STRK_ETH, lp_balance, 1, 1,);
+        .remove_liquidity_from_nostra(nostra_pair_address, lp_balance, 1, 1,);
     spy
         .assert_emitted(
             @array![
@@ -328,7 +340,7 @@ fn test_deposit_withdraw_nostra() {
                     treasury_contract_address,
                     Treasury::Event::NostraLiquidityRemoved(
                         Treasury::NostraLiquidityRemoved {
-                            nostra_pair: NostraPair::STRK_ETH,
+                            nostra_pair_address,
                             amount_lp_removed: lp_balance,
                             amount_0_removed,
                             amount_1_removed
