@@ -94,15 +94,6 @@ export default function Proposal({
     }
   }
 
-  // retrieve IPFS hashes from contract
-
-  // const { data: fileHashes,  } = useContractRead({
-  //     functionName: "",
-  //     args: [proposalId.toString()],
-  //     abi,
-  //     address: '',
-  //     watch: true,
-  // });
 
   return isLoading ? (
     <div>loading contract {proposalId?.toString()}</div>
@@ -125,7 +116,7 @@ export default function Proposal({
               className="px-3 py-2 text-sm font-semibold bg-green-300 rounded-lg transition-all hover:bg-green-400"
               onClick={() => vote(true)}
             >
-              Vote Yes
+               Vote Yes
             </button>
             <button
               className="px-3 py-2 text-sm font-semibold bg-red-300 rounded-lg transition-all hover:bg-red-400"
