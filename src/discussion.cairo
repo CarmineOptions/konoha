@@ -1,9 +1,10 @@
 use starknet::ContractAddress;
+use konoha::types::Comment;
 
 #[starknet::interface]
 trait IDiscussion<TContractState> {
     fn add_comment(ref self: TContractState, prop_id: u32, ipfs_hash: ByteArray );
-    fn get_comments(self: @TContractState, prop_id: u32) -> Array<(ContractAddress, ByteArray)>;
+    fn get_comments(self: @TContractState, prop_id: u32) -> Array<Comment>;
 } 
 
 #[starknet::component]
@@ -20,6 +21,7 @@ mod discussion {
     use konoha::traits::IERC20Dispatcher;
     use konoha::traits::IERC20DispatcherTrait;
     use konoha::traits::get_governance_token_address_self;
+    use konoha::types::Comment;
 
     // Storage implementation entails comments and comment_count
     // Comments is mapping of (proposal id, index) to comment
@@ -28,12 +30,6 @@ mod discussion {
     struct Storage {
         comments: LegacyMap::<(u32, u64), Comment>,
         comment_count: LegacyMap::<u32, u64>
-    }
-
-    #[derive(Drop, Serde, starknet::Store)]
-    pub struct Comment {
-        user: ContractAddress,
-        ipfs_hash: ByteArray,
     }
 
     #[event]
@@ -69,12 +65,12 @@ mod discussion {
             
         }
 
-        fn get_comments(self: @ComponentState<TContractState>, prop_id: u32) -> Array<(ContractAddress, ByteArray )> {
+        fn get_comments(self: @ComponentState<TContractState>, prop_id: u32) -> Array<Comment> {
             //Get comment counts 
             let count: u64 = self.comment_count.read(prop_id);
 
             //Initialize an array of comments
-            let mut arr = ArrayTrait::<(ContractAddress, ByteArray)>::new();
+            let mut arr = ArrayTrait::<Comment>::new();
 
             //if no comments, return empty array
             if count == 0 {
@@ -89,8 +85,10 @@ mod discussion {
                 }
 
                 //collect comment at position i
-                let com: Comment = self.comments.read((prop_id, i));
-                arr.append((com.user, com.ipfs_hash));
+                // let com: Comment = self.comments.read((prop_id, i));
+                // arr.append((com.user, com.ipfs_hash));
+                
+                arr.append(self.comments.read((prop_id, i)));
                 i += 1;  
             };
 

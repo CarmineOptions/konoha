@@ -1,6 +1,7 @@
 use starknet::SyscallResult;
 use starknet::syscalls::{storage_read_syscall, storage_write_syscall, ClassHash};
 use starknet::storage_address_from_base_and_offset;
+use starknet::ContractAddress;
 use core::serde::Serde;
 
 #[derive(Copy, Drop, Serde, starknet::Store)]
@@ -24,4 +25,10 @@ struct CustomProposalConfig {
     target: felt252, //class hash if library call, contract address if regular call
     selector: felt252,
     library_call: bool
+}
+
+#[derive(Drop, Serde, starknet::Store)]
+struct Comment {
+    user: ContractAddress,
+    ipfs_hash: ByteArray,
 }
