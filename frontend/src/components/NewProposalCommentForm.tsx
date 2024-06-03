@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import toast from "react-hot-toast";
 import { useAccount, useContractWrite } from "@starknet-react/core";
 import { submitCommentApi } from "../api/apiService";
-import { CONTRACT_ADDR } from "../lib/config";
+import { CONTRACT_ADDR, formatAddress } from "../lib/config";
 
 export default function NewcommentCommentForm({
     setIsModalOpen,
@@ -39,7 +39,7 @@ export default function NewcommentCommentForm({
 
         const payload = {
             text: comment,
-            address: address,
+            address: formatAddress(address),
         };
 
         setIsLoading(true);

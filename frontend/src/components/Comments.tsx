@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import CopyIcon from "../assets/icons/copy";
 import { useContractRead } from "@starknet-react/core";
 import { abi } from "../lib/abi";
 import { fetchIpfsFile } from "../api/apiService";
 import { CONTRACT_ADDR } from "../lib/config";
 import { TEST_FILE } from "../constants/amm";
+import { CopyIcon, TickIcon } from "../assets/icons/icons";
 type CommentProps = {
   address: string;
   text: string;
@@ -12,6 +12,7 @@ type CommentProps = {
 };
 export default function Comments() {
   const [comments, setComments] = useState<CommentProps>();
+  const [isCopied, setIsCopied] = useState(false);
   const { data, isLoading } = useContractRead({
     functionName: "get_comment",
     args: [""],
@@ -35,7 +36,13 @@ export default function Comments() {
     fetchData();
   }, []);
 
-  console.log(data);
+  function handleCopyClick(address: string) {
+    if (!address) return;
+    navigator.clipboard.writeText(address);
+    setIsCopied(true);
+  }
+
+  console.log(data, comments?.address?.length);
 
   return isLoading ? (
     <div>loading.... </div>
@@ -44,17 +51,19 @@ export default function Comments() {
       <div className="py-2">
         <div className="grid grid-cols-[1fr_3fr] gap-3 ">
           <p className="text-sm font-[400] ">Senders Address:</p>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <p className="font-[600]  text-sm">
               {comments?.address.slice(0, 20)}
             </p>
-            <CopyIcon />
+            <div onClick={() => handleCopyClick(comments?.address)}>
+              {isCopied ? <TickIcon /> : <CopyIcon />}
+            </div>
           </div>
 
           <p className="text-sm font-[400] ">Comment:</p>
           <p className="font-[600]  text-sm">{comments?.text}</p>
 
-          <p className="text-sm font-[400">Token Balance:</p>
+          <p className="text-sm font-[400]">Token Balance:</p>
           <p className="font-[600]  text-sm">0</p>
         </div>
         <div className="border border-b-gray-200 mt-2" />
