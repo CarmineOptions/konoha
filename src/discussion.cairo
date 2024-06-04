@@ -44,7 +44,7 @@ mod discussion {
         fn add_comment(ref self: ComponentState<TContractState>, prop_id: u32, ipfs_hash: ByteArray ) {
             //Check if proposal is live 
             let is_live = self.is_proposal_live(prop_id);
-            assert(is_live == 1, 'Proposal is not live!');
+            assert(is_live, 'Proposal is not live!');
 
             //Check if caller is a CRAM token holder
             let user_address = get_caller_address();
@@ -72,11 +72,6 @@ mod discussion {
             //Initialize an array of comments
             let mut arr = ArrayTrait::<Comment>::new();
 
-            //if no comments, return empty array
-            if count == 0 {
-                return arr;
-            }
-
             // loop over comment count and collect comments
             let mut i: u64 = 0;
             loop {
@@ -102,14 +97,13 @@ mod discussion {
     +Drop<TContractState>,
     impl Proposals: proposals_component::HasComponent<TContractState>,
     > of InternalTrait<TContractState> {
-        fn is_proposal_live(ref self: ComponentState<TContractState>, prop_id: u32 ) -> u8 {
+        fn is_proposal_live(ref self: ComponentState<TContractState>, prop_id: u32 ) -> bool {
 
             let proposals_comp = get_dep_component!(@self, Proposals);
 
             let live_proposals = proposals_comp.get_live_proposals();
 
-            // Initialize is_live to 0 (0 = false , 1 = true)
-            let mut is_live = 0;
+            let mut is_live = false;
 
             //loop over the array to check if prop_id is in the array
             let mut i = 0;
@@ -120,7 +114,7 @@ mod discussion {
 
                 match live_proposals.get(i) {
                     Option::Some(_prop_id) => {
-                        is_live = 1;
+                        is_live = true;
                         break;
                     },
                     Option::None => i += 1
