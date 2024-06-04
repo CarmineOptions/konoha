@@ -175,7 +175,7 @@ fn test_add_comment_on_non_live_proposal() {
     let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
     let gov_contract = deploy_governance(token_contract.contract_address);
     let gov_contract_addr = gov_contract.contract_address;
-    let ipfs_hash : ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
+    let ipfs_hash: ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
@@ -191,7 +191,8 @@ fn test_add_comment_on_non_live_proposal() {
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
     start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
 
-    IDiscussionDispatcher { contract_address: gov_contract_addr }.add_comment(prop_id.try_into().unwrap(), ipfs_hash);
+    IDiscussionDispatcher { contract_address: gov_contract_addr }
+        .add_comment(prop_id.try_into().unwrap(), ipfs_hash);
 }
 
 #[test]
@@ -200,7 +201,7 @@ fn test_add_comment_when_token_balance_is_zero() {
     let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
     let gov_contract = deploy_governance(token_contract.contract_address);
     let gov_contract_addr = gov_contract.contract_address;
-    let ipfs_hash : ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
+    let ipfs_hash: ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
@@ -217,7 +218,8 @@ fn test_add_comment_when_token_balance_is_zero() {
         CheatSpan::TargetCalls(1)
     );
 
-    IDiscussionDispatcher { contract_address: gov_contract_addr }.add_comment(prop_id.try_into().unwrap(), ipfs_hash);
+    IDiscussionDispatcher { contract_address: gov_contract_addr }
+        .add_comment(prop_id.try_into().unwrap(), ipfs_hash);
 }
 
 #[test]
@@ -225,7 +227,7 @@ fn test_add_comment() {
     let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
     let gov_contract = deploy_governance(token_contract.contract_address);
     let gov_contract_addr = gov_contract.contract_address;
-    let ipfs_hash : ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
+    let ipfs_hash: ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
@@ -249,7 +251,8 @@ fn test_add_comment() {
         CheatSpan::TargetCalls(1)
     );
 
-    IDiscussionDispatcher { contract_address: gov_contract_addr }.add_comment(prop_id.try_into().unwrap(), ipfs_hash); 
+    IDiscussionDispatcher { contract_address: gov_contract_addr }
+        .add_comment(prop_id.try_into().unwrap(), ipfs_hash);
 }
 
 #[test]
@@ -281,13 +284,15 @@ fn test_get_comments() {
         CheatSpan::TargetCalls(2)
     );
 
-    IDiscussionDispatcher { contract_address: gov_contract_addr }.add_comment(prop_id.try_into().unwrap(), ipfs_hash.try_into().unwrap());
+    IDiscussionDispatcher { contract_address: gov_contract_addr }
+        .add_comment(prop_id.try_into().unwrap(), ipfs_hash.try_into().unwrap());
 
-    let res = IDiscussionDispatcher { contract_address: gov_contract_addr }.get_comments(prop_id.try_into().unwrap());
- 
+    let res = IDiscussionDispatcher { contract_address: gov_contract_addr }
+        .get_comments(prop_id.try_into().unwrap());
+
     // Checks if get_comments returns a comment at position zero
     match res.get(0) {
-        Option::Some(_com) => {true;},
+        Option::Some(_com) => { true; },
         Option::None => panic!("No comment found!"),
     }
 }
