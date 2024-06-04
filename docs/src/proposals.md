@@ -21,8 +21,7 @@ The storage structure for proposals is as follows:
 - **delegate_hash**: Maps user addresses to their delegate hash.
 - **total_delegated_to**: Maps user addresses to their total delegated voting power.
 - **custom_proposal_type**: Links custom proposal type IDs to CustomProposalConfig.
-- **custom_proposal_payload**: Maps (proposal ID, index) to the calldata associated with the custom proposals. 
-
+- **custom_proposal_payload**: Maps (proposal ID, index) to the calldata associated with the custom proposals.
 
 ## Structures
 
@@ -143,14 +142,22 @@ prop_id: felt252
 - prop_id: The identifier of the proposal.
 - Returns: The voting status of the user for the specified proposal.
 
-## Customization
+## Custom Proposals
 
-While the current version of the component does not support altering the built-in voting logic, this is an area planned for future development. If you have specific requirements or ideas for custom voting logic, now is an excellent time to reach out to us with your feedback and suggestions.
-Here are some ways you can customize it:
+Custom proposals are flexible mechanism within the proposal and voting system that allows for the submission and handling of proposals with specific, user-defined configurations. These proposals are not limited to predefined types, enabling a more dynamic and adaptable governance process. The core features and handling of custom proposals are defined in several parts of the code.
 
-Custom Voting Logic: This modifies the vote function to implement custom voting logic or add additional checks.
+get_custom_proposal_type:
+Retrieves the configuration of a custom proposal type.
+Parameters: `i.`
+Returns: `CustomProposalConfig`
 
-Proposal Validation: This extends the submit_proposal function to include additional validation or metadata for proposals. This allows for greater control over the types of proposals submitted and ensures that they meet the necessary criteria before being accepted.
+- To submit a custom proposal, use the submit_custom_proposal method:
+
+```
+
+let custom_prop_id = proposals.submit_custom_proposal(custom_proposal_type, calldata);
+
+```
 
 ### Dependencies
 
@@ -159,6 +166,10 @@ The Proposals component does not depend on other Konoha components, making it fl
 It interacts with a governance token contract, so ensure your protocol has a compatible ERC-20 governance token.
 
 - Note: The governance token should be non-transferable.
+
+## Customization
+
+While the current version of the component does not support altering the built-in voting logic, this is an area planned for future development. If you have specific requirements or ideas for custom voting logic, now is an excellent time to reach out to us with your feedback and suggestions.
 
 ### Conclusion
 
