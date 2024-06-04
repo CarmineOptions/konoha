@@ -109,11 +109,4 @@ The Vesting contract is composed of the following:
 - VestingImpl: Implementation of the IVesting trait for managing vesting operations.
 - Storage: Storage component for storing vesting milestones.
 
-### Events
-
-The Vesting contract emits the following events:
-
-- VestingMilestoneAdded: This indicates the addition of a new vesting milestone.
-- Vested: This indicates that tokens have been vested for a grantee.
-
 Note that the methods `add_vesting_milestone ` and `add_linear_vesting_schedule` can only be called by the contract itself to prevent unauthorized modifications.
