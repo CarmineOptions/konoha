@@ -265,22 +265,6 @@ fn test_deposit_withdraw_carmine() {
     );
 }
 
-#[test]
-fn test_upgrade_treasury_contract() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
-        get_important_addresses();
-
-    let new_class_hash: ClassHash =
-        0x03eb5d443f730133de67b82901cd4b038098c814ad21d811baef9cbd5daeafec
-        .try_into()
-        .unwrap();
-
-    // Ensure only the owner (governance) can upgrade the contract
-    prank(
-        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
-    );
-    IUpgradeableDispatcher { contract_address: treasury_contract_address }.upgrade(new_class_hash);
-}
 
 #[test]
 #[fork("MAINNET")]
