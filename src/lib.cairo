@@ -1,6 +1,9 @@
 mod airdrop;
 mod treasury_types {
     mod carmine;
+    mod zklend {
+        mod interfaces;
+    }
 }
 mod constants;
 mod contract;
