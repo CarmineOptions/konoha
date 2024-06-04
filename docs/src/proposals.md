@@ -4,174 +4,98 @@
 
 ### Overview
 
-The Proposals component is designed for governance within the Konoha ecosystem. It includes functions for voting on proposals, submitting new proposals and managing custom proposals. It primarily interacts with a governance token, allowing for token holders to participate in the decision-making process.
-It includes functions for voting on proposals, submitting new proposals, and managing custom proposals.
+The Konoha Vesting Module provides a structured approach to managing token vesting schedules for your team. This module is designed to ensure that tokens are distributed according to predefined schedules, enhancing transparency and security.
 
-## Storage
+### Key Features
 
-The storage structure for proposals is as follows:
+- Linear Vesting Schedule: Allows for gradual release of tokens over a specified period.
+- Vesting Milestones: Enables setting specific vesting milestones with predefined amounts.
+- Event Emission: Tracks and emits events for vesting milestones and completed vesting actions.
+  Components
+- Interface: `IVesting` This interface defines the core functionality for the vesting module.
 
-- **proposal_details**: This maps proposal IDs to detailed proposal information.
-- **proposal_vote_ends**: Maps proposal IDs to their respective voting end block numbers.
-- **proposal_vote_end_timestamp**: Maps proposal IDs to their voting end timestamps.
-- **proposal_voted_by**: Connects proposal IDs and user addresses to the voting status.
-- **proposal_total_yay**: Tracks the count of votes in favor for each proposal.
-- **proposal_total_nay**: Tracks the count of votes against each proposal.
-- **proposal_applied**: Maps proposal IDs to their application status.
-- **delegate_hash**: Maps user addresses to their delegate hash.
-- **total_delegated_to**: Maps user addresses to their total delegated voting power.
-- **custom_proposal_type**: Links custom proposal type IDs to CustomProposalConfig.
-- **custom_proposal_payload**: Maps (proposal ID, index) to the calldata associated with the custom proposals.
+## Methods
 
-## Structures
+- vest(grantee: ContractAddress, vested_timestamp: u64)
 
-- The `PropDetails` represents the details of a proposal.
-  It consists of the `payload` which is the data associated with the proposal and `to_upgrade` which is the type of contract upgrade proposed.
+- Description: Releases vested tokens to the grantee if the vesting timestamp has been reached.
 
-- The `VoteStatus` indicates the voting status of a user on a proposal.
-  It consists of the following possible values:
+`Parameters:`
 
-* 0: No vote cast.
-* 1: Voted in favor.
-* 2: Voted against.
+- grantee: Address of the token recipient.
 
-- The `CustomProposalConfig` indicates the Configuration for custom proposals.
-  It consists of the following Fields:
+- vested_timestamp: The timestamp when the tokens become eligible for vesting.
 
-* target: The target contract for the custom proposal.
-* selector: The function selector for the custom proposal.
+`add_vesting_milestone(vesting_timestamp: u64, grantee: ContractAddress, amount: u128)`
 
-# Integration
+Description: Adds a vesting milestone for a grantee with a specific amount to be vested at a given timestamp.
 
-The Proposals component can be integrated into your protocol without any dependencies on other Konoha components. This means it can be used standalone within the Konoha ecosystem or potentially integrated into other systems that follow similar patterns.
+`Parameters:`
 
-## Key Functions
+- vesting_timestamp: The timestamp when the tokens will be vested.
+- grantee: Address of the token recipient.
+- amount: Amount of tokens to be vested.
 
-##### Submitting a Proposal
+`- add_linear_vesting_schedule(first_vest: u64, period: u64, increments_count: u16, total_amount: u128, grantee: ContractAddress)`
 
-```
+- Description: Creates a linear vesting schedule where tokens are vested in increments over a specified period.
 
-fn submit_proposal(
-ref self: TContractState, payload: felt252, to_upgrade: ContractType
-) -> felt252;
+`Parameters:`
 
-```
+- first_vest: The initial vesting timestamp.
+- period: Time interval between each vesting event.
+- increments_count: Total number of vesting increments.
+- total_amount: Total amount of tokens to be vested.
+- grantee: Address of the token recipient.
 
-###### Parameters:
+### Vesting
 
-- payload: The data related to the proposal.
-- to_upgrade: The type of contract upgrade proposed.
-- Returns: A unique identifier for the submitted proposal.
+This implements the IVesting interface, managing the storage and execution of vesting schedules.
 
-##### Voting on a Proposal
+##### Storage
 
-```
+- milestone: Stores the vesting milestones as a map of (timestamp, grantee) to the amount of tokens.
 
-fn vote(
-ref self: TContractState,
-prop_id: felt252,
-opinion: felt252);
+* Events
+  VestingMilestoneAdded
 
-```
+`Parameters:`
 
-###### Parameters:
+- grantee: Address of the token recipient.
+- timestamp: The vesting timestamp.
+- amount: Amount of tokens to be vested.
 
-- prop_id: The identifier of the proposal.
-- opinion: The user's vote (1 for yay, 2 for nay).
+## Vested
 
-##### Getting Proposal Details
+`Parameters:`
 
-```
+- grantee: Address of the token recipient.
+- timestamp: The vesting timestamp.
+- amount: Amount of tokens vested.
 
-fn get_proposal_details(self: @TContractState,
-prop_id: felt252) -> PropDetails;
+### Methods
 
-```
+- vest(grantee: ContractAddress, vested_timestamp: u64)
+- Executes the vesting process, releasing the tokens to the grantee if the vesting timestamp has been reached and the amount to vest is not zero.
 
-###### Parameters:
+- Generates multiple vesting milestones based on the linear vesting schedule parameters.
 
-- prop_id: The identifier of the proposal.
-- Returns: The details of the specified proposal.
+## Cliff Period
 
-##### Getting Vote Counts
+A cliff period is the initial period in a vesting schedule during which no tokens are vested. Tokens start to vest only after the cliff period ends. This is useful for ensuring that the grantee remains with the project for a minimum period before receiving any tokens.
 
-```
-fn get_vote_counts(self: @TContractState,
-prop_id: felt252) -> (u128, u128);
+### How Cliff Works
 
-```
+When using the add_linear_vesting_schedule method, you can set the cliff period by adjusting the first_vest parameter. The first_vest timestamp should be set to a date in the future, representing the end of the cliff period.
 
-###### Parameters:
+` For example, if the current date is January 1, 2024, and you want a 6-month cliff period, the first_vest timestamp should be set to July 1, 2024. Tokens will start vesting only after this date.`
 
-- prop_id: The identifier of the proposal.
-- Returns: A tuple containing the yay and nay vote counts.
+## Usage
 
-##### Getting Proposal Status
+To implement a vesting schedule using the Konoha Vesting Module, follow these steps:
 
-```
-fn get_proposal_status(self: @TContractState,
-prop_id: felt252) -> felt252;
-
-```
-
-###### Parameters:
-
-- prop_id: The identifier of the proposal.
-- Returns: The status of the proposal (e.g., active, passed, failed).
-
-##### Getting Live Proposals
-
-fn get_live_proposals(self: @TContractState) -> Array<felt252>;
-Returns: An array of identifiers for active proposals.
-
-##### Checking User Vote
-
-```
-
-fn get_user_voted(
-self: @TContractState,
-user_address: ContractAddress,
-prop_id: felt252
-) -> VoteStatus;
-
-```
-
-## Parameters:
-
-- user_address: The address of the user.
-- prop_id: The identifier of the proposal.
-- Returns: The voting status of the user for the specified proposal.
-
-## Custom Proposals
-
-Custom proposals are flexible mechanism within the proposal and voting system that allows for the submission and handling of proposals with specific, user-defined configurations. These proposals are not limited to predefined types, enabling a more dynamic and adaptable governance process. The core features and handling of custom proposals are defined in several parts of the code.
-
-get_custom_proposal_type:
-Retrieves the configuration of a custom proposal type.
-Parameters: `i.`
-Returns: `CustomProposalConfig`
-
-- To submit a custom proposal, use the submit_custom_proposal method:
-
-```
-
-let custom_prop_id = proposals.submit_custom_proposal(custom_proposal_type, calldata);
-
-```
-
-### Dependencies
-
-The Proposals component does not depend on other Konoha components, making it flexible and easy to integrate.
-
-It interacts with a governance token contract, so ensure your protocol has a compatible ERC-20 governance token.
-
-- Note: The governance token should be non-transferable.
-
-## Customization
-
-While the current version of the component does not support altering the built-in voting logic, this is an area planned for future development. If you have specific requirements or ideas for custom voting logic, now is an excellent time to reach out to us with your feedback and suggestions.
-
-### Conclusion
-
-The Proposals component is a versatile and independent module for managing decentralized governance.
-Its ease of integration and rich functionality make it a suitable choice for protocols looking to implement governance within the Konoha ecosystem or beyond. Customize and extend its features as needed to best fit your protocol’s requirements.
+- Define the Vesting Schedule: Determine whether you need a `linear vesting schedule` or specific vesting milestones.
+- Add Vesting Milestones or Schedule:
+- For a linear vesting schedule, `use the add_linear_vesting_schedule method.`
+- For specific milestones, use the `add_vesting_milestone method.`
+- Execute Vesting: Call the `vest ` method to release tokens when they become eligible.
