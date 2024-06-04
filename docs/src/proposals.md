@@ -7,17 +7,22 @@
 The Proposals component is designed for governance within the Konoha ecosystem. It includes functions for voting on proposals, submitting new proposals and managing custom proposals. It primarily interacts with a governance token, allowing for token holders to participate in the decision-making process.
 It includes functions for voting on proposals, submitting new proposals, and managing custom proposals.
 
-## Functionality
+## Storage
 
-The Proposals component offers the following functionalities:
+The storage structure for proposals is as follows:
 
-- `Submit Proposal`: This allows the user to submit a new proposal with the provided payload and upgrade type.
-- `Vote on Proposal`: The Vote on Proposal component allows users to vote on existing proposals.
-- `Get Proposal Details`: This allows for the Retrieval of the details of a specific proposal based on it's ID.
-- `Get Vote Counts`: The `Get Vote Counts` component is used to Retrieve the vote counts (yay and nay) for a specific proposal.
-- `Get Proposal Status`: This checks the current status of a proposal (active, passed, or failed).
-- `Get Live Proposals`: This returns all active proposals in an array of IDs.
-- `Check User Vote`: This checks a specific user voting status and if they have voted on a specific proposal.
+- **proposal_details**: This maps proposal IDs to detailed proposal information.
+- **proposal_vote_ends**: Maps proposal IDs to their respective voting end block numbers.
+- **proposal_vote_end_timestamp**: Maps proposal IDs to their voting end timestamps.
+- **proposal_voted_by**: Connects proposal IDs and user addresses to the voting status.
+- **proposal_total_yay**: Tracks the count of votes in favor for each proposal.
+- **proposal_total_nay**: Tracks the count of votes against each proposal.
+- **proposal_applied**: Maps proposal IDs to their application status.
+- **delegate_hash**: Maps user addresses to their delegate hash.
+- **total_delegated_to**: Maps user addresses to their total delegated voting power.
+- **custom_proposal_type**: Links custom proposal type IDs to CustomProposalConfig.
+- **custom_proposal_payload**: Maps (proposal ID, index) to the calldata associated with the custom proposals. 
+
 
 ## Structures
 
