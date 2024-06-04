@@ -54,7 +54,7 @@ mod discussion {
             let user_address = get_caller_address();
             let govtoken_addr = get_governance_token_address_self();
             let caller_balance: u256 = IERC20Dispatcher { contract_address: govtoken_addr }
-                .balance_Of(user_address);
+                .balance_of(user_address);
             assert(caller_balance.high != 0 || caller_balance.low != 0, 'Govtoken balance is zero');
 
             //get current comment count 

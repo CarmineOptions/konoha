@@ -30,6 +30,7 @@ trait IERC20<TContractState> {
     fn decimals(self: @TContractState) -> u8;
     fn totalSupply(self: @TContractState) -> u256;
     fn balanceOf(self: @TContractState, account: ContractAddress) -> u256;
+    fn balance_of(self: @TContractState, account: ContractAddress) -> u256;
     fn allowance(self: @TContractState, owner: ContractAddress, spender: ContractAddress) -> u256;
     fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256) -> bool;
     fn transferFrom(
