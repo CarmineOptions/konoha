@@ -167,7 +167,262 @@ fn test_submit_proposal_under_quorum() {
     dispatcher.submit_proposal(42, 1);
 }
 
-////////////////////////////////////////////////////////////////////////////
+#[test]
+#[should_panic(expected: ('Not enough funds',))]
+fn test_multiple_delegations_with_insufficient_balance() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    prank(
+        CheatTarget::One(token_contract.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    token_contract.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 500.try_into().unwrap());
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let mut calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    calldata.append((second_address.try_into().unwrap(), 500));
+    let addr: felt252 = 0x4;
+    dispatcher.delegate_vote(addr.try_into().unwrap(), calldata, 6000.try_into().unwrap());
+}
+
+#[test]
+#[should_panic(expected: ('incorrect delegate list',))]
+fn test_delegate_vote_with_incorrect_calldata() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    let mut calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    let addr: felt252 = 0x4;
+    calldata.append((addr.try_into().unwrap(), 50000.try_into().unwrap()));
+    dispatcher
+        .delegate_vote(first_address.try_into().unwrap(), calldata, 50000.try_into().unwrap());
+}
+
+#[test]
+#[should_panic(expected: ('incorrect delegate list',))]
+fn test_withdraw_delegation_with_incorrect_calldata() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    let prop_id = dispatcher.submit_proposal(42, 1);
+
+    start_prank(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap());
+    let mut calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    calldata.append((second_address.try_into().unwrap(), 50000.try_into().unwrap()));
+    dispatcher
+        .withdraw_delegation(
+            second_address.try_into().unwrap(), calldata, 50000.try_into().unwrap(), prop_id
+        );
+}
+
+#[test]
+fn test_multiple_delegations() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    prank(
+        CheatTarget::One(token_contract.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    token_contract.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 500.try_into().unwrap());
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let mut calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    calldata.append((second_address.try_into().unwrap(), 500));
+    dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 100.try_into().unwrap());
+
+    assert!(
+        dispatcher.get_total_delegated_to(second_address.try_into().unwrap()) == 600,
+        "Incorrect amount delegated!"
+    );
+}
+
+#[test]
+#[should_panic(expected: ('user already voted',))]
+fn test_delegate_vote_and_delegation_withdrawal() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    prank(
+        CheatTarget::One(token_contract.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    token_contract.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+
+    prank(
+        CheatTarget::One(token_contract.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    token_contract.transfer(second_address.try_into().unwrap(), 1000.try_into().unwrap());
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 1);
+
+    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    let prop_id = dispatcher.submit_proposal(42, 1);
+
+    start_prank(CheatTarget::One(gov_contract_addr), second_address.try_into().unwrap());
+    dispatcher.vote(prop_id, 1);
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let mut calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    calldata.append((second_address.try_into().unwrap(), 1));
+    dispatcher.withdraw_delegation(second_address.try_into().unwrap(), calldata, 1, prop_id);
+}
+
+#[test]
+#[should_panic(expected: ('amount has to be lower',))]
+fn test_withdraw_more_than_delegated_amount() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    prank(
+        CheatTarget::One(token_contract.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    token_contract.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 10.try_into().unwrap());
+
+    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    let prop_id = dispatcher.submit_proposal(42, 1);
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let mut calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    calldata.append((second_address.try_into().unwrap(), 10));
+    dispatcher.withdraw_delegation(second_address.try_into().unwrap(), calldata, 20, prop_id);
+}
+
+#[test]
+#[should_panic(expected: ('voting token balance is zero',))]
+fn test_full_withdraw_and_vote() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    prank(
+        CheatTarget::One(token_contract.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    token_contract.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 10.try_into().unwrap());
+
+    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    let prop_id = dispatcher.submit_proposal(42, 1);
+
+    prank(
+        CheatTarget::One(gov_contract_addr),
+        first_address.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
+    let mut calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
+    calldata.append((second_address.try_into().unwrap(), 10));
+    dispatcher.withdraw_delegation(second_address.try_into().unwrap(), calldata, 10, prop_id);
+
+    start_prank(CheatTarget::One(gov_contract_addr), second_address.try_into().unwrap());
+    dispatcher.vote(prop_id, 1);
+}
+
+#[test]
+fn test_successful_proposal_submission() {
+    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
+    let gov_contract = deploy_governance(token_contract.contract_address);
+    let gov_contract_addr = gov_contract.contract_address;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+
+    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    let prop_id_1: u128 = dispatcher.submit_proposal(42, 1).try_into().unwrap();
+    let prop_id_2: u128 = dispatcher.submit_proposal(43, 1).try_into().unwrap();
+
+    assert!(prop_id_1 < prop_id_2, "Proposals should have unique ids");
+
+    let prop_details_1 = dispatcher.get_proposal_details(prop_id_1.try_into().unwrap());
+    let prop_details_2 = dispatcher.get_proposal_details(prop_id_2.try_into().unwrap());
+
+    assert!(prop_details_1.payload == 42, "wrong payload first proposal");
+    assert!(prop_details_2.payload == 43, "wrong payload second proposal");
+}
+
 
 #[test]
 #[should_panic(expected: ('Proposal is not live!',))]
@@ -309,3 +564,4 @@ fn test_get_comments() {
     assert_eq!(*res_span.at(2).user, first_address.try_into().unwrap());
     assert_eq!(res_span.at(2).ipfs_hash, @ipfs_hash_3);
 }
+

@@ -30,7 +30,7 @@ successfully
 
 ### Usual proposal functionalities
 
-[] Successful proposal submission : ensure the proposal submission is registered with a unique proposal id
+[x] Successful proposal submission : ensure the proposal submission is registered with a unique proposal id
 
 [x] Proposal expiry : check that the proposal is correctly flagged as expired after its voting deadline
 
@@ -93,19 +93,19 @@ Runs tests on a specific, already deployed contract.
 
 ### Unit tests
 
-[] Apply a passed proposal
+[x] Apply a passed proposal
 
 Test that a proposal marked as passed is correctly applied, including the appropriate contract upgrade.
 
-[] Apply already applied proposal
+[x] Apply already applied proposal
 
 Ensure the contract rejects applying a proposal that has already been applied.
 
-[] Apply failed proposal
+[x] Apply failed proposal
 
 Ensure the contract rejects applying a proposal that did not pass.
 
-[] Apply non-existent proposal
+[x] Apply non-existent proposal
 
 Ensure the contract rejects applying a proposal that does not exist.
 

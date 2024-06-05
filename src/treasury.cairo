@@ -27,10 +27,13 @@ trait ITreasury<TContractState> {
         lp_token_amount: u256
     );
     fn get_amm_address(self: @TContractState) -> ContractAddress;
+    fn deposit_to_zklend(ref self: TContractState, token: ContractAddress, amount: u256);
+    fn withdraw_from_zklend(ref self: TContractState, token: ContractAddress, amount: u256);
 }
 
 #[starknet::contract]
 mod Treasury {
+    use core::traits::TryInto;
     use core::starknet::event::EventEmitter;
     use super::{OptionType};
     use core::num::traits::zero::Zero;
@@ -42,6 +45,9 @@ mod Treasury {
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
     use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
+    use konoha::treasury_types::zklend::interfaces::{
+        IMarket, IMarketDispatcher, IMarketDispatcherTrait
+    };
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
@@ -54,6 +60,7 @@ mod Treasury {
     #[storage]
     struct Storage {
         amm_address: ContractAddress,
+        zklend_market_contract_address: ContractAddress,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
@@ -88,6 +95,18 @@ mod Treasury {
         lp_token_amount: u256
     }
 
+    #[derive(starknet::Event, Drop)]
+    struct LiquidityProvidedToZklend {
+        token_address: ContractAddress,
+        amount: u256
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct LiquidityWithdrawnFromZklend {
+        token_address: ContractAddress,
+        amount: u256
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -95,6 +114,8 @@ mod Treasury {
         AMMAddressUpdated: AMMAddressUpdated,
         LiquidityProvided: LiquidityProvided,
         LiquidityWithdrawn: LiquidityWithdrawn,
+        LiquidityProvidedToZklend: LiquidityProvidedToZklend,
+        LiquidityWithdrawnFromZklend: LiquidityWithdrawnFromZklend,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         #[flat]
@@ -107,6 +128,7 @@ mod Treasury {
         const INSUFFICIENT_LP_TOKENS: felt252 = 'Insufficient LP token balance';
         const ADDRESS_ZERO_GOVERNANCE: felt252 = 'Governance addr is zero address';
         const ADDRESS_ZERO_AMM: felt252 = 'AMM addr is zero address';
+        const ADDRESS_ZERO_ZKLEND_MARKET: felt252 = 'zklnd markt addr is zero addrr';
         const ADDRESS_ALREADY_CHANGED: felt252 = 'New Address same as Previous';
     }
 
@@ -114,11 +136,17 @@ mod Treasury {
     fn constructor(
         ref self: ContractState,
         gov_contract_address: ContractAddress,
-        AMM_contract_address: ContractAddress
+        AMM_contract_address: ContractAddress,
+        zklend_market_contract_address: ContractAddress
     ) {
         assert(gov_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_GOVERNANCE);
         assert(AMM_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_AMM);
+        assert(
+            zklend_market_contract_address != zeroable::Zeroable::zero(),
+            Errors::ADDRESS_ZERO_ZKLEND_MARKET
+        );
         self.amm_address.write(AMM_contract_address);
+        self.zklend_market_contract_address.write(zklend_market_contract_address);
         self.ownable.initializer(gov_contract_address);
     }
 
@@ -224,7 +252,42 @@ mod Treasury {
         fn get_amm_address(self: @ContractState) -> ContractAddress {
             self.amm_address.read()
         }
+
+        // Deposit token to ZKLend Market
+        fn deposit_to_zklend(ref self: ContractState, token: ContractAddress, amount: u256) {
+            self.ownable.assert_only_owner();
+            let pooled_token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token };
+            let zklend_market: IMarketDispatcher = IMarketDispatcher {
+                contract_address: self.zklend_market_contract_address.read()
+            };
+
+            assert(
+                pooled_token.balanceOf(get_contract_address()) >= amount,
+                Errors::INSUFFICIENT_POOLED_TOKEN
+            );
+
+            pooled_token.approve(self.zklend_market_contract_address.read(), amount);
+
+            zklend_market.deposit(token, amount.try_into().unwrap());
+
+            zklend_market.enable_collateral(token);
+
+            self.emit(LiquidityProvidedToZklend { token_address: token, amount });
+        }
+
+        // Withdraw token from ZKLend Market
+        fn withdraw_from_zklend(ref self: ContractState, token: ContractAddress, amount: u256) {
+            self.ownable.assert_only_owner();
+            let zklend_market: IMarketDispatcher = IMarketDispatcher {
+                contract_address: self.zklend_market_contract_address.read()
+            };
+
+            zklend_market.withdraw(token, amount.try_into().unwrap());
+
+            self.emit(LiquidityWithdrawnFromZklend { token_address: token, amount });
+        }
     }
+
 
     #[abi(embed_v0)]
     impl UpgradeableImpl of IUpgradeable<ContractState> {
