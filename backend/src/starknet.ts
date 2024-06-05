@@ -19,7 +19,14 @@ export const getStarknetId = async (
     constants.StarknetChainId.SN_MAIN
   );
 
-  const domain = await starknetIdNavigator.getStarkName(address);
+  let domain;
+  try {
+    domain = await starknetIdNavigator.getStarkName(address);
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+
   const id = await starknetIdNavigator.getStarknetId(domain);
 
   return id;
