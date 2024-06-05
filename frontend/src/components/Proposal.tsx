@@ -161,7 +161,7 @@ export default function Proposal({
               </svg>
             </button>
             <p className="text-xl font-bold">New Comment</p>
-            <NewcommentCommentForm setIsModalOpen={setIsNewCommentModalOpen} />
+            <NewcommentCommentForm propId={proposalId.toString()} setIsModalOpen={setIsNewCommentModalOpen} />
           </div>
         </dialog>
       )}
