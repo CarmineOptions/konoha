@@ -260,7 +260,9 @@ fn test_get_comments() {
     let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
     let gov_contract = deploy_governance(token_contract.contract_address);
     let gov_contract_addr = gov_contract.contract_address;
-    let ipfs_hash: ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
+    let ipfs_hash_1: ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
+    let ipfs_hash_2: ByteArray = "Uinienu2G54J6o5dfyMn4PPjbQhDrJ6Mu93qbhwjni2ijnf";
+    let ipfs_hash_3: ByteArray = "MPrNQiJbdik6o5dfyMn4Pjnislnenoen7hHSU8Ii82jdB56";
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
@@ -281,18 +283,29 @@ fn test_get_comments() {
     prank(
         CheatTarget::One(gov_contract_addr),
         first_address.try_into().unwrap(),
-        CheatSpan::TargetCalls(2)
+        CheatSpan::TargetCalls(7)
     );
 
-    IDiscussionDispatcher { contract_address: gov_contract_addr }
-        .add_comment(prop_id.try_into().unwrap(), ipfs_hash.try_into().unwrap());
+    let discussion_dispatcher = IDiscussionDispatcher { contract_address: gov_contract_addr };
 
-    let res = IDiscussionDispatcher { contract_address: gov_contract_addr }
-        .get_comments(prop_id.try_into().unwrap());
+    discussion_dispatcher.add_comment(prop_id.try_into().unwrap(), ipfs_hash_1.try_into().unwrap());
+    discussion_dispatcher.add_comment(prop_id.try_into().unwrap(), ipfs_hash_2.try_into().unwrap());
+    discussion_dispatcher.add_comment(prop_id.try_into().unwrap(), ipfs_hash_3.try_into().unwrap());
 
-    // Checks if get_comments returns a comment at position zero
-    match res.get(0) {
-        Option::Some(_com) => { true; },
-        Option::None => panic!("No comment found!"),
-    }
+    let res = discussion_dispatcher.get_comments(prop_id.try_into().unwrap());
+
+    let res_span = res.span();
+
+    let ipfs_hash_1: ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
+    let ipfs_hash_2: ByteArray = "Uinienu2G54J6o5dfyMn4PPjbQhDrJ6Mu93qbhwjni2ijnf";
+    let ipfs_hash_3: ByteArray = "MPrNQiJbdik6o5dfyMn4Pjnislnenoen7hHSU8Ii82jdB56";
+
+    assert_eq!(*res_span.at(0).user, first_address.try_into().unwrap());
+    assert_eq!(res_span.at(0).ipfs_hash, @ipfs_hash_1);
+
+    assert_eq!(*res_span.at(1).user, first_address.try_into().unwrap());
+    assert_eq!(res_span.at(1).ipfs_hash, @ipfs_hash_2);
+
+    assert_eq!(*res_span.at(2).user, first_address.try_into().unwrap());
+    assert_eq!(res_span.at(2).ipfs_hash, @ipfs_hash_3);
 }
