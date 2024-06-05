@@ -72,7 +72,6 @@ export default function Proposal({
     // Call the write function to vote on the proposal
     if (vote) {
       // contract.invoke("vote", [proposalId.toString(), 1]);
-
       // await contract.functions.vote(proposalId.toString(), 1);
       write_yes()
         .then(() => {
@@ -192,7 +191,7 @@ export default function Proposal({
               </svg>
             </button>
             <p className="text-xl font-bold">Proposal Comments</p>
-            <Comments />
+            <Comments proposalId={proposalId.toString()} />
           </div>
         </dialog>
       )}
