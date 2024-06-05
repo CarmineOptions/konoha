@@ -543,25 +543,21 @@ fn test_get_comments() {
 
     let discussion_dispatcher = IDiscussionDispatcher { contract_address: gov_contract_addr };
 
-    discussion_dispatcher.add_comment(prop_id.try_into().unwrap(), ipfs_hash_1.try_into().unwrap());
-    discussion_dispatcher.add_comment(prop_id.try_into().unwrap(), ipfs_hash_2.try_into().unwrap());
-    discussion_dispatcher.add_comment(prop_id.try_into().unwrap(), ipfs_hash_3.try_into().unwrap());
+    discussion_dispatcher.add_comment(prop_id.try_into().unwrap(), ipfs_hash_1.clone());
+    discussion_dispatcher.add_comment(prop_id.try_into().unwrap(), ipfs_hash_2.clone());
+    discussion_dispatcher.add_comment(prop_id.try_into().unwrap(), ipfs_hash_3.clone());
 
     let res = discussion_dispatcher.get_comments(prop_id.try_into().unwrap());
 
     let res_span = res.span();
 
-    let ipfs_hash_1: ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
-    let ipfs_hash_2: ByteArray = "Uinienu2G54J6o5dfyMn4PPjbQhDrJ6Mu93qbhwjni2ijnf";
-    let ipfs_hash_3: ByteArray = "MPrNQiJbdik6o5dfyMn4Pjnislnenoen7hHSU8Ii82jdB56";
-
     assert_eq!(*res_span.at(0).user, first_address.try_into().unwrap());
-    assert_eq!(res_span.at(0).ipfs_hash, @ipfs_hash_1);
+    assert_eq!(res_span.at(0).ipfs_hash.clone(), ipfs_hash_1);
 
     assert_eq!(*res_span.at(1).user, first_address.try_into().unwrap());
-    assert_eq!(res_span.at(1).ipfs_hash, @ipfs_hash_2);
+    assert_eq!(res_span.at(1).ipfs_hash.clone(), ipfs_hash_2);
 
     assert_eq!(*res_span.at(2).user, first_address.try_into().unwrap());
-    assert_eq!(res_span.at(2).ipfs_hash, @ipfs_hash_3);
+    assert_eq!(res_span.at(2).ipfs_hash.clone(), ipfs_hash_3);
 }
 
