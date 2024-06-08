@@ -7,6 +7,7 @@ mod treasury_types {
 }
 mod constants;
 mod contract;
+mod discussion;
 mod merkle_tree;
 mod proposals;
 mod token;
