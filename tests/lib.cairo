@@ -1,6 +1,6 @@
-mod basic;
-mod test_treasury;
-mod proposals_tests;
 mod airdrop_tests;
-mod upgrades_tests;
+mod basic;
+mod proposals_tests;
 mod setup;
+mod test_treasury;
+mod upgrades_tests;

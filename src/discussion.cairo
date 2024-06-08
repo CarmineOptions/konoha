@@ -23,12 +23,11 @@ mod discussion {
     use konoha::traits::get_governance_token_address_self;
     use konoha::types::Comment;
 
-    // Storage implementation entails comments and comment_count
-    // Comments is mapping of (proposal id, index) to comment
-    // While the comment_count is a mapping of proposal id to number of comments
     #[storage]
     struct Storage {
+        // mapping of (proposal id, index) to comment
         comments: LegacyMap::<(u32, u64), Comment>,
+        // mapping of proposal id to number of comments
         comment_count: LegacyMap::<u32, u64>
     }
 
@@ -50,7 +49,7 @@ mod discussion {
             let is_live = self.is_proposal_live(prop_id);
             assert(is_live, 'Proposal is not live!');
 
-            //Check if caller is a CRAM token holder
+            //Check if caller is a governance token holder
             let user_address = get_caller_address();
             let govtoken_addr = get_governance_token_address_self();
             let caller_balance: u256 = IERC20Dispatcher { contract_address: govtoken_addr }
