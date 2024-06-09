@@ -53,7 +53,6 @@ export default function NewcommentCommentForm({
 		try {
 			const result = await submitCommentApi(payload);
 			setIpfsHash(result?.ipfs_hash);
-			toast.success("Comment submitted successfully");
 		} catch (error) {
 			toast.error("Something went wrong");
 			console.error(error);
