@@ -20,14 +20,13 @@ export const getStarknetId = async (
   );
 
   let domain;
+  let id;
   try {
     domain = await starknetIdNavigator.getStarkName(address);
-  } catch (error) {
-    console.error(error);
+    id = await starknetIdNavigator.getStarknetId(domain);
+  } catch {
     return null;
   }
-
-  const id = await starknetIdNavigator.getStarknetId(domain);
 
   return id;
 };
