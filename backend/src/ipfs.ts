@@ -69,7 +69,6 @@ export const submitProposal = async (req: Request, res: Response) => {
 
     return res.json({ ipfs_hash: pin.IpfsHash });
   } catch (error) {
-    console.error("Error uploading to IPFS", error);
     return res.status(500).json({ error: "Error uploading to IPFS" });
   }
 };
