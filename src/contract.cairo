@@ -36,6 +36,7 @@ mod Governance {
     use konoha::airdrop::airdrop as airdrop_component;
     use konoha::vesting::vesting as vesting_component;
     use konoha::discussion::discussion as discussion_component;
+    use konoha::staking::staking as staking_component;
 
     use starknet::ContractAddress;
 
@@ -45,6 +46,7 @@ mod Governance {
     component!(path: proposals_component, storage: proposals, event: ProposalsEvent);
     component!(path: upgrades_component, storage: upgrades, event: UpgradesEvent);
     component!(path: discussion_component, storage: discussions, event: DiscussionEvent);
+    component!(path: staking_component, storage: staking, event: StakingEvent);
 
     #[abi(embed_v0)]
     impl Airdrop = airdrop_component::AirdropImpl<ContractState>;
@@ -60,6 +62,9 @@ mod Governance {
     #[abi(embed_v0)]
     impl Discussions = discussion_component::DiscussionImpl<ContractState>;
 
+    #[abi(embed_v0)]
+    impl Staking = staking_component::StakingImpl<ContractState>;
+
     #[storage]
     struct Storage {
         proposal_initializer_run: LegacyMap::<u64, bool>,
@@ -73,7 +78,9 @@ mod Governance {
         #[substorage(v0)]
         upgrades: upgrades_component::Storage,
         #[substorage(v0)]
-        discussions: discussion_component::Storage
+        discussions: discussion_component::Storage,
+        #[substorage(v0)]
+        staking: staking_component::Storage,
     }
 
     // PROPOSALS
@@ -102,6 +109,7 @@ mod Governance {
         ProposalsEvent: proposals_component::Event,
         UpgradesEvent: upgrades_component::Event,
         DiscussionEvent: discussion_component::Event,
+        StakingEvent: staking_component::Event,
     }
 
     #[constructor]
