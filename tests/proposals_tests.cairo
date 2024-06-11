@@ -13,8 +13,8 @@ use snforge_std::{
 };
 
 use super::setup::{
-    admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens, deploy_governance_and_both_tokens,
-    test_vote_upgrade_root, check_if_healthy
+    admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens,
+    deploy_governance_and_both_tokens, test_vote_upgrade_root, check_if_healthy
 };
 use super::staking_tests::{set_staking_curve, stake_all};
 use konoha::contract::IGovernanceDispatcher;
@@ -78,7 +78,11 @@ fn test_vote_on_expired_proposal() {
 
     let dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
 
-    prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    prank(
+        CheatTarget::One(gov.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
     let prop_id = dispatcher.submit_proposal(42, 1);
 
     //simulate passage of time
@@ -86,7 +90,11 @@ fn test_vote_on_expired_proposal() {
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
     start_warp(CheatTarget::One(gov.contract_address), end_timestamp + 1);
 
-    prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap(), CheatSpan::TargetCalls(1));
+    prank(
+        CheatTarget::One(gov.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
     dispatcher.vote(prop_id, 1);
 }
 

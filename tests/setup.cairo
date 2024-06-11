@@ -41,19 +41,29 @@ fn deploy_governance(token_address: ContractAddress) -> IGovernanceDispatcher {
 }
 
 // return governance, voting token, floating token.
-fn deploy_governance_and_both_tokens() -> (IGovernanceDispatcher, IERC20Dispatcher, IERC20Dispatcher) {
+fn deploy_governance_and_both_tokens() -> (
+    IGovernanceDispatcher, IERC20Dispatcher, IERC20Dispatcher
+) {
     let gov_contract = declare("Governance").expect('unable to declare governance');
     let mut args: Array<felt252> = ArrayTrait::new();
     args.append(voting_token_address);
-    gov_contract.deploy_at(@args, governance_address.try_into().unwrap()).expect('unable to deploy governance');
-    let gov_dispatcher = IGovernanceDispatcher { contract_address: governance_address.try_into().unwrap() };
+    gov_contract
+        .deploy_at(@args, governance_address.try_into().unwrap())
+        .expect('unable to deploy governance');
+    let gov_dispatcher = IGovernanceDispatcher {
+        contract_address: governance_address.try_into().unwrap()
+    };
 
     println!("Deploying VotingToken");
     let voting_token_class = declare("VotingToken").expect('unable to declare VotingToken');
     let mut voting_token_constructor_calldata = ArrayTrait::new();
     voting_token_constructor_calldata.append(governance_address);
-    voting_token_class.deploy_at(@voting_token_constructor_calldata, voting_token_address.try_into().unwrap()).expect('unable to deploy VotingToken');
-    let voting_token_dispatcher = IERC20Dispatcher { contract_address: voting_token_address.try_into().unwrap() };
+    voting_token_class
+        .deploy_at(@voting_token_constructor_calldata, voting_token_address.try_into().unwrap())
+        .expect('unable to deploy VotingToken');
+    let voting_token_dispatcher = IERC20Dispatcher {
+        contract_address: voting_token_address.try_into().unwrap()
+    };
 
     let mut calldata = ArrayTrait::new();
     calldata.append(GOV_TOKEN_INITIAL_SUPPLY.low.into());
@@ -64,10 +74,14 @@ fn deploy_governance_and_both_tokens() -> (IGovernanceDispatcher, IERC20Dispatch
     floating_token_class
         .deploy_at(@calldata, floating_token_address.try_into().unwrap())
         .expect('unable to deploy FloatingToken');
-    let floating_token_dispatcher = IERC20Dispatcher { contract_address: floating_token_address.try_into().unwrap() };
+    let floating_token_dispatcher = IERC20Dispatcher {
+        contract_address: floating_token_address.try_into().unwrap()
+    };
 
     // set floating token address in staking component
-    set_floating_token_address(governance_address.try_into().unwrap(), floating_token_address.try_into().unwrap());
+    set_floating_token_address(
+        governance_address.try_into().unwrap(), floating_token_address.try_into().unwrap()
+    );
 
     (gov_dispatcher, voting_token_dispatcher, floating_token_dispatcher)
 }
