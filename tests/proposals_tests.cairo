@@ -13,9 +13,10 @@ use snforge_std::{
 };
 
 use super::setup::{
-    admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens,
+    admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens, deploy_governance_and_both_tokens,
     test_vote_upgrade_root, check_if_healthy
 };
+use super::staking_tests::{set_staking_curve, stake_all};
 use konoha::contract::IGovernanceDispatcher;
 use konoha::contract::IGovernanceDispatcherTrait;
 use konoha::proposals::IProposalsDispatcher;
@@ -71,29 +72,24 @@ fn test_proposal_expiry() {
 #[test]
 #[should_panic(expected: ('voting concluded',))]
 fn test_vote_on_expired_proposal() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
 
-    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+    let dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
 
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap(), CheatSpan::TargetCalls(1));
     let prop_id = dispatcher.submit_proposal(42, 1);
 
     //simulate passage of time
     let current_timestamp = get_block_timestamp();
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
-    start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
+    start_warp(CheatTarget::One(gov.contract_address), end_timestamp + 1);
 
-    prank(
-        CheatTarget::One(token_contract.contract_address),
-        admin_addr.try_into().unwrap(),
-        CheatSpan::TargetCalls(1)
-    );
-    token_contract.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
-    start_prank(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap());
+    prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap(), CheatSpan::TargetCalls(1));
     dispatcher.vote(prop_id, 1);
 }
+
 
 #[test]
 fn test_vote_on_quorum_not_met() {

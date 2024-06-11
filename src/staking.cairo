@@ -1,3 +1,5 @@
+use starknet::ContractAddress;
+
 #[starknet::interface]
 trait IStaking<TContractState> {
     fn stake(ref self: TContractState, length: u64, amount: u128) -> u32; // returns stake ID
@@ -5,6 +7,7 @@ trait IStaking<TContractState> {
     fn unstake_airdrop(ref self: TContractState, amount: u128);
 
     fn set_curve_point(ref self: TContractState, length: u64, conversion_rate: u16);
+    fn set_floating_token_address(ref self: TContractState, address: ContractAddress);
 }
 
 #[starknet::component]
@@ -115,6 +118,15 @@ mod staking {
             let myaddr = get_contract_address();
             assert(caller == myaddr, 'can only call from proposal');
             self.curve.write(length, conversion_rate);
+        }
+
+        fn set_floating_token_address(
+            ref self: ComponentState<TContractState>, address: ContractAddress
+        ) {
+            let caller = get_caller_address();
+            let myaddr = get_contract_address();
+            assert(caller == myaddr, 'can only call from proposal');
+            self.floating_token_address.write(address);
         }
     }
 
