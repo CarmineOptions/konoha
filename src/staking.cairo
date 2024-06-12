@@ -31,6 +31,40 @@ mod staking {
         floating_token_address: ContractAddress
     }
 
+    #[derive(starknet::Event, Drop)]
+    struct Staked {
+        user: ContractAddress,
+        stake_id: u32,
+        amount: u128,
+        amount_voting_token: u128,
+        start_date: u64,
+        length: u64
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct Unstaked {
+        user: ContractAddress,
+        stake_id: u32,
+        amount: u128,
+        amount_voting_token: u128,
+        start_date: u64,
+        length: u64
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct UnstakedAirdrop {
+        user: ContractAddress,
+        amount: u128
+    }
+
+    #[derive(starknet::Event, Drop)]
+    #[event]
+    enum Event {
+        Staked: Staked,
+        Unstaked: Unstaked,
+        UnstakedAirdrop: UnstakedAirdrop
+    }
+
     #[embeddable_as(StakingImpl)]
     impl Staking<
         TContractState, +HasComponent<TContractState>,
@@ -60,7 +94,17 @@ mod staking {
                 contract_address: get_governance_token_address_self()
             };
             voting_token.mint(caller, amount_voting_token.into());
-
+            self
+                .emit(
+                    Staked {
+                        user: caller,
+                        stake_id: free_id,
+                        amount,
+                        amount_voting_token,
+                        start_date: get_block_timestamp(),
+                        length
+                    }
+                );
             free_id
         }
 
@@ -85,6 +129,17 @@ mod staking {
             // the payoff is in holding voting tokens, which make the user eligible for distributions of protocol revenue
             // works for tokens with fixed max float
             floating_token.transfer(caller, amount_staked.into());
+            self
+                .emit(
+                    Unstaked {
+                        user: caller,
+                        stake_id: id,
+                        amount: amount_staked,
+                        amount_voting_token,
+                        start_date,
+                        length
+                    }
+                );
         }
 
         fn unstake_airdrop(ref self: ComponentState<TContractState>, amount: u128) {
@@ -111,6 +166,7 @@ mod staking {
                 contract_address: self.floating_token_address.read()
             };
             floating_token.mint(caller, to_unstake.into());
+            self.emit(UnstakedAirdrop { user: caller, amount: to_unstake });
         }
 
         fn set_curve_point(
@@ -162,6 +218,7 @@ mod staking {
             self: @ComponentState<TContractState>, address: ContractAddress
         ) -> u128 {
             // to handle the special case where the user has been airdropped (locked) voting tokens
+            // TODO
             42
         }
     }
