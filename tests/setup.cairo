@@ -41,6 +41,7 @@ fn deploy_governance(token_address: ContractAddress) -> IGovernanceDispatcher {
 }
 
 // return governance, voting token, floating token.
+// by default, all floating tokens are minted to admin address.
 fn deploy_governance_and_both_tokens() -> (
     IGovernanceDispatcher, IERC20Dispatcher, IERC20Dispatcher
 ) {
@@ -54,7 +55,6 @@ fn deploy_governance_and_both_tokens() -> (
         contract_address: governance_address.try_into().unwrap()
     };
 
-    println!("Deploying VotingToken");
     let voting_token_class = declare("VotingToken").expect('unable to declare VotingToken');
     let mut voting_token_constructor_calldata = ArrayTrait::new();
     voting_token_constructor_calldata.append(governance_address);

@@ -36,5 +36,14 @@ fn stake_all(gov: ContractAddress, floating: IERC20Dispatcher, staker: ContractA
     floating.approve(gov, balance_of_staker.into());
     prank(CheatTarget::One(gov), staker, CheatSpan::TargetCalls(1));
     staking.stake(ONE_MONTH, balance_of_staker);
-    println!("staked");
+}
+
+fn stake_half(gov: ContractAddress, floating: IERC20Dispatcher, staker: ContractAddress) {
+    let staking = IStakingDispatcher { contract_address: gov };
+
+    let balance_of_staker = floating.balance_of(staker).low;
+    prank(CheatTarget::One(floating.contract_address), staker, CheatSpan::TargetCalls(1));
+    floating.approve(gov, balance_of_staker.into());
+    prank(CheatTarget::One(gov), staker, CheatSpan::TargetCalls(1));
+    staking.stake(ONE_MONTH, balance_of_staker / 2);
 }
