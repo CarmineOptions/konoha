@@ -8,6 +8,8 @@ trait IStaking<TContractState> {
 
     fn set_curve_point(ref self: TContractState, length: u64, conversion_rate: u16);
     fn set_floating_token_address(ref self: TContractState, address: ContractAddress);
+
+    fn get_floating_token_address(self: @TContractState) -> ContractAddress;
 }
 
 #[starknet::component]
@@ -127,6 +129,10 @@ mod staking {
             let myaddr = get_contract_address();
             assert(caller == myaddr, 'can only call from proposal');
             self.floating_token_address.write(address);
+        }
+
+        fn get_floating_token_address(self: @ComponentState<TContractState>) -> ContractAddress {
+            self.floating_token_address.read()
         }
     }
 
