@@ -322,6 +322,7 @@ fn test_delegate_vote_and_delegation_withdrawal() {
     let calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
     dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 1);
 
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
