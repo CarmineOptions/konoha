@@ -48,33 +48,34 @@ export default function Comments({ proposalId }: Props) {
     setIsCopied(true);
   }
 
+  console.log(proposalId, "proposal Id");
+
   return isLoading ? (
     <div>loading.... </div>
   ) : (
     <div className="w-[35rem] pt-5">
       <div className="py-2">
-        {comments.length > 0 && comments.map(({address, text, starknet_id}, i) => (
-          <div key={i}>
-            <div className="grid grid-cols-[1fr_3fr] gap-3 ">
-              <p className="text-sm font-[400] ">Senders Address:</p>
-              <div className="flex items-center gap-2">
-                <p className="font-[600]  text-sm">
-                  {address.slice(0, 20)}
-                </p>
-                <div onClick={() => handleCopyClick(address)}>
-                  {isCopied ? <TickIcon /> : <CopyIcon />}
+        {comments.length > 0 &&
+          comments.map(({ address, text, starknet_id }, i) => (
+            <div key={i}>
+              <div className="grid grid-cols-[1fr_3fr] gap-3 ">
+                <p className="text-sm font-[400] ">Senders Address:</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-[600]  text-sm">{address.slice(0, 20)}</p>
+                  <div onClick={() => handleCopyClick(address)}>
+                    {isCopied ? <TickIcon /> : <CopyIcon />}
+                  </div>
                 </div>
+
+                <p className="text-sm font-[400] ">Comment:</p>
+                <p className="font-[600]  text-sm">{text}</p>
+
+                <p className="text-sm font-[400]">Token Balance:</p>
+                <p className="font-[600]  text-sm">{starknet_id}</p>
               </div>
-
-              <p className="text-sm font-[400] ">Comment:</p>
-              <p className="font-[600]  text-sm">{text}</p>
-
-              <p className="text-sm font-[400]">Token Balance:</p>
-              <p className="font-[600]  text-sm">{starknet_id}</p>
+              <div className="border border-b-gray-200 mt-2" />
             </div>
-            <div className="border border-b-gray-200 mt-2" />
-          </div>
-        ))}
+          ))}
       </div>
     </div>
   );
