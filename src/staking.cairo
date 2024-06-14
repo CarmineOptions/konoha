@@ -1,5 +1,7 @@
 use starknet::ContractAddress;
 
+// This component should not be used along with delegation, as when the tokens are unstaked, they are not automatically undelegated.
+
 #[starknet::interface]
 trait IStaking<TContractState> {
     fn stake(ref self: TContractState, length: u64, amount: u128) -> u32; // returns stake ID
@@ -25,7 +27,6 @@ mod staking {
     use zeroable::NonZero;
     use zeroable::NonZeroIntoImpl;
 
-    // TODO check if storage packing is on by default, possibly add
     #[derive(Copy, Drop, Serde)]
     struct Stake {
         amount_staked: u128,
