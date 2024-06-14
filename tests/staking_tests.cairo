@@ -126,3 +126,24 @@ fn test_multiple_overlapping_stake_unstake() {
     assert(voting.balance_of(admin) == 0, 'nonzero bal after all');
     assert(staking.get_total_voting_power(admin) == 0, 'admin voting power nonzero');
 }
+
+#[test]
+#[should_panic(expected: ('unlock time not yet reached',))]
+fn test_unstake_before_unlock(mut amount_to_stake: u16, duration_seed: u8) {
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let staking = IStakingDispatcher { contract_address: gov.contract_address };
+    let admin: ContractAddress = admin_addr.try_into().unwrap();
+
+    let duration_mod = duration_seed % 2;
+    let duration = if(duration_mod == 0){ONE_MONTH}else{ONE_YEAR};
+    if(amount_to_stake == 0) {
+        amount_to_stake += 1;
+    }
+    prank(CheatTarget::One(floating.contract_address), admin, CheatSpan::TargetCalls(1));
+    floating.approve(gov.contract_address, amount_to_stake.into());
+    prank(CheatTarget::One(gov.contract_address), admin, CheatSpan::TargetCalls(3));
+    let stake_id = staking.stake(duration, amount_to_stake.into());
+
+    staking.unstake(stake_id);
+}
