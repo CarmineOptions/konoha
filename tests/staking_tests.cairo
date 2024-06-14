@@ -136,8 +136,12 @@ fn test_unstake_before_unlock(mut amount_to_stake: u16, duration_seed: u8) {
     let admin: ContractAddress = admin_addr.try_into().unwrap();
 
     let duration_mod = duration_seed % 2;
-    let duration = if(duration_mod == 0){ONE_MONTH}else{ONE_YEAR};
-    if(amount_to_stake == 0) {
+    let duration = if (duration_mod == 0) {
+        ONE_MONTH
+    } else {
+        ONE_YEAR
+    };
+    if (amount_to_stake == 0) {
         amount_to_stake += 1;
     }
     prank(CheatTarget::One(floating.contract_address), admin, CheatSpan::TargetCalls(1));
