@@ -13,6 +13,7 @@ trait IStaking<TContractState> {
 
     fn get_floating_token_address(self: @TContractState) -> ContractAddress;
     fn get_stake(self: @TContractState, address: ContractAddress, stake_id: u32) -> staking::Stake;
+    fn get_total_voting_power(self: @TContractState, address: ContractAddress) -> u128;
 }
 
 #[starknet::component]
@@ -40,7 +41,7 @@ mod staking {
     const TWO_POW_128: felt252 = 0x100000000000000000000000000000000;
     const TWO_POW_192: felt252 = 0x1000000000000000000000000000000000000000000000000;
 
-    impl PackStake of StorePacking<Stake, (felt252, felt252)> {
+    impl StakeStorePacking of StorePacking<Stake, (felt252, felt252)> {
         fn pack(value: Stake) -> (felt252, felt252) {
             let fst = value.amount_staked.into() + value.start_date.into() * TWO_POW_128;
             let snd = value.amount_voting_token.into()
@@ -264,6 +265,25 @@ mod staking {
             self: @ComponentState<TContractState>, address: ContractAddress, stake_id: u32
         ) -> Stake {
             self.stake.read((address, stake_id))
+        }
+
+        fn get_total_voting_power(
+            self: @ComponentState<TContractState>, address: ContractAddress
+        ) -> u128 {
+            let mut id = 0;
+            let mut acc = 0;
+            let currtime = get_block_timestamp();
+            loop {
+                let res: Stake = self.stake.read((address, id));
+                if (res.amount_voting_token == 0) {
+                    break acc;
+                }
+                id += 1;
+                let not_expired: bool = currtime < (res.length + res.start_date);
+                if (not_expired) {
+                    acc += res.amount_voting_token;
+                }
+            }
         }
     }
 
