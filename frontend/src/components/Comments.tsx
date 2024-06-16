@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useContractRead } from "@starknet-react/core";
 import { abi } from "../lib/abi";
 import { fetchIpfsFile } from "../api/apiService";
-import { CONTRACT_ADDR } from "../lib/config";
+import { CONTRACT_ADDR, formatIpfsHash } from "../lib/config";
 import { CopyIcon, TickIcon } from "../assets/icons/icons";
 type CommentProps = {
   address: string;
@@ -23,12 +23,15 @@ export default function Comments({ proposalId }: Props) {
     watch: true,
   });
 
+
+  console.log(data, "from smart contract")
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         if (Array.isArray(data)) {
           const ipfsFetchPromises = data.map((item: { ipfs_hash: string }) =>
-            fetchIpfsFile(item.ipfs_hash)
+            fetchIpfsFile(formatIpfsHash(item.ipfs_hash))
           );
           const ipfsResults = await Promise.all(ipfsFetchPromises);
 
@@ -48,14 +51,13 @@ export default function Comments({ proposalId }: Props) {
     setIsCopied(true);
   }
 
-  console.log(proposalId, "proposal Id");
 
   return isLoading ? (
     <div>loading.... </div>
   ) : (
     <div className="w-[35rem] pt-5">
       <div className="py-2">
-        {comments.length > 0 &&
+        {comments.length > 0 ?
           comments.map(({ address, text, starknet_id }, i) => (
             <div key={i}>
               <div className="grid grid-cols-[1fr_3fr] gap-3 ">
@@ -75,7 +77,7 @@ export default function Comments({ proposalId }: Props) {
               </div>
               <div className="border border-b-gray-200 mt-2" />
             </div>
-          ))}
+          )): <div className="flex justify-center items-center"> <p className="text-sm font-extrabold ">No comments available </p> </div>}
       </div>
     </div>
   );

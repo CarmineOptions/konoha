@@ -5,3 +5,8 @@ export const formatAddress = (addr: string) => {
 };
 
 
+
+export const formatIpfsHash = (hash: string) => {
+    return hash.replace(/,/g, ''); 
+}
+
