@@ -131,7 +131,7 @@ mod staking {
             };
             floating_token.transfer_from(caller, get_contract_address(), amount.into());
 
-            let amount_voting_token = (amount * conversion_rate.into()) / 100;
+            let (amount_voting_token, _) = DivRem::div_rem((amount * conversion_rate.into()), 100);
             let free_id = self.get_free_stake_id(caller);
 
             self
