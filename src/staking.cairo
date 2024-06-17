@@ -235,7 +235,7 @@ mod staking {
             let floating_token = IERC20Dispatcher {
                 contract_address: self.floating_token_address.read()
             };
-            floating_token.mint(caller, to_unstake.into());
+            floating_token.transfer(caller, to_unstake.into());
             self.emit(UnstakedAirdrop { user: caller, amount: to_unstake });
         }
 
