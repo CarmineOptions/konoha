@@ -24,7 +24,6 @@ mod staking {
     use konoha::traits::{
         get_governance_token_address_self, IERC20Dispatcher, IERC20DispatcherTrait
     };
-    use konoha::constants::UNLOCK_DATE;
     use zeroable::NonZero;
     use zeroable::NonZeroIntoImpl;
 
@@ -213,8 +212,6 @@ mod staking {
         }
 
         fn unstake_airdrop(ref self: ComponentState<TContractState>, amount: u128) {
-            assert(get_block_timestamp() > UNLOCK_DATE, 'tokens not yet unlocked');
-
             let caller = get_caller_address();
 
             let total_staked = self.get_total_staked_accounted(caller); // manually staked tokens
