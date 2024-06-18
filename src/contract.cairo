@@ -36,8 +36,10 @@ mod Governance {
     use konoha::airdrop::airdrop as airdrop_component;
     use konoha::vesting::vesting as vesting_component;
     use konoha::discussion::discussion as discussion_component;
+    use konoha::staking::staking as staking_component;
+    use konoha::staking::{IStakingDispatcher, IStakingDispatcherTrait};
 
-    use starknet::ContractAddress;
+    use starknet::{ContractAddress, ClassHash};
 
 
     component!(path: airdrop_component, storage: airdrop, event: AirdropEvent);
@@ -45,6 +47,7 @@ mod Governance {
     component!(path: proposals_component, storage: proposals, event: ProposalsEvent);
     component!(path: upgrades_component, storage: upgrades, event: UpgradesEvent);
     component!(path: discussion_component, storage: discussions, event: DiscussionEvent);
+    component!(path: staking_component, storage: staking, event: StakingEvent);
 
     #[abi(embed_v0)]
     impl Airdrop = airdrop_component::AirdropImpl<ContractState>;
@@ -60,6 +63,9 @@ mod Governance {
     #[abi(embed_v0)]
     impl Discussions = discussion_component::DiscussionImpl<ContractState>;
 
+    #[abi(embed_v0)]
+    impl Staking = staking_component::StakingImpl<ContractState>;
+
     #[storage]
     struct Storage {
         proposal_initializer_run: LegacyMap::<u64, bool>,
@@ -73,7 +79,9 @@ mod Governance {
         #[substorage(v0)]
         upgrades: upgrades_component::Storage,
         #[substorage(v0)]
-        discussions: discussion_component::Storage
+        discussions: discussion_component::Storage,
+        #[substorage(v0)]
+        staking: staking_component::Storage,
     }
 
     // PROPOSALS
@@ -102,12 +110,51 @@ mod Governance {
         ProposalsEvent: proposals_component::Event,
         UpgradesEvent: upgrades_component::Event,
         DiscussionEvent: discussion_component::Event,
+        StakingEvent: staking_component::Event,
     }
 
+    use starknet::syscalls::deploy_syscall;
+    use starknet::get_contract_address;
+
     #[constructor]
-    fn constructor(ref self: ContractState, govtoken_address: ContractAddress) {
+    fn constructor(
+        ref self: ContractState,
+        voting_token_class: ClassHash,
+        floating_token_class: ClassHash,
+        recipient: ContractAddress
+    ) {
         // This is not used in production on mainnet, because the governance token is already deployed (and distributed).
-        self.governance_token_address.write(govtoken_address);
+
+        let governance_address = get_contract_address();
+
+        let mut voting_token_calldata: Array<felt252> = ArrayTrait::new();
+        voting_token_calldata.append(governance_address.into());
+        let (voting_token_address, _) = deploy_syscall(
+            voting_token_class, 42, voting_token_calldata.span(), true
+        )
+            .unwrap();
+        self.governance_token_address.write(voting_token_address);
+
+        let mut floating_token_calldata: Array<felt252> = ArrayTrait::new();
+        floating_token_calldata.append(10000000000000000000); // 10**19, 10 tokens overall
+        floating_token_calldata.append(0); // high for u256 supply
+        floating_token_calldata.append(recipient.into());
+        floating_token_calldata.append(governance_address.into());
+        let (floating_token_address, _) = deploy_syscall(
+            floating_token_class, 42, floating_token_calldata.span(), true
+        )
+            .unwrap();
+
+        let staking = IStakingDispatcher { contract_address: governance_address };
+        staking.set_floating_token_address(floating_token_address);
+        let ONE_MONTH: u64 = 2629743; // 30.44 days
+        let THREE_MONTHS = ONE_MONTH * 3;
+        let SIX_MONTHS = ONE_MONTH * 6;
+        let ONE_YEAR: u64 = 31536000; // 365 days
+        staking.set_curve_point(ONE_MONTH, 100);
+        staking.set_curve_point(THREE_MONTHS, 120);
+        staking.set_curve_point(SIX_MONTHS, 160);
+        staking.set_curve_point(ONE_YEAR, 250);
     }
 
     #[abi(embed_v0)]

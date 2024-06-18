@@ -14,8 +14,9 @@ use snforge_std::{
 
 use super::setup::{
     admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens,
-    test_vote_upgrade_root, check_if_healthy
+    deploy_governance_and_both_tokens, test_vote_upgrade_root, check_if_healthy
 };
+use super::staking_tests::{set_staking_curve, stake_all, stake_half};
 use konoha::contract::IGovernanceDispatcher;
 use konoha::contract::IGovernanceDispatcherTrait;
 use konoha::proposals::IProposalsDispatcher;
@@ -32,17 +33,18 @@ use starknet::get_block_timestamp;
 const GOV_TOKEN_INITIAL_SUPPLY: felt252 = 1000000000000000000;
 
 
+#[test]
 fn test_express_proposal() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
 
-    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+    let dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
 
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
 
     assert!(dispatcher.get_proposal_status(prop_id) == 1, "proposal not passed!");
@@ -50,19 +52,18 @@ fn test_express_proposal() {
 
 #[test]
 fn test_proposal_expiry() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
+    let dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
 
-    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
-
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
     //simulate passage of time
     let current_timestamp = get_block_timestamp();
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
-    start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
+    start_warp(CheatTarget::One(gov.contract_address), end_timestamp + 1);
 
     let status = dispatcher.get_proposal_status(prop_id);
     assert!(status == constants::MINUS_ONE, "proposal not expired!");
@@ -71,35 +72,39 @@ fn test_proposal_expiry() {
 #[test]
 #[should_panic(expected: ('voting concluded',))]
 fn test_vote_on_expired_proposal() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
 
-    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+    let dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
 
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    prank(
+        CheatTarget::One(gov.contract_address),
+        admin_addr.try_into().unwrap(),
+        CheatSpan::TargetCalls(1)
+    );
     let prop_id = dispatcher.submit_proposal(42, 1);
 
     //simulate passage of time
     let current_timestamp = get_block_timestamp();
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
-    start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
+    start_warp(CheatTarget::One(gov.contract_address), end_timestamp + 1);
 
     prank(
-        CheatTarget::One(token_contract.contract_address),
+        CheatTarget::One(gov.contract_address),
         admin_addr.try_into().unwrap(),
         CheatSpan::TargetCalls(1)
     );
-    token_contract.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
-    start_prank(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
 }
 
+
 #[test]
 fn test_vote_on_quorum_not_met() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    stake_half(gov.contract_address, floating, admin_addr.try_into().unwrap());
+    let gov_contract_addr = gov.contract_address;
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
@@ -111,11 +116,12 @@ fn test_vote_on_quorum_not_met() {
     let prop_id = dispatcher.submit_proposal(42, 1);
 
     prank(
-        CheatTarget::One(token_contract.contract_address),
+        CheatTarget::One(floating.contract_address),
         admin_addr.try_into().unwrap(),
         CheatSpan::TargetCalls(1)
     );
-    token_contract.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
+    floating.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
+    stake_half(gov.contract_address, floating, first_address.try_into().unwrap());
 
     prank(
         CheatTarget::One(gov_contract_addr),
@@ -127,7 +133,7 @@ fn test_vote_on_quorum_not_met() {
     let (yay_votes, nay_votes) = dispatcher.get_vote_counts(prop_id);
     let total_votes = yay_votes + nay_votes;
     let total_eligible_votes: u128 = IERC20CamelOnlyDispatcher {
-        contract_address: token_contract.contract_address
+        contract_address: voting.contract_address
     }
         .totalSupply()
         .low;
@@ -146,18 +152,20 @@ fn test_vote_on_quorum_not_met() {
 #[test]
 #[should_panic(expected: ('not enough tokens to submit',))]
 fn test_submit_proposal_under_quorum() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
     prank(
-        CheatTarget::One(token_contract.contract_address),
+        CheatTarget::One(floating.contract_address),
         admin_addr.try_into().unwrap(),
         CheatSpan::TargetCalls(1)
     );
-    token_contract.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
+    floating.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
+    stake_all(gov.contract_address, floating, first_address.try_into().unwrap());
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
 
     prank(
         CheatTarget::One(gov_contract_addr),
@@ -170,18 +178,19 @@ fn test_submit_proposal_under_quorum() {
 #[test]
 #[should_panic(expected: ('Not enough funds',))]
 fn test_multiple_delegations_with_insufficient_balance() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
     prank(
-        CheatTarget::One(token_contract.contract_address),
+        CheatTarget::One(floating.contract_address),
         admin_addr.try_into().unwrap(),
         CheatSpan::TargetCalls(1)
     );
-    token_contract.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+    floating.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+    stake_all(gov.contract_address, floating, first_address.try_into().unwrap());
 
     prank(
         CheatTarget::One(gov_contract_addr),
@@ -205,9 +214,9 @@ fn test_multiple_delegations_with_insufficient_balance() {
 #[test]
 #[should_panic(expected: ('incorrect delegate list',))]
 fn test_delegate_vote_with_incorrect_calldata() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, _floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
@@ -222,12 +231,13 @@ fn test_delegate_vote_with_incorrect_calldata() {
 #[test]
 #[should_panic(expected: ('incorrect delegate list',))]
 fn test_withdraw_delegation_with_incorrect_calldata() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
@@ -242,18 +252,19 @@ fn test_withdraw_delegation_with_incorrect_calldata() {
 
 #[test]
 fn test_multiple_delegations() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
     prank(
-        CheatTarget::One(token_contract.contract_address),
+        CheatTarget::One(floating.contract_address),
         admin_addr.try_into().unwrap(),
         CheatSpan::TargetCalls(1)
     );
-    token_contract.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+    floating.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+    stake_all(gov.contract_address, floating, first_address.try_into().unwrap());
 
     prank(
         CheatTarget::One(gov_contract_addr),
@@ -281,25 +292,27 @@ fn test_multiple_delegations() {
 #[test]
 #[should_panic(expected: ('user already voted',))]
 fn test_delegate_vote_and_delegation_withdrawal() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
     prank(
-        CheatTarget::One(token_contract.contract_address),
+        CheatTarget::One(floating.contract_address),
         admin_addr.try_into().unwrap(),
         CheatSpan::TargetCalls(1)
     );
-    token_contract.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+    floating.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+    stake_all(gov.contract_address, floating, first_address.try_into().unwrap());
 
     prank(
-        CheatTarget::One(token_contract.contract_address),
+        CheatTarget::One(floating.contract_address),
         admin_addr.try_into().unwrap(),
         CheatSpan::TargetCalls(1)
     );
-    token_contract.transfer(second_address.try_into().unwrap(), 1000.try_into().unwrap());
+    floating.transfer(second_address.try_into().unwrap(), 1000.try_into().unwrap());
+    stake_all(gov.contract_address, floating, second_address.try_into().unwrap());
 
     prank(
         CheatTarget::One(gov_contract_addr),
@@ -309,6 +322,7 @@ fn test_delegate_vote_and_delegation_withdrawal() {
     let calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
     dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 1);
 
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
@@ -328,18 +342,20 @@ fn test_delegate_vote_and_delegation_withdrawal() {
 #[test]
 #[should_panic(expected: ('amount has to be lower',))]
 fn test_withdraw_more_than_delegated_amount() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
     prank(
-        CheatTarget::One(token_contract.contract_address),
+        CheatTarget::One(floating.contract_address),
         admin_addr.try_into().unwrap(),
         CheatSpan::TargetCalls(1)
     );
-    token_contract.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+    floating.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+    stake_all(gov.contract_address, floating, first_address.try_into().unwrap());
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
 
     prank(
         CheatTarget::One(gov_contract_addr),
@@ -365,18 +381,19 @@ fn test_withdraw_more_than_delegated_amount() {
 #[test]
 #[should_panic(expected: ('voting token balance is zero',))]
 fn test_full_withdraw_and_vote() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
     prank(
-        CheatTarget::One(token_contract.contract_address),
+        CheatTarget::One(floating.contract_address),
         admin_addr.try_into().unwrap(),
         CheatSpan::TargetCalls(1)
     );
-    token_contract.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+    floating.transfer(first_address.try_into().unwrap(), 1000.try_into().unwrap());
+    stake_all(gov.contract_address, floating, first_address.try_into().unwrap());
 
     prank(
         CheatTarget::One(gov_contract_addr),
@@ -386,6 +403,7 @@ fn test_full_withdraw_and_vote() {
     let calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
     dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 10.try_into().unwrap());
 
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
@@ -404,12 +422,12 @@ fn test_full_withdraw_and_vote() {
 
 #[test]
 fn test_successful_proposal_submission() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
-
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let prop_id_1: u128 = dispatcher.submit_proposal(42, 1).try_into().unwrap();
     let prop_id_2: u128 = dispatcher.submit_proposal(43, 1).try_into().unwrap();
@@ -427,13 +445,14 @@ fn test_successful_proposal_submission() {
 #[test]
 #[should_panic(expected: ('Proposal is not live!',))]
 fn test_add_comment_on_non_live_proposal() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
     let ipfs_hash: ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
     prank(
         CheatTarget::One(gov_contract_addr),
         admin_addr.try_into().unwrap(),
@@ -453,13 +472,14 @@ fn test_add_comment_on_non_live_proposal() {
 #[test]
 #[should_panic(expected: ('Govtoken balance is zero',))]
 fn test_add_comment_when_token_balance_is_zero() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
     let ipfs_hash: ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
     prank(
         CheatTarget::One(gov_contract_addr),
         admin_addr.try_into().unwrap(),
@@ -479,13 +499,14 @@ fn test_add_comment_when_token_balance_is_zero() {
 
 #[test]
 fn test_add_comment() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
     let ipfs_hash: ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
+    stake_half(gov.contract_address, floating, admin_addr.try_into().unwrap());
     prank(
         CheatTarget::One(gov_contract_addr),
         admin_addr.try_into().unwrap(),
@@ -494,12 +515,13 @@ fn test_add_comment() {
     let prop_id = dispatcher.submit_proposal(42, 1);
 
     prank(
-        CheatTarget::One(token_contract.contract_address),
+        CheatTarget::One(floating.contract_address),
         admin_addr.try_into().unwrap(),
         CheatSpan::TargetCalls(1)
     );
-    token_contract.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
+    floating.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
 
+    stake_all(gov.contract_address, floating, first_address.try_into().unwrap());
     prank(
         CheatTarget::One(gov_contract_addr),
         first_address.try_into().unwrap(),
@@ -512,15 +534,16 @@ fn test_add_comment() {
 
 #[test]
 fn test_get_comments() {
-    let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
-    let gov_contract = deploy_governance(token_contract.contract_address);
-    let gov_contract_addr = gov_contract.contract_address;
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
     let ipfs_hash_1: ByteArray = "QmTFMPrNQiJ6o5dfyMn4PPjbQhDrJ6Mu93qe2yMvgnJYM6";
     let ipfs_hash_2: ByteArray = "Uinienu2G54J6o5dfyMn4PPjbQhDrJ6Mu93qbhwjni2ijnf";
     let ipfs_hash_3: ByteArray = "MPrNQiJbdik6o5dfyMn4Pjnislnenoen7hHSU8Ii82jdB56";
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
+    stake_half(gov.contract_address, floating, admin_addr.try_into().unwrap());
     prank(
         CheatTarget::One(gov_contract_addr),
         admin_addr.try_into().unwrap(),
@@ -529,11 +552,12 @@ fn test_get_comments() {
     let prop_id = dispatcher.submit_proposal(42, 1);
 
     prank(
-        CheatTarget::One(token_contract.contract_address),
+        CheatTarget::One(floating.contract_address),
         admin_addr.try_into().unwrap(),
         CheatSpan::TargetCalls(1)
     );
-    token_contract.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
+    floating.transfer(first_address.try_into().unwrap(), 100000.try_into().unwrap());
+    stake_all(gov.contract_address, floating, first_address.try_into().unwrap());
 
     prank(
         CheatTarget::One(gov_contract_addr),
