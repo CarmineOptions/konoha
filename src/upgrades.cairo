@@ -5,28 +5,28 @@ trait IUpgrades<TContractState> {
 
 #[starknet::component]
 mod upgrades {
-    use core::result::ResultTrait;
-    use core::array::ArrayTrait;
-    use traits::TryInto;
-    use option::OptionTrait;
-    use traits::Into;
     use core::SpanTrait;
-
-    use starknet::SyscallResultTrait;
-    use starknet::SyscallResult;
-    use starknet::syscalls;
-    use starknet::ClassHash;
-    use starknet::ContractAddress;
-    use starknet::class_hash;
-
-    use konoha::types::{CustomProposalConfig, PropDetails};
-    use konoha::contract::Governance;
+    use core::array::ArrayTrait;
+    use core::result::ResultTrait;
+    use konoha::airdrop::airdrop as airdrop_component;
     use konoha::contract::Governance::ContractState;
+    use konoha::contract::Governance;
 
     use konoha::proposals::proposals as proposals_component;
     use konoha::proposals::proposals::ProposalsImpl;
-    use konoha::airdrop::airdrop as airdrop_component;
     use konoha::traits::get_governance_token_address_self;
+
+    use konoha::types::{CustomProposalConfig, PropDetails};
+    use option::OptionTrait;
+    use starknet::ClassHash;
+    use starknet::ContractAddress;
+    use starknet::SyscallResult;
+
+    use starknet::SyscallResultTrait;
+    use starknet::class_hash;
+    use starknet::syscalls;
+    use traits::Into;
+    use traits::TryInto;
 
     #[storage]
     struct Storage {

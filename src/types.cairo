@@ -1,8 +1,8 @@
-use starknet::SyscallResult;
-use starknet::syscalls::{storage_read_syscall, storage_write_syscall, ClassHash};
-use starknet::storage_address_from_base_and_offset;
-use starknet::ContractAddress;
 use core::serde::Serde;
+use starknet::ContractAddress;
+use starknet::SyscallResult;
+use starknet::storage_address_from_base_and_offset;
+use starknet::syscalls::{storage_read_syscall, storage_write_syscall, ClassHash};
 
 #[derive(Copy, Drop, Serde, starknet::Store)]
 struct PropDetails {

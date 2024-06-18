@@ -13,10 +13,10 @@ trait IveCARM<TContractState> {
 #[starknet::contract]
 mod MyToken {
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
-    use starknet::ContractAddress;
-    use starknet::ClassHash;
-    use openzeppelin::token::erc20::ERC20Component;
     use openzeppelin::access::ownable::ownable::OwnableComponent;
+    use openzeppelin::token::erc20::ERC20Component;
+    use starknet::ClassHash;
+    use starknet::ContractAddress;
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);

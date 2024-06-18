@@ -1,8 +1,16 @@
 use array::ArrayTrait;
-use core::traits::TryInto;
 use core::traits::Into;
+use core::traits::TryInto;
 use debug::PrintTrait;
-use starknet::ContractAddress;
+use konoha::constants;
+use konoha::contract::IGovernanceDispatcher;
+use konoha::contract::IGovernanceDispatcherTrait;
+use konoha::discussion::IDiscussionDispatcher;
+use konoha::discussion::IDiscussionDispatcherTrait;
+use konoha::proposals::IProposalsDispatcher;
+use konoha::proposals::IProposalsDispatcherTrait;
+use konoha::upgrades::IUpgradesDispatcher;
+use konoha::upgrades::IUpgradesDispatcherTrait;
 use openzeppelin::token::erc20::interface::{
     IERC20Dispatcher, IERC20DispatcherTrait, IERC20CamelOnlyDispatcher,
     IERC20CamelOnlyDispatcherTrait
@@ -11,23 +19,15 @@ use snforge_std::{
     BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget,
     prank, CheatSpan
 };
+use starknet::ContractAddress;
+
+use starknet::get_block_timestamp;
 
 use super::setup::{
     admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens,
     deploy_governance_and_both_tokens, test_vote_upgrade_root, check_if_healthy
 };
 use super::staking_tests::{set_staking_curve, stake_all, stake_half};
-use konoha::contract::IGovernanceDispatcher;
-use konoha::contract::IGovernanceDispatcherTrait;
-use konoha::proposals::IProposalsDispatcher;
-use konoha::proposals::IProposalsDispatcherTrait;
-use konoha::upgrades::IUpgradesDispatcher;
-use konoha::upgrades::IUpgradesDispatcherTrait;
-use konoha::constants;
-use konoha::discussion::IDiscussionDispatcher;
-use konoha::discussion::IDiscussionDispatcherTrait;
-
-use starknet::get_block_timestamp;
 
 
 const GOV_TOKEN_INITIAL_SUPPLY: felt252 = 1000000000000000000;

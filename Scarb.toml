@@ -18,6 +18,9 @@ snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag 
 [scripts]
 test = "snforge test"
 
+[tool.fmt]
+sort-module-level-items = true
+
 [[tool.snforge.fork]]
 name = "MAINNET"
 url = "http://34.22.208.73:6060/v0_7"

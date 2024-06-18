@@ -11,22 +11,22 @@ trait IAirdrop<TContractState> {
 
 #[starknet::component]
 mod airdrop {
-    use konoha::contract::IGovernance;
     use array::ArrayTrait;
     use hash::LegacyHash;
-    use traits::Into;
-    use starknet::ContractAddressIntoFelt252;
-    use starknet::ContractAddress;
-    use traits::TryInto;
-    use option::OptionTrait;
+    use konoha::contract::Governance::ContractState;
+
+    use konoha::contract::Governance;
+    use konoha::contract::IGovernance;
 
     use konoha::merkle_tree::MerkleTree;
     use konoha::merkle_tree::MerkleTreeTrait;
-
-    use konoha::contract::Governance;
-    use konoha::contract::Governance::ContractState;
     use konoha::traits::IGovernanceTokenDispatcher;
     use konoha::traits::IGovernanceTokenDispatcherTrait;
+    use option::OptionTrait;
+    use starknet::ContractAddress;
+    use starknet::ContractAddressIntoFelt252;
+    use traits::Into;
+    use traits::TryInto;
 
     #[storage]
     struct Storage {

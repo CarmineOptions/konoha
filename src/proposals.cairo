@@ -38,47 +38,46 @@ trait IProposals<TContractState> {
 
 #[starknet::component]
 mod proposals {
-    use konoha::proposals::IProposals;
-    use konoha::contract::IGovernance;
-    use konoha::contract::IGovernanceDispatcher;
-    use konoha::contract::IGovernanceDispatcherTrait;
-    use traits::TryInto;
-    use option::OptionTrait;
-    use traits::Into;
-    use box::BoxTrait;
-    use zeroable::Zeroable;
-
     use array::ArrayTrait;
     use array::SpanTrait;
+    use box::BoxTrait;
     use clone::Clone;
 
     use hash::LegacyHash;
-
-    use starknet::contract_address::ContractAddressZeroable;
-    use starknet::class_hash::ClassHashZeroable;
-    use starknet::get_block_info;
-    use starknet::get_block_timestamp;
-    use starknet::get_caller_address;
-    use starknet::BlockInfo;
-    use starknet::ContractAddress;
-    use starknet::ClassHash;
-    use starknet::contract_address_const;
-    use starknet::event::EventEmitter;
-    use starknet::get_contract_address;
-
-
-    use starknet::class_hash::class_hash_try_from_felt252;
-    use starknet::contract_address::contract_address_to_felt252;
-
-    use konoha::types::BlockNumber;
-    use konoha::types::ContractType;
-    use konoha::types::PropDetails;
-    use konoha::types::VoteStatus;
-    use konoha::types::CustomProposalConfig;
+    use konoha::constants;
+    use konoha::contract::IGovernance;
+    use konoha::contract::IGovernanceDispatcher;
+    use konoha::contract::IGovernanceDispatcherTrait;
+    use konoha::proposals::IProposals;
     use konoha::traits::IERC20Dispatcher;
     use konoha::traits::IERC20DispatcherTrait;
     use konoha::traits::get_governance_token_address_self;
-    use konoha::constants;
+
+    use konoha::types::BlockNumber;
+    use konoha::types::ContractType;
+    use konoha::types::CustomProposalConfig;
+    use konoha::types::PropDetails;
+    use konoha::types::VoteStatus;
+    use option::OptionTrait;
+    use starknet::BlockInfo;
+    use starknet::ClassHash;
+    use starknet::ContractAddress;
+    use starknet::class_hash::ClassHashZeroable;
+
+
+    use starknet::class_hash::class_hash_try_from_felt252;
+
+    use starknet::contract_address::ContractAddressZeroable;
+    use starknet::contract_address::contract_address_to_felt252;
+    use starknet::contract_address_const;
+    use starknet::event::EventEmitter;
+    use starknet::get_block_info;
+    use starknet::get_block_timestamp;
+    use starknet::get_caller_address;
+    use starknet::get_contract_address;
+    use traits::Into;
+    use traits::TryInto;
+    use zeroable::Zeroable;
 
     #[storage]
     struct Storage {
