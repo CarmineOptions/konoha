@@ -1,7 +1,4 @@
-use traits::Into;
-use traits::TryInto;
-
-use starknet::{ContractAddress, storage_access::storage_address_from_base};
+use konoha::constants;
 
 use konoha::contract::IGovernanceDispatcher;
 use konoha::contract::IGovernanceDispatcherTrait;
@@ -9,11 +6,14 @@ use konoha::proposals::IProposalsDispatcher;
 use konoha::proposals::IProposalsDispatcherTrait;
 use konoha::upgrades::IUpgradesDispatcher;
 use konoha::upgrades::IUpgradesDispatcherTrait;
-use konoha::constants;
 use snforge_std::{CheatTarget, ContractClassTrait, prank, CheatSpan, get_class_hash};
+
+use starknet::{ContractAddress, storage_access::storage_address_from_base};
 
 use super::setup::{admin_addr, deploy_governance_and_both_tokens};
 use super::staking_tests::{set_staking_curve, stake_all, stake_half};
+use traits::Into;
+use traits::TryInto;
 
 
 #[test]

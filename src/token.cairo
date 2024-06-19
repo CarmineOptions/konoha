@@ -2,16 +2,16 @@
 
 #[starknet::contract]
 mod FloatingToken {
-    use openzeppelin::token::erc20::interface::IERC20;
-    use openzeppelin::token::erc20::ERC20Component;
-    use starknet::{ClassHash, ContractAddress};
-
-    use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
-    use openzeppelin::upgrades::interface::IUpgradeable;
-
-    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait as OwnableInternalTrait;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::interface::IOwnableTwoStep;
+
+    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait as OwnableInternalTrait;
+    use openzeppelin::token::erc20::ERC20Component;
+    use openzeppelin::token::erc20::interface::IERC20;
+    use openzeppelin::upgrades::interface::IUpgradeable;
+
+    use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
+    use starknet::{ClassHash, ContractAddress};
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);

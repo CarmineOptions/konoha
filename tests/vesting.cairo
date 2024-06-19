@@ -1,15 +1,15 @@
+use array::ArrayTrait;
 use core::option::OptionTrait;
 use core::result::ResultTrait;
-use array::ArrayTrait;
 use core::traits::TryInto;
 use debug::PrintTrait;
-use starknet::ContractAddress;
-use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget
-};
 
 use konoha::vesting::{IVestingDispatcher, IVestingDispatcherTrait, IVesting};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+use snforge_std::{
+    BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget
+};
+use starknet::ContractAddress;
 
 // returns gov addr, token addr
 fn test_setup() -> (ContractAddress, ContractAddress) {

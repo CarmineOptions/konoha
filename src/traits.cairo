@@ -1,5 +1,11 @@
-use starknet::{ClassHash, ContractAddress};
 use core::starknet::SyscallResultTrait;
+
+// To be called from within any component to access the parent contract.
+// Not nice, but it works.
+// Incurs nonnegligible gas cost.
+// Could be replaced by directly fetching the address from storage?
+use starknet::get_contract_address;
+use starknet::{ClassHash, ContractAddress};
 
 
 #[starknet::interface]
@@ -7,12 +13,6 @@ trait IProvidesAddresses<TContractState> {
     fn get_governance_token_address(self: @TContractState) -> ContractAddress;
     fn get_amm_address(self: @TContractState) -> ContractAddress;
 }
-
-// To be called from within any component to access the parent contract.
-// Not nice, but it works.
-// Incurs nonnegligible gas cost.
-// Could be replaced by directly fetching the address from storage?
-use starknet::get_contract_address;
 fn get_governance_token_address_self() -> ContractAddress {
     let dsp = IProvidesAddressesDispatcher { contract_address: get_contract_address() };
     dsp.get_governance_token_address()

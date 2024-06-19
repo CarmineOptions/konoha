@@ -25,11 +25,11 @@ trait IVesting<TContractState> {
 
 #[starknet::component]
 mod vesting {
-    use starknet::ContractAddress;
-    use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
     use konoha::contract::Governance;
     use konoha::contract::{IGovernanceDispatcher, IGovernanceDispatcherTrait};
     use konoha::traits::{IGovernanceTokenDispatcher, IGovernanceTokenDispatcherTrait};
+    use starknet::ContractAddress;
+    use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
 
     #[storage]
     struct Storage {

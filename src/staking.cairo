@@ -18,11 +18,11 @@ trait IStaking<TContractState> {
 
 #[starknet::component]
 mod staking {
-    use starknet::{
-        ContractAddress, get_block_timestamp, get_caller_address, get_contract_address, StorePacking
-    };
     use konoha::traits::{
         get_governance_token_address_self, IERC20Dispatcher, IERC20DispatcherTrait
+    };
+    use starknet::{
+        ContractAddress, get_block_timestamp, get_caller_address, get_contract_address, StorePacking
     };
     use zeroable::NonZero;
     use zeroable::NonZeroIntoImpl;

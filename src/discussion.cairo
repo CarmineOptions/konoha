@@ -1,5 +1,5 @@
-use starknet::ContractAddress;
 use konoha::types::Comment;
+use starknet::ContractAddress;
 
 #[starknet::interface]
 trait IDiscussion<TContractState> {
@@ -13,15 +13,15 @@ mod discussion {
     use core::box::Box;
     use core::serde::Serde;
 
-    use starknet::get_caller_address;
-    use starknet::ContractAddress;
-
     use konoha::proposals::proposals as proposals_component;
     use konoha::proposals::proposals::ProposalsImpl;
     use konoha::traits::IERC20Dispatcher;
     use konoha::traits::IERC20DispatcherTrait;
     use konoha::traits::get_governance_token_address_self;
     use konoha::types::Comment;
+    use starknet::ContractAddress;
+
+    use starknet::get_caller_address;
 
     #[storage]
     struct Storage {

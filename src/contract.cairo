@@ -1,8 +1,8 @@
+use konoha::types::{ContractType, PropDetails, VoteStatus};
 // This file if possible calls out to Proposals or Upgrades or other files where actual logic resides.
 // When Components arrive in Cairo 2.?, it will be refactored to take advantage of them. Random change to rerun CI
 
 use starknet::ContractAddress;
-use konoha::types::{ContractType, PropDetails, VoteStatus};
 
 #[starknet::interface]
 trait IGovernance<TContractState> {
@@ -27,17 +27,20 @@ trait IGovernance<TContractState> {
 
 #[starknet::contract]
 mod Governance {
-    use konoha::types::BlockNumber;
-    use konoha::types::VoteStatus;
-    use konoha::types::ContractType;
-    use konoha::types::PropDetails;
-    use konoha::proposals::proposals as proposals_component;
-    use konoha::upgrades::upgrades as upgrades_component;
     use konoha::airdrop::airdrop as airdrop_component;
-    use konoha::vesting::vesting as vesting_component;
     use konoha::discussion::discussion as discussion_component;
+    use konoha::proposals::proposals as proposals_component;
     use konoha::staking::staking as staking_component;
     use konoha::staking::{IStakingDispatcher, IStakingDispatcherTrait};
+    use konoha::types::BlockNumber;
+    use konoha::types::ContractType;
+    use konoha::types::PropDetails;
+    use konoha::types::VoteStatus;
+    use konoha::upgrades::upgrades as upgrades_component;
+    use konoha::vesting::vesting as vesting_component;
+    use starknet::get_contract_address;
+
+    use starknet::syscalls::deploy_syscall;
 
     use starknet::{ContractAddress, ClassHash};
 
@@ -112,9 +115,6 @@ mod Governance {
         DiscussionEvent: discussion_component::Event,
         StakingEvent: staking_component::Event,
     }
-
-    use starknet::syscalls::deploy_syscall;
-    use starknet::get_contract_address;
 
     #[constructor]
     fn constructor(
