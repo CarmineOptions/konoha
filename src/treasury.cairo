@@ -29,6 +29,12 @@ trait ITreasury<TContractState> {
     fn get_amm_address(self: @TContractState) -> ContractAddress;
     fn deposit_to_zklend(ref self: TContractState, token: ContractAddress, amount: u256);
     fn withdraw_from_zklend(ref self: TContractState, token: ContractAddress, amount: u256);
+    fn deposit_to_nostra_lending_pool(
+        ref self: TContractState, token: ContractAddress, amount: u256
+    );
+    fn withdraw_from_nostra_lending_pool(
+        ref self: TContractState, token: ContractAddress, amount: u256
+    );
 }
 
 #[starknet::contract]
@@ -39,6 +45,9 @@ mod Treasury {
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
     use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
+    use konoha::treasury_types::nostra::interface::{
+        INostraAssetToken, INostraAssetTokenDispatcher, INostraAssetTokenDispatcherTrait
+    };
     use konoha::treasury_types::zklend::interfaces::{
         IMarket, IMarketDispatcher, IMarketDispatcherTrait
     };
@@ -126,6 +135,7 @@ mod Treasury {
         const INSUFFICIENT_FUNDS: felt252 = 'Insufficient token balance';
         const INSUFFICIENT_POOLED_TOKEN: felt252 = 'Insufficient Pooled balance';
         const INSUFFICIENT_LP_TOKENS: felt252 = 'Insufficient LP token balance';
+        const INSUFFICIENT_NOSTRA_LENDING_P_TOKENS: felt252 = 'Insufficient nostr LP token bal';
         const ADDRESS_ZERO_GOVERNANCE: felt252 = 'Governance addr is zero address';
         const ADDRESS_ZERO_AMM: felt252 = 'AMM addr is zero address';
         const ADDRESS_ZERO_ZKLEND_MARKET: felt252 = 'zklnd markt addr is zero addrr';
@@ -285,6 +295,40 @@ mod Treasury {
             zklend_market.withdraw(token, amount.try_into().unwrap());
 
             self.emit(LiquidityWithdrawnFromZklend { token_address: token, amount });
+        }
+
+        //Deposit token to Nostra lending pool
+        fn deposit_to_nostra_lending_pool(
+            ref self: ContractState, token: ContractAddress, amount: u256
+        ) {
+            self.ownable.assert_only_owner();
+            let pooled_token: INostraAssetTokenDispatcher = INostraAssetTokenDispatcher {
+                contract_address: token
+            };
+
+            assert(
+                pooled_token.balanceOf(get_contract_address()) >= amount,
+                Errors::INSUFFICIENT_POOLED_TOKEN
+            );
+
+            pooled_token.deposit(token, amount.try_into().unwrap());
+        }
+
+        // Withdraw token from Nostra lending pool
+        fn withdraw_from_nostra_lending_pool(
+            ref self: ContractState, token: ContractAddress, amount: u256
+        ) {
+            self.ownable.assert_only_owner();
+            let pooled_token: INostraAssetTokenDispatcher = INostraAssetTokenDispatcher {
+                contract_address: token
+            };
+
+            assert(
+                pooled_token.balanceOf(get_contract_address()) >= amount,
+                Errors::INSUFFICIENT_NOSTRA_LENDING_P_TOKENS
+            );
+
+            pooled_token.withdraw(token, get_contract_address(), amount.try_into().unwrap());
         }
     }
 
