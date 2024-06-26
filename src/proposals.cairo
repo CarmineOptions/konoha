@@ -238,7 +238,6 @@ mod proposals {
             if index >= calldata_span.len() {
                 return new_list;
             } else {
-                //let calldata_span: Span<(ContractAddress, u128)> = calldata.span();
                 let (curr_addr, curr_amount) = *calldata_span.at(index);
                 if curr_addr == to_addr {
                     new_list.append((curr_addr, new_amount));

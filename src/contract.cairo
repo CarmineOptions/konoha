@@ -1,6 +1,5 @@
 use konoha::types::{ContractType, PropDetails, VoteStatus};
 // This file if possible calls out to Proposals or Upgrades or other files where actual logic resides.
-// When Components arrive in Cairo 2.?, it will be refactored to take advantage of them. Random change to rerun CI
 
 use starknet::ContractAddress;
 
@@ -13,7 +12,7 @@ trait IGovernance<TContractState> {
     // UPGRADES
 
     fn get_governance_token_address(self: @TContractState) -> ContractAddress;
-// fn apply_passed_proposal(ref self: TContractState, prop_id: felt252);
+// rest in component
 // AIRDROPS
 
 // in component
@@ -21,7 +20,10 @@ trait IGovernance<TContractState> {
 // VESTING
 
 // in component
-// OPTIONS / ONE-OFF
+
+// STAKING
+
+// in component
 }
 
 
