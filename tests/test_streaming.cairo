@@ -39,10 +39,10 @@ fn test_add_new_stream() {
     
     streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
     
-    let key = (get_caller_address(), recipient, end_time, start_time);
+    //let key = (get_caller_address(), recipient, end_time, start_time);
 
     let (claimed_amount, stored_total_amount) = streaming.get_stream_info(
-        get_contract_address(),  // streamer
+        streamer, 
         recipient,
         start_time,
         end_time,
@@ -50,25 +50,5 @@ fn test_add_new_stream() {
 
     assert_eq!(claimed_amount, 0, "Incorrect claimed amount after stream creation");
     assert_eq!(stored_total_amount, total_amount, "Incorrect total amount stored");
-    println!("Stream Info for key {:?}: claimed_amount={}, stored_total_amount={}", key, claimed_amount, stored_total_amount);
 }
-
-fn main(){
-    test_add_new_stream();
-}
-
-
-//fn test_deploy() -> ContractAddress {
-//    let (gov_dispatcher, _, _) = deploy_governance_and_both_tokens();
-//    gov_dispatcher.contract_address
-//}
-//
-//#[test]
-//fn test_add_new_stream() {
-//    let gov_address = test_deploy();
-//    let streaming_dispatcher = IStreamingDispatcher { contract_address: gov_address };
-//
-//    start_warp(CheatTarget::All, 1);
-//    streaming_dispatcher.add_new_stream(0x2.try_into().unwrap(), 100, 200, 100000);
-//}
 
