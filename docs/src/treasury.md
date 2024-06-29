@@ -8,9 +8,8 @@ The Treasury contract manages a protocol's funds, allowing for various financial
 
 The Treasury is intentionally designed as a standalone contract, separate from the main governance contract. This architectural decision provides several benefits:
 
-1. **Enhanced Security**: By isolating the Treasury functionality, the risk of potential vulnerabilities in other parts of the system affecting the funds is reduced.
-2. **Operational Flexibility**: The standalone nature allows for easier upgrades and modifications to the Treasury without affecting the core governance functionality.
-3. **Clear Separation of Concerns**: This design clearly delineates financial operations from governance operations.
+- **Enhanced Security**: By isolating the Treasury functionality, the risk of potential vulnerabilities in other parts of the system affecting the funds is reduced.
+- **Operational Flexibility**: The standalone nature allows for easier upgrades and modifications to the Treasury without affecting the core governance functionality.
 
 ## Key Functions
 
@@ -108,7 +107,7 @@ Submit a proposal with to_upgrade = 6 and the payload being the class hash of th
 
 ### 3. Execute the Proposal
 
-Once the proposal passes, call apply_passed_proposal on the governance contract to execute the arbitrary proposal. This will:
+Once the proposal passes, call [apply_passed_proposal](./upgrades.md#apply_passed_proposal) on the governance contract to execute the arbitrary proposal. This will:
 
 Deploy the DeFiSpring contract with governance as the owner.
 Transfer the specified amount of tokens from the Treasury to the DeFiSpring contract.

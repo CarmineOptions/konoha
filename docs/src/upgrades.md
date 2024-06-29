@@ -13,6 +13,8 @@ This is the main function of the upgrades component. It takes a proposal ID as a
 3. Retrieves the proposal details.
 4. Executes the upgrade based on the proposal type.
 
+It can be called by anyone, e.g. a keeper bot. The only parameter is the `prop_id` of the proposal to apply.
+
 ## Security Considerations
 
 - Only passed proposals can be applied.

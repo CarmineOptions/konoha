@@ -1,12 +1,12 @@
 # Proposals
 
-The core of Konoha are proposals. This is one of the two components (the other being [upgrades](upgrades.md) that should be mixed into every deployed instance.
+The core of Konoha are proposals. This is one of the two components (the other being [upgrades](upgrades.md)) that should be mixed into every deployed instance.
 
 ## Constants
 
-To propose a proposal, you need 1/200 of the total supply of the voting token.
+To propose a proposal, you need voting power equivalent to 1/200th of the total supply of voting tokens.
 
-By default, it takes a week for a proposal to pass.
+By default, proposals have a one-week voting period
 
 Both values are adjustable in `constants.cairo`.
 
@@ -29,7 +29,7 @@ To propose a builtin proposal, call `submit_proposal` with parameters:
 
 ### Custom proposals
 
-Well suited for actions that are to be performed relatively frequently and that follow code paths defined ahead of time. Even though you could use an arbitrary proposal for everything that you would use a custom one for, this is not recommended as it obfuscates the meaning of proposals for anyone wishing to verify what is actually being passed.
+Custom proposals are best suited for actions that are performed regularly and follow predetermined procedures. While arbitrary proposals can technically be used for any action, doing so may obscure the intent of the proposals, making verification more difficult.
 
 Examples of what custom proposals are for:
 - adjust risk parameters of a lending protocol
@@ -48,7 +48,7 @@ A custom proposal is defined by the following values:
 
 ### Arbitrary proposals
 
-These allow the execution of arbitrary code in the execution context (and with the corresponding rights) of the main governance contract.
+Arbitrary proposals enable the execution of any code with the same permissions and authority as the main governance contract.
 
 To prepare an arbitrary proposal, first declare a class with the function `execute_arbitrary_proposal` and note the class hash. This function will execute in the context of governance (will be library called).
 
