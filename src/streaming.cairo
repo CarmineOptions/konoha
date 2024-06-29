@@ -1,7 +1,5 @@
 use starknet::ContractAddress;
 
-// To add new vesting schedules, this Component should be part of a Custom proposal which calls add_linear_vesting_schedule or a vesting milestone.
-// This will execute the code from this component in the context of the contract. Only vest() should be exported externally from the contract.
 #[starknet::interface]
 trait IStreaming<TContractState>{
     fn add_new_stream(
