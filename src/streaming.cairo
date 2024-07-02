@@ -16,7 +16,7 @@ trait IStreaming<TContractState>{
         streamer: ContractAddress,
         recipient: ContractAddress,
         start_time: u64,
-        end_time: u64
+        end_time: u64,
      );
 
      fn cancel_stream(
@@ -27,7 +27,7 @@ trait IStreaming<TContractState>{
      );
 
     fn get_stream_info(
-        ref self: TContractState, //TContractState?
+        ref self: TContractState, 
         streamer: ContractAddress,
         recipient: ContractAddress,
         start_time: u64,
@@ -68,7 +68,10 @@ mod streaming {
     #[derive(starknet::Event, Drop, Serde)]
     struct StreamClaimed{
         streamer: ContractAddress,
-        claimed_amount: u128
+        recipient: ContractAddress,
+        start_time: u64,
+        end_time: u64,
+        total_amount: u128
     }
 
     #[derive(starknet::Event, Drop, Serde)]
@@ -77,13 +80,15 @@ mod streaming {
         recipient: ContractAddress,
         start_time: u64,
         end_time: u64,
-        reclaimed_amount: u128
+        reclaimed_amount: u256        
     }
+    
     //TODO:
     #[embeddable_as(StreamingImpl)]
     impl Streaming<
         TContractState, +HasComponent<TContractState>
     > of super::IStreaming<ComponentState<TContractState>> {
+        
         fn add_new_stream(
             ref self: ComponentState<TContractState>,
             streamer: ContractAddress,
@@ -91,20 +96,22 @@ mod streaming {
             start_time: u64,
             end_time: u64,
             total_amount: u128
-        ){
-            assert(get_caller_address()== get_contract_address(), 'not self-call');
-            assert(start_time < end_time, 'starts first');
-            
+        ) {
             let key = (get_caller_address(), recipient, start_time, end_time);
-            self.streams.write(key, (0, total_amount));
 
+            assert(get_caller_address() == get_contract_address(), 'not self-call');
+            assert(start_time < end_time, 'starts first');
+
+            let mut claimable_amount = 0;
+            self.streams.write(key, (claimable_amount, total_amount));
+        
             self.emit(StreamCreated{
                 streamer: get_caller_address(),
                 recipient: recipient,
                 start_time: start_time,
                 end_time: end_time,
                 total_amount: total_amount
-            })
+            });
         }
 
         fn claim_stream(
@@ -112,43 +119,49 @@ mod streaming {
             streamer: ContractAddress,
             recipient: ContractAddress,
             start_time: u64,
-            end_time: u64
+            end_time: u64,
+
          ){
             let current_time = get_block_timestamp();
 
-            let key: (ContractAddress, ContractAddress, u64, u64) = (
-                streamer,
+            let key = (
+                get_caller_address(),
                 recipient,
                 start_time,
                 end_time,
             );
 
-            let (claimed_amount, total_amount): (u128, u128) = self.streams.read(key);
-
+           let (mut claimed_amount, total_amount): (u128, u128) = self.streams.read(key);
             assert(current_time > start_time, 'stream has not started');
 
             let elapsed_time = if current_time > end_time {
                 end_time - start_time
-            } else{
+            } else{ 
                 current_time - start_time
             };
+            let stream_duration = end_time - start_time;
 
-            let stream_duration = (end_time - start_time);
-            
-            let claimable_amount = (total_amount * elapsed_time.into()) / stream_duration.into();
+
+            let claimable_amount = (total_amount * elapsed_time.into() / stream_duration.into());
             let amount_to_claim = claimable_amount - claimed_amount;
-            assert(amount_to_claim > 0, 'nothing to claim');
-            
-            self.streams.write(key, (claimable_amount + amount_to_claim, total_amount));//claimable shld be (claimable_amount + amount_to_claim)
-            self.streams.read(key);
 
+
+            assert(amount_to_claim > 0, 'nothing to claim');
+            claimed_amount += amount_to_claim;
+            
             let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
             IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() }
-                .mint(recipient, amount_to_claim.into());
+                .mint(recipient, claimed_amount.into());
+
+            self.streams.write(key, (claimable_amount, total_amount));//claimable shld be (token_to_claim + amount_to_claim)?
+
 
             self.emit(StreamClaimed{
-                streamer: streamer,
-                claimed_amount: amount_to_claim,
+                streamer: get_caller_address(),
+                recipient: recipient,
+                start_time: start_time,
+                end_time: end_time,
+                total_amount: total_amount
             })
          }
     
@@ -167,10 +180,9 @@ mod streaming {
 
             // Read from the streams LegacyMap
             let (claimed_amount, total_amount): (u128, u128) = self.streams.read(key);
+            let unclaimed_amount: u256 = total_amount.into() - claimed_amount.into();
 
-            let unclaimed_amount = total_amount - claimed_amount;
             //cancel stream
-
             self.streams.write(key, (0,0));
 
             let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
@@ -193,13 +205,15 @@ mod streaming {
             end_time: u64,
         ) -> (u128, u128) {
             let key: (ContractAddress, ContractAddress, u64, u64) = (
-                streamer,
+                get_caller_address(),
                 recipient,
                 start_time,
                 end_time,
             );
-            self.streams.read(key)
+            let (mut claimable_amount, mut total_amount) : (u128, u128) = self.streams.read(key);
+            (claimable_amount, total_amount)            
         }
+        
         
     }
 } 
