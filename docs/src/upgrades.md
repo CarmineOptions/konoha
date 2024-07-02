@@ -20,14 +20,8 @@ It can be called by anyone, e.g. a keeper bot. The only parameter is the `prop_i
 - Only passed proposals can be applied.
 - Each proposal can only be applied once.
 
-## Events
-
-The upgrades component emits an `Upgraded` event when a proposal is successfully applied, including the proposal ID and upgrade type.
-
 ## Usage
 
-Upgrades are typically initiated through the governance process:
-
-1. A proposal is submitted (see [Proposals](./proposals.md)).
-2. The community votes on the proposal.
-3. If the proposal passes, anyone can call `apply_passed_proposal` to execute the upgrade.
+1. A proposal is submitted and voted on (see [Proposals](./proposals.md)).
+2. If the proposal passes, anyone can call `apply_passed_proposal` to execute the upgrade.
+3. The system emits an `Upgraded` event when a proposal is successfully applied.
