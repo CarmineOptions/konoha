@@ -44,7 +44,6 @@ mod Governance {
     use starknet::get_contract_address;
 
     use starknet::syscalls::deploy_syscall;
-
     use starknet::{ContractAddress, ClassHash};
 
 
