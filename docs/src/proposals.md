@@ -53,3 +53,21 @@ Arbitrary proposals enable the execution of any code with the same permissions a
 To prepare an arbitrary proposal, first declare a class with the function `execute_arbitrary_proposal` and note the class hash. This function will execute in the context of governance (will be library called).
 
 To then propose an arbitrary proposal, call `submit_proposal` with `to_upgrade = 6`, and the payload being the class hash of the previously declared class.
+
+## Customization
+
+Protocols can customize the proposal system in several ways:
+
+1. **Adjust voting parameters**: Modify the `constants.cairo` file to change the required voting power or voting period.
+
+2. **Define custom proposals**: Use the `add_custom_proposal_config` function to define new types of custom proposals specific to your protocol's needs.
+
+3. **Implement arbitrary proposals**: For more complex customizations, create arbitrary proposals that can execute any code within the governance context.
+
+For more detailed customization options, see the [Customizing Konoha](./customizing.md) guide.
+
+## Usage
+
+1. Submit a proposal using `submit_proposal` function.
+2. Token holders vote on the proposal during the voting period.
+3. If the proposal passes, it can be executed using the `apply_passed_proposal` function (see [Upgrades](./upgrades.md)).
