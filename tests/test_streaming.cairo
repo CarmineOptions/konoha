@@ -4,103 +4,185 @@ use core::result::ResultTrait;
 use core::traits::TryInto;
 use debug::PrintTrait;
 
+use konoha::contract::Governance;
+use konoha::contract::{IGovernanceDispatcher, IGovernanceDispatcherTrait};
+use konoha::traits::{IGovernanceTokenDispatcher, IGovernanceTokenDispatcherTrait};
+use starknet::{get_block_timestamp, get_caller_address, get_contract_address, ContractAddress};
 use konoha::vesting::{IVestingDispatcher, IVestingDispatcherTrait, IVesting};
+use konoha::streaming::{IStreamingDispatcher, IStreamingDispatcherTrait, IStreaming};
+
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
     BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget,
     prank, CheatSpan
 };
-use starknet::{ContractAddress, get_caller_address};
+
 use super::setup::{deploy_governance_and_both_tokens};
 
-fn test_setup(gov: ContractAddress) {
-    let grantee: ContractAddress = 0x1.try_into().unwrap();
+fn start_stream(gov: ContractAddress){
     prank(CheatTarget::One(gov), gov, CheatSpan::TargetCalls(4));
-    let gov_vesting = IVestingDispatcher { contract_address: gov };
-    gov_vesting.add_linear_vesting_schedule(10, 10, 10, 1000000, grantee);
+    let streaming = IStreamingDispatcher { contract_address: gov };
+    streaming.add_new_stream(get_caller_address(), 0x2.try_into().unwrap(), 100, 200, 100000);
 }
 
+//passing!
 #[test]
-#[should_panic(expected : ('not self-call',))]
-fn test_unauthorized_add_vesting_schedule() {
+fn test_add_new_stream() {
     let (gov, _, _) = deploy_governance_and_both_tokens();
-    test_setup(gov.contract_address);
+    start_stream(gov.contract_address);
+    let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
 
-    let gov_vesting = IVestingDispatcher { contract_address: gov.contract_address };
+    let streamer = get_caller_address();
+    let recipient = 0x2.try_into().unwrap();
+    let start_time: u64 = 100;
+    let end_time: u64 = 200;
+    let total_amount: u128 = 100000;
+    
+    streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
+    //let key = (get_caller_address(), recipient, end_time, start_time);
 
-    let caller = get_caller_address();
+    let (claimed_amount, stored_total_amount) = streaming.get_stream_info(
+        streamer, 
+        recipient,
+        start_time,
+        end_time,
+    );
 
-    start_warp(CheatTarget::All, 1);
-    start_prank(CheatTarget::One(gov.contract_address), caller);
-
-    let grantee: ContractAddress = 0x1.try_into().unwrap();
-
-    gov_vesting.add_linear_vesting_schedule(10, 10, 10, 1000000, grantee);
+    assert_eq!(streamer, get_caller_address(), "Incorrect streamer addr");
+    assert_eq!(recipient, 0x2.try_into().unwrap(), "Incorrect streamer addr");
+    assert_eq!(start_time, 100, "Incorrect start time");
+    assert_eq!(end_time, 200, "Incorrect end time");
+    assert_eq!(claimed_amount, 0, "Incorrect claimed amount after stream creation");
+    assert_eq!(stored_total_amount, 100000, "Incorrect total amount stored");
 }
 
-#[test]
-#[should_panic(expected: ('not yet eligible',))]
-fn test_unauthorized_vest_early() {
+//passing!
+#[test] 
+#[should_panic(expected: ('starts first',))]
+fn test_valid_stream_time(){
     let (gov, _, _) = deploy_governance_and_both_tokens();
-    test_setup(gov.contract_address);
+    start_stream(gov.contract_address);
+    let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
 
-    let gov_vesting = IVestingDispatcher { contract_address: gov.contract_address };
+    let streamer = get_caller_address();
+    let recipient = 0x2.try_into().unwrap();
+    let start_time: u64 = 200;
+    let end_time: u64 = 100;
+    let total_amount: u128 = 100000;
 
-    start_warp(CheatTarget::All, 1);
-    start_prank(CheatTarget::One(gov.contract_address), gov.contract_address);
-
-    let grantee: ContractAddress = 0x1.try_into().unwrap();
-
-    gov_vesting.add_linear_vesting_schedule(10, 10, 10, 1000000, grantee);
-
-    gov_vesting.vest(grantee, 10);
+    streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
 }
 
-#[test]
-#[should_panic(expected: ('nothing to vest',))]
-fn test_vest_twice() {
+//passing!
+#[test] 
+#[should_panic(expected: ('nothing to claim',))]
+fn test_claimed_amount(){
     let (gov, _, _) = deploy_governance_and_both_tokens();
-    test_setup(gov.contract_address);
+    start_stream(gov.contract_address);
+    let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
 
-    let gov_vesting = IVestingDispatcher { contract_address: gov.contract_address };
+    let streamer = get_caller_address();
+    let recipient = 0x2.try_into().unwrap();
+    let start_time: u64 = 100;
+    let end_time: u64 = 200;
+    let total_amount: u128 = 0;
+    streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
 
-    start_warp(CheatTarget::All, 1);
-    start_prank(CheatTarget::One(gov.contract_address), gov.contract_address);
+    start_warp(CheatTarget::One(gov.contract_address), 150);
+    //shouldn't have anything to claim
+    streaming.claim_stream(streamer, recipient, start_time, end_time);
+}
 
-    let grantee: ContractAddress = 0x1.try_into().unwrap();
-
-    gov_vesting.add_linear_vesting_schedule(10, 10, 10, 1000000, grantee);
-
-    start_warp(CheatTarget::All, 11);
-
-    gov_vesting.vest(grantee, 10);
-    gov_vesting.vest(grantee, 10);
+//passing!
+#[test]
+#[should_panic(expected: ('stream has not started',))]
+fn test_stream_started(){
+  let (gov, _, _) = deploy_governance_and_both_tokens();
+  start_stream(gov.contract_address);
+  let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
+  let streamer = get_caller_address();
+  let recipient = 0x2.try_into().unwrap();
+  let start_time: u64 = 100;
+  let end_time: u64 = 200;
+  let total_amount: u128 = 100000;
+  streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
+  start_warp(CheatTarget::One(gov.contract_address), 50);// before of stream
+  
+  streaming.claim_stream(streamer, recipient, start_time, end_time);
 }
 
 #[test]
-fn test_add_simple_vesting_schedule() {
-    let (gov, token_address, _) = deploy_governance_and_both_tokens();
-    test_setup(gov.contract_address);
+fn test_claim_stream() {
+    let (gov, _, _) = deploy_governance_and_both_tokens();
+    start_stream(gov.contract_address);
+    let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
 
-    let gov_vesting = IVestingDispatcher { contract_address: gov.contract_address };
-    let tok = IERC20Dispatcher { contract_address: token_address.contract_address };
+    let streamer = get_caller_address();
+    let recipient = 0x2.try_into().unwrap();
+    let start_time: u64 = 100;
+    let end_time: u64 = 200;
+    let total_amount: u128 = 100000;
 
-    let grantee: ContractAddress = 0x1.try_into().unwrap();
-    gov_vesting.add_linear_vesting_schedule(10, 10, 10, 1000001, grantee);
+    streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
+    let (claimable_amount, total_amount) = streaming.get_stream_info(
+        streamer, 
+        recipient,
+        start_time,
+        end_time,
+    );
+    start_warp(CheatTarget::One(gov.contract_address), 150);
 
-    start_warp(CheatTarget::All, 11); // past first vest
-    // anyone can claim for the grantee
-    gov_vesting.vest(grantee, 10);
-    assert(tok.balance_of(grantee) == 100000, 'vesting unsuccessful');
+    streaming.claim_stream(streamer, recipient, start_time, end_time);
+    
 
-    // grantee themselves can claim too
-    start_prank(CheatTarget::One(gov.contract_address), grantee);
-    start_warp(CheatTarget::All, 21); // past second vest
-    gov_vesting.vest(grantee, 20);
-    assert(tok.balance_of(grantee) == 200000, 'vesting unsuccessful');
 
-    start_warp(CheatTarget::All, 101); // past last vest. no requirement to vest in order
-    gov_vesting.vest(grantee, 100);
-    // leftover tokens are included in last vest. (remainder after division)
-    assert(tok.balance_of(grantee) == 300001, 'vesting unsuccessful');
+    let expected_claimed_amount = (100000 * 100/ 100); //should be 50% since middle of stream
+    assert_eq!(total_amount, 100000, "Incorrect total amount after claiming the stream");
+    assert_eq!(claimable_amount, expected_claimed_amount, "Incorrect claimed amount after claiming the stream");
+
+    streaming.claim_stream(streamer, recipient, start_time, end_time);
+    let (claimable_amount, total_amount) = streaming.get_stream_info(streamer, recipient, start_time, end_time);
+
+    assert_eq!(claimable_amount, expected_claimed_amount, "Claimed amount should remain the same after second claim attempt");
+    assert_eq!(total_amount, total_amount, "Total amount stored should remain the same after second claim attempt");
+}
+
+#[test]
+fn test_cancel_stream() {
+    let (gov, _, _) = deploy_governance_and_both_tokens();
+    start_stream(gov.contract_address);
+    let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
+
+    let streamer = get_caller_address();
+    let recipient = 0x2.try_into().unwrap();
+    let start_time: u64 = 100;
+    let end_time: u64 = 200;
+    let total_amount: u128 = 100000;
+
+    streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
+
+    start_warp(CheatTarget::One(gov.contract_address), 150);
+
+    //test cancel_stream
+    streaming.cancel_stream(recipient, start_time, end_time);
+
+    let (claimed_amount, stored_total_amount) = streaming.get_stream_info(
+        streamer, 
+        recipient, 
+        start_time, 
+        end_time);
+
+    assert_eq!(claimed_amount, 0, "Claimed amount should be 0 after canceling the stream");
+    assert_eq!(stored_total_amount, 0, "Total amount should be 0 after canceling the stream");
+
+    let unclaimed_amount: u256 = total_amount.into() - claimed_amount.into(); //100000
+    let self_dsp = IGovernanceDispatcher { contract_address: gov.contract_address };
+    let token_address = self_dsp.get_governance_token_address();
+    let erc20 = IERC20Dispatcher { contract_address: token_address };
+
+    // Check the balance of the streamer (caller address) with ERC_20, I couldnt use balance_of
+    let balance = erc20.balance_of(get_caller_address());
+
+    assert_eq!(unclaimed_amount.into(), 100000, "Unclaimed amount should be reclaimed correctly");
+    assert_eq!(balance, 0, "balance");
 }
