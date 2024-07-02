@@ -133,18 +133,18 @@ fn test_claim_stream() {
     start_warp(CheatTarget::One(gov.contract_address), 150);
 
     streaming.claim_stream(streamer, recipient, start_time, end_time);
-    
 
-
-    let expected_claimed_amount = (100000 * 100/ 100); //should be 50% since middle of stream
+    let expected_claimed_amount = (100000 * 50/ 100); //should be 50% since middle of stream
     assert_eq!(total_amount, 100000, "Incorrect total amount after claiming the stream");
-    assert_eq!(claimable_amount, expected_claimed_amount, "Incorrect claimed amount after claiming the stream");
+    assert_eq!(claimable_amount, 0, "Incorrect claimed amount after claiming the stream");
 
-    streaming.claim_stream(streamer, recipient, start_time, end_time);
-    let (claimable_amount, total_amount) = streaming.get_stream_info(streamer, recipient, start_time, end_time);
+    let self_dsp = IGovernanceDispatcher { contract_address: gov.contract_address };
+    let token_address = self_dsp.get_governance_token_address();
+    let erc20 = IERC20Dispatcher { contract_address: token_address };
+    
+    let balance = erc20.balance_of(recipient);
 
-    assert_eq!(claimable_amount, expected_claimed_amount, "Claimed amount should remain the same after second claim attempt");
-    assert_eq!(total_amount, total_amount, "Total amount stored should remain the same after second claim attempt");
+    assert_eq!(balance, expected_claimed_amount, "Balance should match the expected claimed amount");
 }
 
 #[test]
