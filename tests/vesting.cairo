@@ -20,7 +20,6 @@ fn test_setup(gov: ContractAddress) {
     gov_vesting.add_linear_vesting_schedule(10, 10, 10, 1000000, grantee);
 }
 
-//passing!
 #[test]
 #[should_panic(expected : ('not self-call',))]
 fn test_unauthorized_add_vesting_schedule() {
