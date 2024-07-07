@@ -24,7 +24,6 @@ export default function Comments({ proposalId }: Props) {
   });
 
 
-  console.log(data, "from smart contract")
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,6 +49,10 @@ export default function Comments({ proposalId }: Props) {
     navigator.clipboard.writeText(address);
     setIsCopied(true);
   }
+
+
+
+  
 
 
   return isLoading ? (

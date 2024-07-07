@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useAccount, useContractWrite } from "@starknet-react/core";
-import { CONTRACT_ADDR, formatAddress } from "../lib/config";
-import { shortString } from "starknet";
+import { CONTRACT_ADDR, formatAddressBravoos } from "../lib/config";
+import {byteArray} from "starknet"
+
 import { submitCommentApi } from "../api/apiService";
 export default function NewcommentCommentForm({
   setIsModalOpen,
@@ -21,8 +22,8 @@ export default function NewcommentCommentForm({
       contractAddress: CONTRACT_ADDR,
       entrypoint: "add_comment",
       calldata: [
-        propId.toString(),
-        shortString.splitLongString(ipfsHash).toString(),
+       propId.toString(),
+       byteArray.byteArrayFromString(ipfsHash)
       ],
     };
     return [tx];
@@ -43,9 +44,10 @@ export default function NewcommentCommentForm({
       return;
     }
 
+
     const payload = {
       text: comment,
-      address: formatAddress(address),
+      address: formatAddressBravoos(address),
     };
 
     setIsLoading(true);
