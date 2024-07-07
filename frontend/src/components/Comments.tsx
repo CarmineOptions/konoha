@@ -3,7 +3,6 @@ import { useContractRead } from "@starknet-react/core";
 import { abi } from "../lib/abi";
 import { fetchIpfsFile } from "../api/apiService";
 import { CONTRACT_ADDR, formatIpfsHash } from "../lib/config";
-import { CopyIcon, TickIcon } from "../assets/icons/icons";
 type CommentProps = {
   address: string;
   text: string;
@@ -14,7 +13,6 @@ type Props = {
 };
 export default function Comments({ proposalId }: Props) {
   const [comments, setComments] = useState<CommentProps>([]);
-  const [isCopied, setIsCopied] = useState(false);
   const { data, isLoading } = useContractRead({
     functionName: "get_comments",
     args: [proposalId.toString()],
@@ -44,11 +42,6 @@ export default function Comments({ proposalId }: Props) {
     fetchData();
   }, [data]);
 
-  function handleCopyClick(address: string) {
-    if (!address) return;
-    navigator.clipboard.writeText(address);
-    setIsCopied(true);
-  }
 
 
 
@@ -67,9 +60,7 @@ export default function Comments({ proposalId }: Props) {
                 <p className="text-sm font-[400] ">Senders Address:</p>
                 <div className="flex items-center gap-2">
                   <p className="font-[600]  text-sm">{address.slice(0, 20)}</p>
-                  <div onClick={() => handleCopyClick(address)}>
-                    {isCopied ? <TickIcon /> : <CopyIcon />}
-                  </div>
+                 
                 </div>
 
                 <p className="text-sm font-[400] ">Comment:</p>
