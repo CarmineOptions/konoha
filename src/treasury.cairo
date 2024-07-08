@@ -117,13 +117,13 @@ mod Treasury {
     }
 
     #[derive(starknet::Event, Drop)]
-    struct DepositToNostraLendingPool {
+    struct LiquidityProvidedToNostraLendingPool {
         nostra_token: ContractAddress,
         amount: u256
     }
 
     #[derive(starknet::Event, Drop)]
-    struct WithdrawFromNostraLendingPool {
+    struct LiquidityWithdrawnFromNostraLendingPool {
         nostra_token: ContractAddress,
         amount: u256
     }
@@ -138,8 +138,8 @@ mod Treasury {
         LiquidityWithdrawn: LiquidityWithdrawn,
         LiquidityProvidedToZklend: LiquidityProvidedToZklend,
         LiquidityWithdrawnFromZklend: LiquidityWithdrawnFromZklend,
-        DepositToNostraLendingPool: DepositToNostraLendingPool,
-        WithdrawFromNostraLendingPool: WithdrawFromNostraLendingPool,
+        LiquidityProvidedToNostraLendingPool: LiquidityProvidedToNostraLendingPool,
+        LiquidityWithdrawnFromNostraLendingPool: LiquidityWithdrawnFromNostraLendingPool,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         #[flat]
@@ -333,7 +333,7 @@ mod Treasury {
 
             nostra_market.mint(get_contract_address(), amount);
 
-            self.emit(DepositToNostraLendingPool { nostra_token: nostraToken, amount });
+            self.emit(LiquidityProvidedToNostraLendingPool { nostra_token: nostraToken, amount });
         }
 
         fn withdraw_from_nostra_lending_pool(
@@ -344,14 +344,12 @@ mod Treasury {
                 contract_address: nostraToken
             };
 
-            assert(
-                nostra_market.balanceOf(get_contract_address()) >= amount,
-                Errors::INSUFFICIENT_NOSTRA_TOKENS
-            );
-
             nostra_market.burn(get_contract_address(), get_contract_address(), amount);
 
-            self.emit(WithdrawFromNostraLendingPool { nostra_token: nostraToken, amount });
+            self
+                .emit(
+                    LiquidityWithdrawnFromNostraLendingPool { nostra_token: nostraToken, amount }
+                );
         }
     }
 

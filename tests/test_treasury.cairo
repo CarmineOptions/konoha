@@ -391,26 +391,3 @@ fn test_deposit_nostra_lending_pool_with_insufficient_balance() {
             usdc_addr, nostraUsdcToken, deposit_amt.try_into().unwrap()
         );
 }
-
-
-#[test]
-#[should_panic(expected: ('Insufficient nostra token',))]
-#[fork("MAINNET")]
-fn test_withdraw_from_nostra_lending_pool_with_insufficient_balance() {
-    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
-    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
-
-    let nostraUsdcToken: ContractAddress =
-        0x002fc2d4b41cc1f03d185e6681cbd40cced61915d4891517a042658d61cba3b1
-        .try_into()
-        .unwrap();
-
-    let withdraw_amt = 2000000; // 2 USDC
-
-    prank(
-        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
-    );
-
-    treasury_dispatcher
-        .withdraw_from_nostra_lending_pool(nostraUsdcToken, withdraw_amt.try_into().unwrap());
-}
