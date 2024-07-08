@@ -150,7 +150,7 @@ mod Treasury {
         const INSUFFICIENT_FUNDS: felt252 = 'Insufficient token balance';
         const INSUFFICIENT_POOLED_TOKEN: felt252 = 'Insufficient Pooled balance';
         const INSUFFICIENT_LP_TOKENS: felt252 = 'Insufficient LP token balance';
-        const INSUFFICIENT_NOSTRA_TOKENS: felt252 = 'Insufficient NST token balance';
+        const INSUFFICIENT_NOSTRA_TOKENS: felt252 = 'Insufficient nostra token';
         const ADDRESS_ZERO_GOVERNANCE: felt252 = 'Governance addr is zero address';
         const ADDRESS_ZERO_AMM: felt252 = 'AMM addr is zero address';
         const ADDRESS_ZERO_ZKLEND_MARKET: felt252 = 'zklnd markt addr is zero addrr';
@@ -312,7 +312,6 @@ mod Treasury {
             self.emit(LiquidityWithdrawnFromZklend { token_address: token, amount });
         }
 
-        //Deposit token to Nostra lending pool
         fn deposit_to_nostra_lending_pool(
             ref self: ContractState,
             token: ContractAddress,
@@ -337,7 +336,6 @@ mod Treasury {
             self.emit(DepositToNostraLendingPool { nostra_token: nostraToken, amount });
         }
 
-        // Withdraw token from Nostra lending pool
         fn withdraw_from_nostra_lending_pool(
             ref self: ContractState, nostraToken: ContractAddress, amount: u256
         ) {

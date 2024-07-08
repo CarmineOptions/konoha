@@ -352,10 +352,6 @@ fn test_deposit_withdraw_nostra_lending_pool() {
 
     assert(bal_before_deposit == bal_after_deposit + deposit_amt, 'deposit to nostra failed');
 
-    roll(
-        CheatTarget::All, get_block_number() + 1, CheatSpan::Indefinite
-    ); // to bypass sandwich guard
-
     // Withdraw from Nostra lending pool
     let bal_before_withdraw = usdc_dispatcher.balanceOf(treasury_contract_address);
 
@@ -367,4 +363,54 @@ fn test_deposit_withdraw_nostra_lending_pool() {
     assert(
         bal_before_withdraw == bal_after_withdraw - deposit_amt, 'withdrawal from nostra failed'
     );
+}
+#[test]
+#[should_panic(expected: ('Insufficient Pooled balance',))]
+#[fork("MAINNET")]
+fn test_deposit_nostra_lending_pool_with_insufficient_balance() {
+    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
+    let usdc_addr: ContractAddress =
+        0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
+        .try_into()
+        .unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    let nostraUsdcToken: ContractAddress =
+        0x002fc2d4b41cc1f03d185e6681cbd40cced61915d4891517a042658d61cba3b1
+        .try_into()
+        .unwrap();
+
+    let deposit_amt = 2000000; // 2 USDC
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher
+        .deposit_to_nostra_lending_pool(
+            usdc_addr, nostraUsdcToken, deposit_amt.try_into().unwrap()
+        );
+}
+
+
+#[test]
+#[should_panic(expected: ('Insufficient nostra token',))]
+#[fork("MAINNET")]
+fn test_withdraw_from_nostra_lending_pool_with_insufficient_balance() {
+    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    let nostraUsdcToken: ContractAddress =
+        0x002fc2d4b41cc1f03d185e6681cbd40cced61915d4891517a042658d61cba3b1
+        .try_into()
+        .unwrap();
+
+    let withdraw_amt = 2000000; // 2 USDC
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+
+    treasury_dispatcher
+        .withdraw_from_nostra_lending_pool(nostraUsdcToken, withdraw_amt.try_into().unwrap());
 }
