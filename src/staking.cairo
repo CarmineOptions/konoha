@@ -1,256 +1,255 @@
 use starknet::ContractAddress;
 
-// This component should not be used along with delegation, as when the tokens are unstaked, they are not automatically undelegated.
-
 #[starknet::interface]
 trait IStaking<TContractState> {
-    fn stake(ref self: TContractState, length: u64, amount: u128) -> u32; // returns stake ID
-    fn unstake(ref self: TContractState, id: u32);
-    fn unstake_airdrop(ref self: TContractState, amount: u128);
-
-    fn set_curve_point(ref self: TContractState, length: u64, conversion_rate: u16);
+    fn create_lock(ref self: TContractState, caller: ContractAddress, amount: u128, lock_duration: u64); //creates lock -> tokens staked, for how long (the timestamp until which the tokens are locked.)
+    fn increase_amount(ref self: TContractState, caller: ContractAddress, amount: u128);
+    fn extend_unlock_date(ref self: TContractState, unlock_date: u64);
+    fn withdraw(ref self: TContractState);
     fn set_floating_token_address(ref self: TContractState, address: ContractAddress);
 
     fn get_floating_token_address(self: @TContractState) -> ContractAddress;
-    fn get_stake(self: @TContractState, address: ContractAddress, stake_id: u32) -> staking::Stake;
-    fn get_total_voting_power(self: @TContractState, address: ContractAddress) -> u128;
+    fn set_voting_token_address(ref self: TContractState, address: ContractAddress);
+    fn get_voting_token_address(self: @TContractState) -> ContractAddress;
+    fn get_balance_of(self: @TContractState, addr: ContractAddress) -> u128;
+    fn balance_of_at(self: @TContractState, addr: ContractAddress, block: u64) -> u128;
+    fn total_supply(self: @TContractState) -> u128;
+    fn total_supply_at(self: @TContractState, block: u64) -> u128;
+    fn get_locked_balance(self: @TContractState, addr: ContractAddress) -> (u128, u64);
 }
 
 #[starknet::component]
 mod staking {
-    use konoha::traits::{
-        get_governance_token_address_self, IERC20Dispatcher, IERC20DispatcherTrait
-    };
+    use core::traits::Into;
+    use super::IStaking;
+    use konoha::traits::{get_governance_token_address_self, IERC20Dispatcher, IERC20DispatcherTrait};
+    use integer::u256_from_felt252;
     use starknet::{
-        ContractAddress, get_block_timestamp, get_caller_address, get_contract_address, StorePacking
+        ContractAddress, get_block_timestamp, get_block_number, get_caller_address, get_contract_address
     };
-    use zeroable::NonZero;
-    use zeroable::NonZeroIntoImpl;
 
-    #[derive(Copy, Drop, Serde)]
-    struct Stake {
-        amount_staked: u128,
-        amount_voting_token: u128,
-        start_date: u64,
-        length: u64,
-        withdrawn: bool
-    }
+    const WEEK: u64 = 7 * 86400; // 7 days in seconds
+    const MAXTIME: u64 = 4 * 365 * 86400; // 4 years in seconds
+    const ONE_YEAR: u64 = 31536000; // 365 days
 
-    const TWO_POW_64: u128 = 0x10000000000000000;
-    const TWO_POW_128: felt252 = 0x100000000000000000000000000000000;
-    const TWO_POW_192: felt252 = 0x1000000000000000000000000000000000000000000000000;
+    //deposit types
+    const DEPOSIT_TYPE_CREATE: u8 = 0;
+    const DEPOSIT_TYPE_INCREASE_AMOUNT: u8 = 1;
+    const DEPOSIT_TYPE_INCREASE_TIME: u8 = 2;
 
-    impl StakeStorePacking of StorePacking<Stake, (felt252, felt252)> {
-        fn pack(value: Stake) -> (felt252, felt252) {
-            let fst = value.amount_staked.into() + value.start_date.into() * TWO_POW_128;
-            let snd = value.amount_voting_token.into()
-                + value.length.into() * TWO_POW_128
-                + value.withdrawn.into() * TWO_POW_192;
-            (fst.into(), snd.into())
-        }
-
-        fn unpack(value: (felt252, felt252)) -> Stake {
-            let (fst, snd) = value;
-            let fst: u256 = fst.into();
-            let amount_staked = fst.low;
-            let start_date = fst.high;
-            let snd: u256 = snd.into();
-            let amount_voting_token = snd.low;
-            let two_pow_64: NonZero<u128> = TWO_POW_64.try_into().unwrap();
-            let (withdrawn, length) = DivRem::div_rem(snd.high, two_pow_64);
-            assert(withdrawn == 0 || withdrawn == 1, 'wrong val: withdrawn');
-            Stake {
-                amount_staked,
-                amount_voting_token,
-                start_date: start_date.try_into().expect('unwrap fail start_date'),
-                length: length.try_into().expect('unpack fail length'),
-                withdrawn: withdrawn != 0
-            }
-        }
+    #[derive(Drop, Serde, Copy, starknet::Store)]
+    struct Point {
+        bias: u128, //starting token deposit amount 
+        slope: u128, //decay rate (token amount / stake time)
+        ts: u64, //time stamp
+        blk: u64, //block number
     }
 
     #[storage]
     struct Storage {
-        stake: LegacyMap::<
-            (ContractAddress, u32), Stake
-        >, // STAKE(address, ID) → Stake{amount staked, amount voting token, start date, length of stake, withdrawn}
-        curve: LegacyMap::<
-            u64, u16
-        >, // length of stake > CARM to veCARM conversion rate (conversion rate is expressed in % – 2:1 is 200)
-        floating_token_address: ContractAddress
+        floating_token_address: ContractAddress, //locked ERC20 token address 
+        voting_token_address: ContractAddress,       //voting token address
+        epoch: u64, //change epochs, incrememnts by one every change
+        point_history: LegacyMap::<u64, Point>, //voting power history (global)
+        user_point_history: LegacyMap::<(ContractAddress, u64), Point>, //voting power history (user)
+        user_point_epoch: LegacyMap::<ContractAddress, u64>, //latest epoch number for user
+        slope_changes: LegacyMap::<u64, u128>, //scheduled change in slope
+        locked: LegacyMap::<ContractAddress, LockedBalance>, //locked amount
     }
-
-    #[derive(starknet::Event, Drop)]
-    struct Staked {
-        user: ContractAddress,
-        stake_id: u32,
+    
+    #[derive(Drop, Serde, Copy, starknet::Store)]
+    struct LockedBalance {
         amount: u128,
-        amount_voting_token: u128,
-        start_date: u64,
-        length: u64
+        end: u64,
     }
 
-    #[derive(starknet::Event, Drop)]
-    struct Unstaked {
-        user: ContractAddress,
-        stake_id: u32,
-        amount: u128,
-        amount_voting_token: u128,
-        start_date: u64,
-        length: u64
-    }
-
-    #[derive(starknet::Event, Drop)]
-    struct UnstakedAirdrop {
-        user: ContractAddress,
-        amount: u128
-    }
-
-    #[derive(starknet::Event, Drop)]
     #[event]
+    #[derive(Drop, starknet::Event)]
     enum Event {
-        Staked: Staked,
-        Unstaked: Unstaked,
-        UnstakedAirdrop: UnstakedAirdrop
+        Deposit: Deposit,
+        Withdraw: Withdraw,
+    }
+
+    #[derive(starknet::Event, Drop, Serde)]
+    struct Deposit {
+        caller: ContractAddress,
+        amount: u128,
+        locktime: u64,
+        type_: u8,
+        ts: u64,
+    }
+    
+    #[derive(starknet::Event, Drop, Serde)]
+    struct Withdraw {
+        caller: ContractAddress,
+        amount: u128,
+        ts: u64,
     }
 
     #[embeddable_as(StakingImpl)]
     impl Staking<
-        TContractState, +HasComponent<TContractState>,
+        TContractState, +HasComponent<TContractState>
     > of super::IStaking<ComponentState<TContractState>> {
-        fn stake(ref self: ComponentState<TContractState>, length: u64, amount: u128) -> u32 {
-            let caller = get_caller_address();
-
-            assert(amount != 0, 'amount to stake is zero');
-            let conversion_rate: u16 = self.curve.read(length);
-            assert(conversion_rate != 0, 'unsupported stake length');
-
-            let floating_token = IERC20Dispatcher {
-                contract_address: self.floating_token_address.read()
-            };
-            floating_token.transfer_from(caller, get_contract_address(), amount.into());
-
-            let (amount_voting_token, _) = DivRem::div_rem((amount * conversion_rate.into()), 100);
-            let free_id = self.get_free_stake_id(caller);
-
-            self
-                .stake
-                .write(
-                    (caller, free_id),
-                    Stake {
-                        amount_staked: amount,
-                        amount_voting_token,
-                        start_date: get_block_timestamp(),
-                        length,
-                        withdrawn: false
-                    }
-                );
-
-            let voting_token = IERC20Dispatcher {
-                contract_address: get_governance_token_address_self()
-            };
-            voting_token.mint(caller, amount_voting_token.into());
-            self
-                .emit(
-                    Staked {
-                        user: caller,
-                        stake_id: free_id,
-                        amount,
-                        amount_voting_token,
-                        start_date: get_block_timestamp(),
-                        length
-                    }
-                );
-            free_id
+        fn get_balance_of(self: @ComponentState<TContractState>, addr: ContractAddress) -> u128 {
+            self._balance_of(addr, get_block_timestamp())
         }
 
-        fn unstake(ref self: ComponentState<TContractState>, id: u32) {
-            let caller = get_caller_address();
-            let res: Stake = self.stake.read((caller, id));
-
-            assert(!res.withdrawn, 'stake withdrawn already');
-
-            assert(res.amount_staked != 0, 'no stake found, check stake id');
-            let unlock_date = res.start_date + res.length;
-            assert(get_block_timestamp() > unlock_date, 'unlock time not yet reached');
-
-            let voting_token = IERC20Dispatcher {
-                contract_address: get_governance_token_address_self()
-            };
-            voting_token.burn(caller, res.amount_voting_token.into());
-
-            let floating_token = IERC20Dispatcher {
-                contract_address: self.floating_token_address.read()
-            };
-            // user gets back the same amount of tokens they put in.
-            // the payoff is in holding voting tokens, which make the user eligible for distributions of protocol revenue
-            // works for tokens with fixed max float
-            floating_token.transfer(caller, res.amount_staked.into());
-            self
-                .stake
-                .write(
-                    (caller, id),
-                    Stake {
-                        amount_staked: res.amount_staked,
-                        amount_voting_token: res.amount_voting_token,
-                        start_date: res.start_date,
-                        length: res.length,
-                        withdrawn: true
-                    }
-                );
-            self
-                .emit(
-                    Unstaked {
-                        user: caller,
-                        stake_id: id,
-                        amount: res.amount_staked,
-                        amount_voting_token: res.amount_voting_token,
-                        start_date: res.start_date,
-                        length: res.length
-                    }
-                );
+        fn balance_of_at(
+            self: @ComponentState<TContractState>, addr: ContractAddress, block: u64
+        ) -> u128 {
+            self._balance_of_at(addr, block)
         }
 
-        fn unstake_airdrop(ref self: ComponentState<TContractState>, amount: u128) {
-            let caller = get_caller_address();
-
-            let total_staked = self.get_total_staked_accounted(caller); // manually staked tokens
-            let voting_token = IERC20Dispatcher {
-                contract_address: get_governance_token_address_self()
-            };
-            let voting_token_balance = voting_token.balance_of(caller).try_into().unwrap();
-            assert(
-                voting_token_balance > total_staked, 'no extra tokens to unstake'
-            ); // potentially unnecessary (underflow checks), but provides for a better error message
-            let to_unstake = voting_token_balance - total_staked;
-
-            // burn voting token, mint floating token
-            let voting_token = IERC20Dispatcher {
-                contract_address: get_governance_token_address_self()
-            };
-            voting_token.burn(caller, to_unstake.into());
-            let floating_token = IERC20Dispatcher {
-                contract_address: self.floating_token_address.read()
-            };
-            floating_token.transfer(caller, to_unstake.into());
-            self.emit(UnstakedAirdrop { user: caller, amount: to_unstake });
+        fn total_supply(self: @ComponentState<TContractState>) -> u128 {
+            self._supply_at(get_block_timestamp())
         }
 
-        fn set_curve_point(
-            ref self: ComponentState<TContractState>, length: u64, conversion_rate: u16
+        fn total_supply_at(self: @ComponentState<TContractState>, block: u64) -> u128 {
+            self._supply_at(block)
+        }
+
+        fn get_locked_balance(self: @ComponentState<TContractState>, addr: ContractAddress) -> (u128, u64) {
+            let LockedBalance { amount: locked_amount, end: locked_end_date } = self.locked.read(addr);
+            (locked_amount, locked_end_date)
+        }
+
+        //using create_lock, locking 4000veCRM for 4 years
+
+        //  const FOUR_YEARS_IN_SECONDS: u64 = 4 * 365 * 24 * 60 * 60; // 126144000 seconds
+        //  let amount = 4000 * 10_u128.pow(18); // Assuming 18 decimal places
+        //  let current_time = get_block_timestamp();
+        //  let lock_duration = current_time + FOUR_YEARS_IN_SECONDS;
+        //create_lock(amount, lock_duration);
+        
+        fn create_lock(
+            ref self: ComponentState<TContractState>, 
+            caller: ContractAddress,
+            amount: u128, 
+            lock_duration: u64
         ) {
-            let caller = get_caller_address();
-            let myaddr = get_contract_address();
-            assert(caller == myaddr, 'can only call from proposal');
-            self.curve.write(length, conversion_rate);
+
+            let old_locked: LockedBalance = self.locked.read(caller); 
+            assert(old_locked.amount == 0, 'Withdraw old tokens first');
+            assert(amount > 0, 'Need non-zero amount');
+        
+            let unlock_date = get_block_timestamp() + lock_duration.into();
+            assert(unlock_date > get_block_timestamp(), 'can only lock in the future(CL)');
+            assert(unlock_date <= get_block_timestamp() + MAXTIME, 'Voting lock can be 4 years max');
+        
+            let new_locked = LockedBalance { amount, end: unlock_date };
+        
+            let token = IERC20Dispatcher { contract_address: self.floating_token_address.read() };
+        
+            let balance = token.balance_of(caller);
+            assert(balance >= amount.into(), 'Insufficient balance');
+        
+            token.transfer_from(caller, get_contract_address(), amount.into());
+
+            self._checkpoint(caller, old_locked, new_locked);
+            self.locked.write(caller, new_locked);
+        
+            let voting_token = IERC20Dispatcher {
+                contract_address: get_governance_token_address_self()
+            };
+            voting_token.mint(caller, amount.into());
+            self
+                .emit(
+                    Deposit {
+                        caller,
+                        amount,
+                        locktime: unlock_date,
+                        type_: DEPOSIT_TYPE_CREATE,
+                        ts: get_block_timestamp(),
+                    }
+                );
         }
+
+        fn increase_amount(
+            ref self: ComponentState<TContractState>, 
+            caller: ContractAddress, 
+            amount: u128
+        ) {
+            let old_locked: LockedBalance = self.locked.read(caller);
+            assert(amount > 0, 'Need non-zero amount');
+            assert(old_locked.amount > 0, 'No existing lock found');
+            assert(old_locked.end > get_block_timestamp(), 'Cannot add to expired lock');
+            
+            let new_locked = LockedBalance { 
+                amount: old_locked.amount + amount, 
+                end: old_locked.end 
+            };
+            
+            let token = IERC20Dispatcher { contract_address: self.floating_token_address.read() };
+            
+            let balance = token.balance_of(caller);
+            assert(balance >= amount.into(), 'Insufficient balance');
+            
+            token.transfer_from(caller, get_contract_address(), amount.into());
+            
+            self._checkpoint(caller, old_locked, new_locked);
+            self.locked.write(caller, new_locked);
+        
+            self.emit(Deposit {
+                caller,
+                amount,
+                locktime: old_locked.end,
+                type_: DEPOSIT_TYPE_INCREASE_AMOUNT,
+                ts: get_block_timestamp(),
+            });
+        }
+                
+        fn extend_unlock_date(ref self: ComponentState<TContractState>, unlock_date: u64) {
+            let caller = get_caller_address();
+            let old_locked: LockedBalance = self.locked.read(caller);
+            assert(old_locked.amount > 0, 'No existing lock found');
+            assert(old_locked.end > get_block_timestamp(), 'Lock expired');
+            assert(unlock_date > old_locked.end, 'Can only increase lock duration');
+            assert(unlock_date <= get_block_timestamp() + MAXTIME, 'Voting lock can be 4 years max');
+        
+            let new_locked = LockedBalance { 
+                amount: old_locked.amount, 
+                end: unlock_date 
+            };
+        
+            self._checkpoint(caller, old_locked, new_locked);
+            self.locked.write(caller, new_locked);
+        
+            self.emit(Deposit {
+                caller,
+                amount: 0,
+                locktime: unlock_date,
+                type_: DEPOSIT_TYPE_INCREASE_TIME,
+                ts: get_block_timestamp(),
+            });
+        }        
+
+        fn withdraw(ref self: ComponentState<TContractState>) {
+            let caller = get_caller_address();
+            let LockedBalance { amount: locked_amount, end: locked_end_date } = self.locked.read(caller);
+            assert(get_block_timestamp() >= locked_end_date, 'The lock did not expire');
+            let amount = locked_amount;
+        
+            self.locked.write(caller, LockedBalance { amount: 0, end: 0 });
+            let user_epoch = self.user_point_epoch.read(caller);
+            self.user_point_epoch.write(caller, user_epoch + 1);
+            self.user_point_history.write(
+                (caller, user_epoch + 1),
+                Point { bias: 0, slope: 0, ts: get_block_timestamp(), blk: get_block_number() }
+            );
+        
+            assert(amount > 0, 'Withdrawing zero amount');
+            let token = IERC20Dispatcher { contract_address: self.floating_token_address.read() };
+            token.transfer(caller, amount.into());
+        
+            self.emit(Withdraw { caller, amount, ts: get_block_timestamp() });
+        }        
 
         fn set_floating_token_address(
             ref self: ComponentState<TContractState>, address: ContractAddress
         ) {
             let caller = get_caller_address();
             let myaddr = get_contract_address();
-            assert(caller == myaddr, 'can only call from proposal');
+            assert(caller == myaddr, 'can only call from proposal(F)');
             self.floating_token_address.write(address);
         }
 
@@ -258,29 +257,17 @@ mod staking {
             self.floating_token_address.read()
         }
 
-        fn get_stake(
-            self: @ComponentState<TContractState>, address: ContractAddress, stake_id: u32
-        ) -> Stake {
-            self.stake.read((address, stake_id))
+        fn set_voting_token_address(
+            ref self: ComponentState<TContractState>, address: ContractAddress
+        ) {
+            let caller = get_caller_address();
+            let myaddr = get_contract_address();
+            assert(caller == myaddr, 'can only call from proposal(V)');
+            self.voting_token_address.write(address);
         }
 
-        fn get_total_voting_power(
-            self: @ComponentState<TContractState>, address: ContractAddress
-        ) -> u128 {
-            let mut id = 0;
-            let mut acc = 0;
-            let currtime = get_block_timestamp();
-            loop {
-                let res: Stake = self.stake.read((address, id));
-                if (res.amount_voting_token == 0) {
-                    break acc;
-                }
-                id += 1;
-                let not_expired: bool = currtime < (res.length + res.start_date);
-                if (not_expired) {
-                    acc += res.amount_voting_token;
-                }
-            }
+        fn get_voting_token_address(self: @ComponentState<TContractState>) -> ContractAddress {
+            self.voting_token_address.read()
         }
     }
 
@@ -288,38 +275,143 @@ mod staking {
     impl InternalImpl<
         TContractState, +HasComponent<TContractState>
     > of InternalTrait<TContractState> {
-        fn get_free_stake_id(
-            self: @ComponentState<TContractState>, address: ContractAddress
-        ) -> u32 {
-            self._get_free_stake_id(address, 0)
-        }
-
-        fn _get_free_stake_id(
-            self: @ComponentState<TContractState>, address: ContractAddress, id: u32
-        ) -> u32 {
-            let res: Stake = self.stake.read((address, id));
-            if (res.amount_staked == 0) {
-                id
+        fn _checkpoint(
+            ref self: ComponentState<TContractState>,
+            addr: ContractAddress,
+            old_locked: LockedBalance,
+            new_locked: LockedBalance
+        ) {
+            let mut epoch = self.epoch.read();
+            let mut point = if epoch == 0 {
+                Point { bias: 0, slope: 0, ts: get_block_timestamp(), blk: get_block_number() }
             } else {
-                self._get_free_stake_id(address, id + 1)
+                self.point_history.read(epoch)
+            };
+        
+            let block_time = get_block_timestamp();
+            let block_number = get_block_number();
+            
+            if block_time > point.ts {
+                let mut last_point = point;
+                last_point.bias -= last_point.slope * (block_time.into() - last_point.ts.into());
+                if last_point.bias < 0 {
+                    last_point.bias = 0;
+                }
+        
+                self.point_history.write(epoch + 1, last_point);
+                self.epoch.write(epoch + 1);
+                epoch += 1;
+                point = last_point;
+            }
+        
+            point.ts = block_time;
+            point.blk = block_number;
+            
+            let old_slope = if old_locked.end > block_time {
+                old_locked.amount / (old_locked.end.into() - block_time.into())
+            } else {
+                0
+            };
+            
+            let new_slope = if new_locked.end > block_time {
+                new_locked.amount / (new_locked.end.into() - block_time.into())
+            } else {
+                0
+            };
+            
+            point.bias = point.bias + new_locked.amount - old_locked.amount;
+            point.slope = point.slope + new_slope - old_slope;
+            
+            self.point_history.write(epoch, point);
+            self.user_point_history.write((addr, epoch), point);
+            self.user_point_epoch.write(addr, epoch);
+            
+            if old_locked.end > block_time {
+                self.slope_changes.write(old_locked.end, self.slope_changes.read(old_locked.end) - old_slope);
+            }
+            
+            if new_locked.end > block_time {
+                self.slope_changes.write(new_locked.end, self.slope_changes.read(new_locked.end) + new_slope);
+            }
+        }
+        
+
+        fn _balance_of(self: @ComponentState<TContractState>, addr: ContractAddress, t: u64) -> u128 {
+            let LockedBalance { amount: locked_amount, end: locked_end_date } = self.locked.read(addr);
+            let start_time = get_block_timestamp(); // Assuming this is when the lock was created
+            
+            if t >= locked_end_date {
+                0
+            } else if t <= start_time {
+                locked_amount
+            } else {
+                let total_lock_duration = locked_end_date - start_time;
+                let elapsed_time = t - start_time;
+                let remaining_time = total_lock_duration - elapsed_time;
+                
+                (locked_amount * remaining_time.into()) / total_lock_duration.into()
             }
         }
 
-        fn get_total_staked_accounted(
-            self: @ComponentState<TContractState>, address: ContractAddress
-        ) -> u128 {
-            let mut id = 0;
-            let mut acc = 0;
-            loop {
-                let res: Stake = self.stake.read((address, id));
-                if (res.amount_voting_token == 0) {
-                    break acc;
-                }
-                id += 1;
-                if (!res.withdrawn) {
-                    acc += res.amount_voting_token;
-                }
+        fn _balance_of_at(self: @ComponentState<TContractState>, addr: ContractAddress, block: u64) -> u128 {
+        //    // Get the latest user point epoch
+        //    let user_epoch = self.user_point_epoch.read(addr);
+        //    
+        //    // Binary search to find the point at the given block
+        //    let mut low = 0;
+        //    let mut high = user_epoch;
+        //    point.blk = block_number;
+        //    while low < high {
+        //        let mid = (low + high + 1) / 2;
+        //        let point = self.user_point_history.read((addr, mid));
+        //        if point.blk <= block {
+        //            low = mid;
+        //        } else {
+        //            high = mid - 1;
+        //        }
+        //    }
+        //    
+        //    let point = self.user_point_history.read((addr, low));
+        //    let block_time = get_block_timestamp_at_block(block); // Assuming a function that returns the timestamp at the given block
+        //    let time_diff = block_time - point.ts;
+        //
+        //    if time_diff >= 0 {
+        //        let balance = point.bias - point.slope * time_diff as u128;
+        //        if balance > 0 {
+        //            balance
+        //        } else {
+        //            0
+        //        }
+        //    } else {
+                0
+        //    }
+        }
+        //fn calculate_voting_power(amount: u128, duration: u64) -> u128 {
+        //    // Implement your voting power calculation logic here
+        //    // This could be a simple multiplication or a more complex formula
+        //    let duration = 1000;
+        //    amount * (duration.into() / ONE_YEAR) // Example: 1 year lock gives full voting power
+        //}
+        
+
+        fn _supply_at(self: @ComponentState<TContractState>, t: u64) -> u128 {
+            let mut point = self.point_history.read(self.epoch.read());
+            let mut supply = point.bias;
+        
+            let mut timestamp = point.ts;
+            while timestamp < t {
+                let slope_change = self.slope_changes.read(timestamp);
+                supply = supply - point.slope * (t.into() - timestamp.into());
+                point.slope = point.slope + slope_change;
+                timestamp = timestamp + WEEK;
+            };
+        
+            if supply > 0 {
+                supply
+            } else {
+                0
             }
         }
+        
     }
 }
