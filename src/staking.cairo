@@ -5,16 +5,15 @@ trait IStaking<TContractState> {
     fn create_lock(ref self: TContractState, caller: ContractAddress, amount: u128, lock_duration: u64); //creates lock -> tokens staked, for how long (the timestamp until which the tokens are locked.)
     fn increase_amount(ref self: TContractState, caller: ContractAddress, amount: u128);
     fn extend_unlock_date(ref self: TContractState, unlock_date: u64);
-    fn withdraw(ref self: TContractState);
-    fn set_floating_token_address(ref self: TContractState, address: ContractAddress);
+    fn withdraw(ref self: TContractState, caller: ContractAddress);
 
+    fn set_floating_token_address(ref self: TContractState, address: ContractAddress);
     fn get_floating_token_address(self: @TContractState) -> ContractAddress;
     fn set_voting_token_address(ref self: TContractState, address: ContractAddress);
     fn get_voting_token_address(self: @TContractState) -> ContractAddress;
-    fn get_balance_of(self: @TContractState, addr: ContractAddress) -> u128;
-    fn balance_of_at(self: @TContractState, addr: ContractAddress, block: u64) -> u128;
-    fn total_supply(self: @TContractState) -> u128;
-    fn total_supply_at(self: @TContractState, block: u64) -> u128;
+
+    fn get_current_supply(self: @TContractState, timestamp: u64) -> u128;
+    fn get_balance_of(self: @TContractState, addr: ContractAddress, timestamp: u64) -> u128;
     fn get_locked_balance(self: @TContractState, addr: ContractAddress) -> (u128, u64);
 }
 
@@ -55,6 +54,8 @@ mod staking {
         user_point_epoch: LegacyMap::<ContractAddress, u64>, //latest epoch number for user
         slope_changes: LegacyMap::<u64, u128>, //scheduled change in slope
         locked: LegacyMap::<ContractAddress, LockedBalance>, //locked amount
+        address_list: LegacyMap::<u32, ContractAddress>,
+        address_count: u32,
     }
     
     #[derive(Drop, Serde, Copy, starknet::Store)]
@@ -90,22 +91,42 @@ mod staking {
     impl Staking<
         TContractState, +HasComponent<TContractState>
     > of super::IStaking<ComponentState<TContractState>> {
-        fn get_balance_of(self: @ComponentState<TContractState>, addr: ContractAddress) -> u128 {
-            self._balance_of(addr, get_block_timestamp())
+        
+        fn get_balance_of(self: @ComponentState<TContractState>, addr: ContractAddress, timestamp: u64) -> u128 {
+            let LockedBalance { amount: locked_amount, end: locked_end_date } = self.locked.read(addr);
+            let user_epoch = self.user_point_epoch.read(addr);
+            let user_point: Point = self.user_point_history.read((addr, user_epoch));
+        
+            if timestamp >= locked_end_date {
+                0
+            } else {
+                let total_lock_duration = locked_end_date - user_point.ts;
+                let elapsed_time = timestamp - user_point.ts;
+                let remaining_time = total_lock_duration - elapsed_time;
+        
+                (locked_amount * remaining_time.into()) / total_lock_duration.into()
+            }
         }
-
-        fn balance_of_at(
-            self: @ComponentState<TContractState>, addr: ContractAddress, block: u64
-        ) -> u128 {
-            self._balance_of_at(addr, block)
-        }
-
-        fn total_supply(self: @ComponentState<TContractState>) -> u128 {
-            self._supply_at(get_block_timestamp())
-        }
-
-        fn total_supply_at(self: @ComponentState<TContractState>, block: u64) -> u128 {
-            self._supply_at(block)
+        
+        fn get_current_supply(self: @ComponentState<TContractState>, timestamp: u64) -> u128 {
+            let mut total_supply: u128 = 0;
+            let address_count = self.address_count.read();
+        
+            let mut i = 0;
+            loop {
+                if i >= address_count {
+                    break;
+                }
+                
+                let addr: ContractAddress = self.address_list.read(i);
+                let balance = self.get_balance_of(addr, timestamp); // Use get_balance_of_at
+                
+                total_supply += balance;
+        
+                i += 1;
+            };
+        
+            total_supply
         }
 
         fn get_locked_balance(self: @ComponentState<TContractState>, addr: ContractAddress) -> (u128, u64) {
@@ -114,7 +135,6 @@ mod staking {
         }
 
         //using create_lock, locking 4000veCRM for 4 years
-
         //  const FOUR_YEARS_IN_SECONDS: u64 = 4 * 365 * 24 * 60 * 60; // 126144000 seconds
         //  let amount = 4000 * 10_u128.pow(18); // Assuming 18 decimal places
         //  let current_time = get_block_timestamp();
@@ -145,9 +165,12 @@ mod staking {
         
             token.transfer_from(caller, get_contract_address(), amount.into());
 
-            self._checkpoint(caller, old_locked, new_locked);
             self.locked.write(caller, new_locked);
-        
+            let current_count = self.address_count.read();
+            self.address_list.write(current_count, caller);
+            self.address_count.write(current_count + 1);
+            self._checkpoint(caller, old_locked, new_locked);
+
             let voting_token = IERC20Dispatcher {
                 contract_address: get_governance_token_address_self()
             };
@@ -186,9 +209,9 @@ mod staking {
             
             token.transfer_from(caller, get_contract_address(), amount.into());
             
-            self._checkpoint(caller, old_locked, new_locked);
             self.locked.write(caller, new_locked);
-        
+            self._checkpoint(caller, old_locked, new_locked);
+
             self.emit(Deposit {
                 caller,
                 amount,
@@ -211,9 +234,9 @@ mod staking {
                 end: unlock_date 
             };
         
-            self._checkpoint(caller, old_locked, new_locked);
             self.locked.write(caller, new_locked);
-        
+            self._checkpoint(caller, old_locked, new_locked);
+
             self.emit(Deposit {
                 caller,
                 amount: 0,
@@ -223,8 +246,7 @@ mod staking {
             });
         }        
 
-        fn withdraw(ref self: ComponentState<TContractState>) {
-            let caller = get_caller_address();
+        fn withdraw(ref self: ComponentState<TContractState>, caller: ContractAddress) {
             let LockedBalance { amount: locked_amount, end: locked_end_date } = self.locked.read(caller);
             assert(get_block_timestamp() >= locked_end_date, 'The lock did not expire');
             let amount = locked_amount;
@@ -262,7 +284,7 @@ mod staking {
         ) {
             let caller = get_caller_address();
             let myaddr = get_contract_address();
-            assert(caller == myaddr, 'can only call from proposal(V)');
+            assert(caller == myaddr, 'can only call from proposal(F)');
             self.voting_token_address.write(address);
         }
 
@@ -334,84 +356,50 @@ mod staking {
                 self.slope_changes.write(new_locked.end, self.slope_changes.read(new_locked.end) + new_slope);
             }
         }
-        
 
-        fn _balance_of(self: @ComponentState<TContractState>, addr: ContractAddress, t: u64) -> u128 {
-            let LockedBalance { amount: locked_amount, end: locked_end_date } = self.locked.read(addr);
-            let start_time = get_block_timestamp(); // Assuming this is when the lock was created
+        fn _supply(self: @ComponentState<TContractState>, t: u64) -> u128 {
+            let mut epoch = self.epoch.read();
+            let mut point: Point = self.point_history.read(epoch);
             
-            if t >= locked_end_date {
-                0
-            } else if t <= start_time {
-                locked_amount
-            } else {
-                let total_lock_duration = locked_end_date - start_time;
-                let elapsed_time = t - start_time;
-                let remaining_time = total_lock_duration - elapsed_time;
+            let mut t_i = point.ts;
+            let mut i = epoch;
+        
+            loop {
+                if i == 0 {
+                    break;
+                }
+        
+                let last_point = point;
+                point = self.point_history.read(i);
                 
-                (locked_amount * remaining_time.into()) / total_lock_duration.into()
-            }
-        }
-
-        fn _balance_of_at(self: @ComponentState<TContractState>, addr: ContractAddress, block: u64) -> u128 {
-        //    // Get the latest user point epoch
-        //    let user_epoch = self.user_point_epoch.read(addr);
-        //    
-        //    // Binary search to find the point at the given block
-        //    let mut low = 0;
-        //    let mut high = user_epoch;
-        //    point.blk = block_number;
-        //    while low < high {
-        //        let mid = (low + high + 1) / 2;
-        //        let point = self.user_point_history.read((addr, mid));
-        //        if point.blk <= block {
-        //            low = mid;
-        //        } else {
-        //            high = mid - 1;
-        //        }
-        //    }
-        //    
-        //    let point = self.user_point_history.read((addr, low));
-        //    let block_time = get_block_timestamp_at_block(block); // Assuming a function that returns the timestamp at the given block
-        //    let time_diff = block_time - point.ts;
-        //
-        //    if time_diff >= 0 {
-        //        let balance = point.bias - point.slope * time_diff as u128;
-        //        if balance > 0 {
-        //            balance
-        //        } else {
-        //            0
-        //        }
-        //    } else {
-                0
-        //    }
-        }
-        //fn calculate_voting_power(amount: u128, duration: u64) -> u128 {
-        //    // Implement your voting power calculation logic here
-        //    // This could be a simple multiplication or a more complex formula
-        //    let duration = 1000;
-        //    amount * (duration.into() / ONE_YEAR) // Example: 1 year lock gives full voting power
-        //}
+                if t < point.ts {
+                    i -= 1;
+                    continue;
+                }
+                
+                let dt = if t > last_point.ts { t - last_point.ts } else { 0 };
+                
+                if point.bias > point.slope * dt.into() {
+                    point.bias -= point.slope * dt.into();
+                } else {
+                    point.bias = 0;
+                }
         
-
-        fn _supply_at(self: @ComponentState<TContractState>, t: u64) -> u128 {
-            let mut point = self.point_history.read(self.epoch.read());
-            let mut supply = point.bias;
-        
-            let mut timestamp = point.ts;
-            while timestamp < t {
-                let slope_change = self.slope_changes.read(timestamp);
-                supply = supply - point.slope * (t.into() - timestamp.into());
-                point.slope = point.slope + slope_change;
-                timestamp = timestamp + WEEK;
+                if t_i > last_point.ts {
+                    let d_slope = self.slope_changes.read(last_point.ts);
+                    point.slope += d_slope;
+                }
+                
+                t_i = last_point.ts;
+                i -= 1;
             };
-        
-            if supply > 0 {
-                supply
-            } else {
-                0
-            }
+            
+            point.bias
         }
-        
+        fn get_address_by_index(self: @ComponentState<TContractState>, index: u32) -> ContractAddress {
+            self.address_list.read(index)
+        }  
     }
+        
 }
+
