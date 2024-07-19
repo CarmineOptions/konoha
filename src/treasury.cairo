@@ -29,6 +29,12 @@ trait ITreasury<TContractState> {
     fn get_amm_address(self: @TContractState) -> ContractAddress;
     fn deposit_to_zklend(ref self: TContractState, token: ContractAddress, amount: u256);
     fn withdraw_from_zklend(ref self: TContractState, token: ContractAddress, amount: u256);
+    fn deposit_to_nostra_lending_pool(
+        ref self: TContractState, token: ContractAddress, nostraToken: ContractAddress, amount: u256
+    );
+    fn withdraw_from_nostra_lending_pool(
+        ref self: TContractState, nostraToken: ContractAddress, amount: u256
+    );
 }
 
 #[starknet::contract]
@@ -39,6 +45,9 @@ mod Treasury {
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
     use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
+    use konoha::treasury_types::nostra::interface::{
+        INostraInterestToken, INostraInterestTokenDispatcher, INostraInterestTokenDispatcherTrait
+    };
     use konoha::treasury_types::zklend::interfaces::{
         IMarket, IMarketDispatcher, IMarketDispatcherTrait
     };
@@ -107,6 +116,19 @@ mod Treasury {
         amount: u256
     }
 
+    #[derive(starknet::Event, Drop)]
+    struct LiquidityProvidedToNostraLendingPool {
+        nostra_token: ContractAddress,
+        amount: u256
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct LiquidityWithdrawnFromNostraLendingPool {
+        nostra_token: ContractAddress,
+        amount: u256
+    }
+
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -116,6 +138,8 @@ mod Treasury {
         LiquidityWithdrawn: LiquidityWithdrawn,
         LiquidityProvidedToZklend: LiquidityProvidedToZklend,
         LiquidityWithdrawnFromZklend: LiquidityWithdrawnFromZklend,
+        LiquidityProvidedToNostraLendingPool: LiquidityProvidedToNostraLendingPool,
+        LiquidityWithdrawnFromNostraLendingPool: LiquidityWithdrawnFromNostraLendingPool,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         #[flat]
@@ -285,6 +309,46 @@ mod Treasury {
             zklend_market.withdraw(token, amount.try_into().unwrap());
 
             self.emit(LiquidityWithdrawnFromZklend { token_address: token, amount });
+        }
+
+        fn deposit_to_nostra_lending_pool(
+            ref self: ContractState,
+            token: ContractAddress,
+            nostraToken: ContractAddress,
+            amount: u256
+        ) {
+            self.ownable.assert_only_owner();
+            let pooled_token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token };
+            let nostra_market: INostraInterestTokenDispatcher = INostraInterestTokenDispatcher {
+                contract_address: nostraToken
+            };
+
+            assert(
+                pooled_token.balanceOf(get_contract_address()) >= amount,
+                Errors::INSUFFICIENT_POOLED_TOKEN
+            );
+
+            pooled_token.approve(nostraToken, amount);
+
+            nostra_market.mint(get_contract_address(), amount);
+
+            self.emit(LiquidityProvidedToNostraLendingPool { nostra_token: nostraToken, amount });
+        }
+
+        fn withdraw_from_nostra_lending_pool(
+            ref self: ContractState, nostraToken: ContractAddress, amount: u256
+        ) {
+            self.ownable.assert_only_owner();
+            let nostra_market: INostraInterestTokenDispatcher = INostraInterestTokenDispatcher {
+                contract_address: nostraToken
+            };
+
+            nostra_market.burn(get_contract_address(), get_contract_address(), amount);
+
+            self
+                .emit(
+                    LiquidityWithdrawnFromNostraLendingPool { nostra_token: nostraToken, amount }
+                );
         }
     }
 

@@ -311,3 +311,83 @@ fn test_deposit_withdraw_zklend() {
 
     assert(bal_before_withdraw == bal_after_withdraw - deposit_amt, 'deposit to zklend failed');
 }
+
+#[test]
+#[fork("MAINNET")]
+fn test_deposit_withdraw_nostra_lending_pool() {
+    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
+    let usdc_addr: ContractAddress =
+        0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
+        .try_into()
+        .unwrap();
+    let random_whale: ContractAddress =
+        0x4267ae838da77a52384283f3321a0746557023d24cb823115d2da5c8c4f1a42
+        .try_into()
+        .unwrap();
+    let usdc_dispatcher = IERC20Dispatcher { contract_address: usdc_addr };
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    let nostraUsdcToken: ContractAddress =
+        0x002fc2d4b41cc1f03d185e6681cbd40cced61915d4891517a042658d61cba3b1
+        .try_into()
+        .unwrap();
+
+    // Transfer USDC from random whale to Treasury contract
+    prank(CheatTarget::One(usdc_addr), random_whale, CheatSpan::TargetCalls(1));
+    let deposit_amt = 2000000; // 2 USDC
+    usdc_dispatcher.transfer(treasury_contract_address, deposit_amt);
+    assert(usdc_dispatcher.balanceOf(treasury_contract_address) >= deposit_amt, 'usdc bal too low');
+
+    // Deposit to Nostra lending pool
+    let bal_before_deposit = usdc_dispatcher.balanceOf(treasury_contract_address);
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
+    );
+    treasury_dispatcher
+        .deposit_to_nostra_lending_pool(
+            usdc_addr, nostraUsdcToken, deposit_amt.try_into().unwrap()
+        );
+
+    let bal_after_deposit = usdc_dispatcher.balanceOf(treasury_contract_address);
+
+    assert(bal_before_deposit == bal_after_deposit + deposit_amt, 'deposit to nostra failed');
+
+    // Withdraw from Nostra lending pool
+    let bal_before_withdraw = usdc_dispatcher.balanceOf(treasury_contract_address);
+
+    treasury_dispatcher
+        .withdraw_from_nostra_lending_pool(nostraUsdcToken, deposit_amt.try_into().unwrap());
+
+    let bal_after_withdraw = usdc_dispatcher.balanceOf(treasury_contract_address);
+
+    assert(
+        bal_before_withdraw == bal_after_withdraw - deposit_amt, 'withdrawal from nostra failed'
+    );
+}
+#[test]
+#[should_panic(expected: ('Insufficient Pooled balance',))]
+#[fork("MAINNET")]
+fn test_deposit_nostra_lending_pool_with_insufficient_balance() {
+    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
+    let usdc_addr: ContractAddress =
+        0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
+        .try_into()
+        .unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    let nostraUsdcToken: ContractAddress =
+        0x002fc2d4b41cc1f03d185e6681cbd40cced61915d4891517a042658d61cba3b1
+        .try_into()
+        .unwrap();
+
+    let deposit_amt = 2000000; // 2 USDC
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher
+        .deposit_to_nostra_lending_pool(
+            usdc_addr, nostraUsdcToken, deposit_amt.try_into().unwrap()
+        );
+}
