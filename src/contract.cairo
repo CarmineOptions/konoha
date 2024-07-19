@@ -40,7 +40,6 @@ mod Governance {
     use konoha::types::VoteStatus;
     use konoha::upgrades::upgrades as upgrades_component;
     use konoha::vesting::vesting as vesting_component;
-    use konoha::streaming::streaming as streaming_component;
     use starknet::get_contract_address;
 
     use starknet::syscalls::deploy_syscall;
@@ -54,8 +53,6 @@ mod Governance {
     component!(path: upgrades_component, storage: upgrades, event: UpgradesEvent);
     component!(path: discussion_component, storage: discussions, event: DiscussionEvent);
     component!(path: staking_component, storage: staking, event: StakingEvent);
-    component!(path: streaming_component, storage: streaming, event: StreamingEvent);
-
 
     #[abi(embed_v0)]
     impl Airdrop = airdrop_component::AirdropImpl<ContractState>;
@@ -74,9 +71,6 @@ mod Governance {
     #[abi(embed_v0)]
     impl Staking = staking_component::StakingImpl<ContractState>;
 
-    #[abi(embed_v0)]
-    impl Streaming = streaming_component::StreamingImpl<ContractState>;
-
     #[storage]
     struct Storage {
         proposal_initializer_run: LegacyMap::<u64, bool>,
@@ -93,9 +87,6 @@ mod Governance {
         discussions: discussion_component::Storage,
         #[substorage(v0)]
         staking: staking_component::Storage,
-        #[substorage(v0)]
-        streaming: streaming_component::Storage,
-
     }
 
     // PROPOSALS
@@ -125,7 +116,6 @@ mod Governance {
         UpgradesEvent: upgrades_component::Event,
         DiscussionEvent: discussion_component::Event,
         StakingEvent: staking_component::Event,
-        StreamingEvent: streaming_component::Event,
     }
 
     #[constructor]
