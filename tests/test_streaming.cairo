@@ -6,23 +6,23 @@ use debug::PrintTrait;
 
 use konoha::contract::Governance;
 use konoha::contract::{IGovernanceDispatcher, IGovernanceDispatcherTrait};
-use konoha::traits::{IGovernanceTokenDispatcher, IGovernanceTokenDispatcherTrait};
-use starknet::{get_block_timestamp, get_caller_address, get_contract_address, ContractAddress};
-use konoha::vesting::{IVestingDispatcher, IVestingDispatcherTrait, IVesting};
 use konoha::streaming::{IStreamingDispatcher, IStreamingDispatcherTrait, IStreaming};
+use konoha::traits::{IGovernanceTokenDispatcher, IGovernanceTokenDispatcherTrait};
+use konoha::vesting::{IVestingDispatcher, IVestingDispatcherTrait, IVesting};
 
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
     BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget,
     prank, CheatSpan
 };
+use starknet::{get_block_timestamp, get_caller_address, get_contract_address, ContractAddress};
 
 use super::setup::{deploy_governance_and_both_tokens};
 
-fn start_stream(gov: ContractAddress){
+fn start_stream(gov: ContractAddress) {
     prank(CheatTarget::One(gov), gov, CheatSpan::TargetCalls(4));
     let streaming = IStreamingDispatcher { contract_address: gov };
-    streaming.add_new_stream(get_caller_address(), 0x2.try_into().unwrap(), 100, 200, 100000);
+    streaming.add_new_stream(0x2.try_into().unwrap(), 100, 200, 100000);
 }
 
 //passing!
@@ -32,23 +32,17 @@ fn test_add_new_stream() {
     start_stream(gov.contract_address);
     let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
 
-    let streamer = get_caller_address();
     let recipient = 0x2.try_into().unwrap();
     let start_time: u64 = 100;
     let end_time: u64 = 200;
     let total_amount: u128 = 100000;
-    
-    streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
+
+    streaming.add_new_stream(recipient, start_time, end_time, total_amount);
     //let key = (get_caller_address(), recipient, end_time, start_time);
 
-    let (claimed_amount, stored_total_amount) = streaming.get_stream_info(
-        streamer, 
-        recipient,
-        start_time,
-        end_time,
-    );
+    let (claimed_amount, stored_total_amount) = streaming
+        .get_stream_info(recipient, start_time, end_time,);
 
-    assert_eq!(streamer, get_caller_address(), "Incorrect streamer addr");
     assert_eq!(recipient, 0x2.try_into().unwrap(), "Incorrect streamer addr");
     assert_eq!(start_time, 100, "Incorrect start time");
     assert_eq!(end_time, 200, "Incorrect end time");
@@ -57,58 +51,56 @@ fn test_add_new_stream() {
 }
 
 //passing!
-#[test] 
+#[test]
 #[should_panic(expected: ('starts first',))]
-fn test_valid_stream_time(){
+fn test_valid_stream_time() {
     let (gov, _, _) = deploy_governance_and_both_tokens();
     start_stream(gov.contract_address);
     let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
 
-    let streamer = get_caller_address();
     let recipient = 0x2.try_into().unwrap();
     let start_time: u64 = 200;
     let end_time: u64 = 100;
     let total_amount: u128 = 100000;
 
-    streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
+    streaming.add_new_stream(recipient, start_time, end_time, total_amount);
 }
 
 //passing!
-#[test] 
+#[test]
 #[should_panic(expected: ('nothing to claim',))]
-fn test_claimed_amount(){
+fn test_claimed_amount() {
     let (gov, _, _) = deploy_governance_and_both_tokens();
     start_stream(gov.contract_address);
     let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
 
-    let streamer = get_caller_address();
     let recipient = 0x2.try_into().unwrap();
     let start_time: u64 = 100;
     let end_time: u64 = 200;
     let total_amount: u128 = 0;
-    streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
+    streaming.add_new_stream(recipient, start_time, end_time, total_amount);
 
     start_warp(CheatTarget::One(gov.contract_address), 150);
     //shouldn't have anything to claim
-    streaming.claim_stream(streamer, recipient, start_time, end_time);
+    streaming.claim_stream(recipient, start_time, end_time);
 }
 
 //passing!
 #[test]
 #[should_panic(expected: ('stream has not started',))]
-fn test_stream_started(){
-  let (gov, _, _) = deploy_governance_and_both_tokens();
-  start_stream(gov.contract_address);
-  let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
-  let streamer = get_caller_address();
-  let recipient = 0x2.try_into().unwrap();
-  let start_time: u64 = 100;
-  let end_time: u64 = 200;
-  let total_amount: u128 = 100000;
-  streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
-  start_warp(CheatTarget::One(gov.contract_address), 50);// before of stream
-  
-  streaming.claim_stream(streamer, recipient, start_time, end_time);
+fn test_stream_started() {
+    let (gov, _, _) = deploy_governance_and_both_tokens();
+    start_stream(gov.contract_address);
+    let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
+
+    let recipient = 0x2.try_into().unwrap();
+    let start_time: u64 = 100;
+    let end_time: u64 = 200;
+    let total_amount: u128 = 100000;
+    streaming.add_new_stream(recipient, start_time, end_time, total_amount);
+    start_warp(CheatTarget::One(gov.contract_address), 50); // before of stream
+
+    streaming.claim_stream(recipient, start_time, end_time);
 }
 
 #[test]
@@ -117,34 +109,31 @@ fn test_claim_stream() {
     start_stream(gov.contract_address);
     let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
 
-    let streamer = get_caller_address();
     let recipient = 0x2.try_into().unwrap();
     let start_time: u64 = 100;
     let end_time: u64 = 200;
     let total_amount: u128 = 100000;
 
-    streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
-    let (claimable_amount, total_amount) = streaming.get_stream_info(
-        streamer, 
-        recipient,
-        start_time,
-        end_time,
-    );
+    streaming.add_new_stream(recipient, start_time, end_time, total_amount);
+    let (claimable_amount, total_amount) = streaming
+        .get_stream_info(recipient, start_time, end_time,);
     start_warp(CheatTarget::One(gov.contract_address), 150);
 
-    streaming.claim_stream(streamer, recipient, start_time, end_time);
+    streaming.claim_stream(recipient, start_time, end_time);
 
-    let expected_claimed_amount = (100000 * 50/ 100); //should be 50% since middle of stream
+    let expected_claimed_amount = (100000 * 50 / 100); //should be 50% since middle of stream
     assert_eq!(total_amount, 100000, "Incorrect total amount after claiming the stream");
     assert_eq!(claimable_amount, 0, "Incorrect claimed amount after claiming the stream");
 
     let self_dsp = IGovernanceDispatcher { contract_address: gov.contract_address };
     let token_address = self_dsp.get_governance_token_address();
     let erc20 = IERC20Dispatcher { contract_address: token_address };
-    
+
     let balance = erc20.balance_of(recipient);
 
-    assert_eq!(balance, expected_claimed_amount, "Balance should match the expected claimed amount");
+    assert_eq!(
+        balance, expected_claimed_amount, "Balance should match the expected claimed amount"
+    );
 }
 
 #[test]
@@ -153,24 +142,20 @@ fn test_cancel_stream() {
     start_stream(gov.contract_address);
     let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
 
-    let streamer = get_caller_address();
     let recipient = 0x2.try_into().unwrap();
     let start_time: u64 = 100;
     let end_time: u64 = 200;
     let total_amount: u128 = 100000;
 
-    streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
+    streaming.add_new_stream(recipient, start_time, end_time, total_amount);
 
     start_warp(CheatTarget::One(gov.contract_address), 150);
 
     //test cancel_stream
     streaming.cancel_stream(recipient, start_time, end_time);
 
-    let (claimed_amount, stored_total_amount) = streaming.get_stream_info(
-        streamer, 
-        recipient, 
-        start_time, 
-        end_time);
+    let (claimed_amount, stored_total_amount) = streaming
+        .get_stream_info(recipient, start_time, end_time);
 
     assert_eq!(claimed_amount, 0, "Claimed amount should be 0 after canceling the stream");
     assert_eq!(stored_total_amount, 0, "Total amount should be 0 after canceling the stream");
@@ -185,49 +170,4 @@ fn test_cancel_stream() {
 
     assert_eq!(unclaimed_amount.into(), 100000, "Unclaimed amount should be reclaimed correctly");
     assert_eq!(balance, 0, "balance");
-}
-
-#[test]
-//#[should_panic(expected: "nothing to claim")]
-fn test_add_new_stream_failure() {
-    let (gov, _, _) = deploy_governance_and_both_tokens();
-    start_stream(gov.contract_address);
-    let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
-
-    let streamer = 0x1.try_into().unwrap(); // This will be an address other than the contract's address
-    let recipient = 0x2.try_into().unwrap();
-    let start_time: u64 = 100;
-    let end_time: u64 = 200;
-    let total_amount: u128 = 100000;
-
-    // Add a stream with `streamer` as `gov` address
-    streaming.add_new_stream(streamer, recipient, start_time, end_time, total_amount);
-
-    let (claimable_amount, stored_total_amount) = streaming.get_stream_info(
-        streamer, 
-        recipient,
-        start_time,
-        end_time,
-    );
-
-    start_warp(CheatTarget::One(gov.contract_address), 150); // Advance time by 150 units
-
-    streaming.claim_stream(
-        streamer,  // Using the wrong `streamer` address
-        recipient,
-        start_time,
-        end_time,
-    );
-
-    assert_eq!(stored_total_amount, 100000, "Incorrect total amount after attempting to claim the stream");
-    assert_eq!(claimable_amount, 0, "Incorrect claimed amount after attempting to claim the stream");
-
-    let self_dsp = IGovernanceDispatcher { contract_address: gov.contract_address };
-    let token_address = self_dsp.get_governance_token_address();
-    let erc20 = IERC20Dispatcher { contract_address: token_address };
-    
-    let balance = erc20.balance_of(recipient);
-
-    let expected_claimed_amount = (100000 * 50 / 100); // should be 50% since middle of stream
-    assert_eq!(balance, expected_claimed_amount, "Balance should match the expected claimed amount");
 }
