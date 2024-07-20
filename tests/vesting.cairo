@@ -21,7 +21,7 @@ fn test_setup(gov: ContractAddress) {
 }
 
 #[test]
-#[should_panic(expected : ('not self-call',))]
+#[should_panic(expected: ('not self-call',))]
 fn test_unauthorized_add_vesting_schedule() {
     let (gov, _, _) = deploy_governance_and_both_tokens();
     test_setup(gov.contract_address);
