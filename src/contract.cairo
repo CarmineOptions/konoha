@@ -34,13 +34,13 @@ mod Governance {
     use konoha::proposals::proposals as proposals_component;
     use konoha::staking::staking as staking_component;
     use konoha::staking::{IStakingDispatcher, IStakingDispatcherTrait};
+    use konoha::streaming::streaming as streaming_component;
     use konoha::types::BlockNumber;
     use konoha::types::ContractType;
     use konoha::types::PropDetails;
     use konoha::types::VoteStatus;
     use konoha::upgrades::upgrades as upgrades_component;
     use konoha::vesting::vesting as vesting_component;
-    use konoha::streaming::streaming as streaming_component;
     use starknet::get_contract_address;
 
     use starknet::syscalls::deploy_syscall;
@@ -95,7 +95,6 @@ mod Governance {
         staking: staking_component::Storage,
         #[substorage(v0)]
         streaming: streaming_component::Storage,
-
     }
 
     // PROPOSALS
