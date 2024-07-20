@@ -82,7 +82,7 @@ mod streaming {
         reclaimed_amount: u256
     }
 
-    //TODO:
+    //TODO
     #[embeddable_as(StreamingImpl)]
     impl Streaming<
         TContractState, +HasComponent<TContractState>
@@ -100,7 +100,7 @@ mod streaming {
             assert(get_caller_address() == get_contract_address(), 'not self-call');
             assert(start_time < end_time, 'starts first');
 
-            let currently_claimable = 0;
+            let mut currently_claimable = 0;
             self.streams.write(key, (currently_claimable, total_amount));
 
             self
@@ -123,8 +123,8 @@ mod streaming {
             end_time: u64,
         ) {
             let current_time = get_block_timestamp();
-
-            let key = (streamer, recipient, start_time, end_time,);
+            //get_caller should be streamer I think
+            let key = (get_caller_address(), recipient, start_time, end_time,);
 
             let (already_claimed, total_amount): (u128, u128) = self.streams.read(key);
             assert(current_time > start_time, 'stream has not started');
