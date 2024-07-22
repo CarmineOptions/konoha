@@ -12,49 +12,6 @@ use snforge_std::{
 };
 use starknet::{ContractAddress, get_block_timestamp};
 
-//#[test]
-//#[fork(url: "https://rpc.starknet-testnet.lava.build", block_id: BlockId::Number(904597))]
-fn test_submit_proposal() {
-    let gov_contract_addr: ContractAddress =
-        0x7ba1d4836a1142c09dde23cb39b2885fe350912591461b5764454a255bdbac6
-        .try_into()
-        .unwrap();
-    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
-    // corresponding govtoken: 0x05151bfdd47826df3669033ea7fb977d3b2d45c4f4d1c439a9edf4062bf34bfa
-    // has one holder, with 31 CARM: 0x0583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1
-    let _admin_addr: ContractAddress =
-        0x0583a9d956d65628f806386ab5b12dccd74236a3c6b930ded9cf3c54efc722a1
-        .try_into()
-        .unwrap();
-    //start_prank(gov_contract_addr, admin_addr);
-    dispatcher.submit_proposal(0x00, 1);
-}
-
-
-// Raises the prop_id to 44, fixes prop_id now 0
-fn submit_44_signal_proposals() {
-    let gov_contract_addr: ContractAddress =
-        0x001405ab78ab6ec90fba09e6116f373cda53b0ba557789a4578d8c1ec374ba0f
-        .try_into()
-        .unwrap();
-    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
-    let scaling_address: ContractAddress =
-        0x052df7acdfd3174241fa6bd5e1b7192cd133f8fc30a2a6ed99b0ddbfb5b22dcd
-        .try_into()
-        .unwrap();
-
-    let mut curr_prop: u8 = 0;
-
-    loop {
-        if curr_prop == 44 {
-            break;
-        }
-        start_prank(CheatTarget::One(gov_contract_addr), scaling_address);
-        dispatcher.submit_proposal(42, 4); // for signal vote with payload 42
-        curr_prop += 1;
-    }
-}
-
 
 // This proposes upgrading the current mainnet Carmine governance to the one in master, votes on it with multiple wallets and passes the upgrade turbo.
 #[test]
