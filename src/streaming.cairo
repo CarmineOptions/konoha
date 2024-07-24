@@ -18,6 +18,7 @@ trait IStreaming<TContractState> {
         recipient: ContractAddress,
         start_time: u64,
         end_time: u64,
+        is_minting: bool
     );
 
     fn cancel_stream(
@@ -73,7 +74,8 @@ mod streaming {
         recipient: ContractAddress,
         start_time: u64,
         end_time: u64,
-        total_amount: u128
+        total_amount: u128,
+        is_minting: bool
     }
 
     #[derive(starknet::Event, Drop, Serde)]
@@ -104,8 +106,7 @@ mod streaming {
             assert(get_caller_address() == get_contract_address(), 'not self-call');
             assert(start_time < end_time, 'starts first');
 
-            let currently_claimable = 0;
-            self.streams.write(key, (currently_claimable, total_amount, is_minting));
+            self.streams.write(key, (0, total_amount, is_minting));
 
             self
                 .emit(
@@ -126,6 +127,7 @@ mod streaming {
             recipient: ContractAddress,
             start_time: u64,
             end_time: u64,
+            is_minting: bool
         ) {
             let current_time = get_block_timestamp();
         
@@ -156,9 +158,19 @@ mod streaming {
         
             // Mint the amount to the recipient
             let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
-            IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() }
-                .mint(recipient, amount_to_claim.into());
+            let governance_token = IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() };
         
+            if is_minting {
+                governance_token.mint(recipient, amount_to_claim.into());
+            } else {
+                let erc20_token = IERC20Dispatcher { contract_address: get_contract_address() };
+        
+                let balance = erc20_token.balance_of(get_contract_address());
+                assert(balance >= amount_to_claim.into(), 'Insufficient transfer balance');
+        
+                erc20_token.approve(recipient, amount_to_claim.try_into().unwrap());
+                erc20_token.transfer(recipient, amount_to_claim.try_into().unwrap());
+            }
             // Emit the StreamClaimed event
             self.emit(StreamClaimed {
                 streamer: streamer,
@@ -166,6 +178,7 @@ mod streaming {
                 start_time: start_time,
                 end_time: end_time,
                 total_amount: total_amount,
+                is_minting: is_minting
             });
         }
         
@@ -178,29 +191,38 @@ mod streaming {
             let key: (ContractAddress, ContractAddress, u64, u64) = (
                 get_caller_address(), recipient, start_time, end_time,
             );
-
+        
             // Read from the streams LegacyMap
-            let (already_claimed, total_amount, _): (u128, u128, bool) = self.streams.read(key);
+            let (already_claimed, total_amount, is_minting): (u128, u128, bool) = self.streams.read(key);
             let to_distribute: u256 = total_amount.into() - already_claimed.into();
-
-            //cancel stream
-            self.streams.write(key, (0, 0, false));
-
+        
+            // Cancel the stream
+            self.streams.write(key, (0, 0, is_minting));
+        
             let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
-            IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() }
-                .mint(get_caller_address(), to_distribute.into());
-
-            self
-                .emit(
-                    StreamCanceled {
-                        streamer: get_caller_address(),
-                        recipient: recipient,
-                        start_time: start_time,
-                        end_time: end_time,
-                        reclaimed_amount: to_distribute,
-                    }
-                )
+            let governance_token = IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() };
+        
+            if is_minting {
+                governance_token.mint(get_caller_address(), to_distribute.into());
+            } else {
+                let erc20_token = IERC20Dispatcher { contract_address: get_contract_address() };
+        
+                let balance = erc20_token.balance_of(get_contract_address());
+                assert(balance >= to_distribute.into(), 'Insufficient transfer balance');
+        
+                erc20_token.approve(recipient, to_distribute.try_into().unwrap());
+                erc20_token.transfer(recipient, to_distribute.try_into().unwrap());
+            }
+        
+            self.emit(StreamCanceled {
+                streamer: get_caller_address(),
+                recipient: recipient,
+                start_time: start_time,
+                end_time: end_time,
+                reclaimed_amount: to_distribute,
+            });
         }
+        
         fn get_stream_info(
             ref self: ComponentState<TContractState>,
             streamer: ContractAddress,
