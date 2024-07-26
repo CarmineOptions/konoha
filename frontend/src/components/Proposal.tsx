@@ -23,12 +23,15 @@ export default function Proposal({
   const [isCommentModalOpen, setIsCommentModalOpen] =
     React.useState<boolean>(false);
   // Call the contract function get_proposal_details with the proposalId to get the proposal details
+
+  
   const { data, isLoading } = useContractRead({
     functionName: "get_proposal_details",
     args: [proposalId.toString()],
     abi,
     address: CONTRACT_ADDR,
-    watch: true,
+    watch: false,
+    retry: false
   });
 
   // Convert the proposal type from number to string

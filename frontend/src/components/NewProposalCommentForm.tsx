@@ -30,7 +30,6 @@ export default function NewcommentCommentForm({
   }, [ipfsHash]);
 
   const { writeAsync } = useContractWrite({ calls });
-
   async function submitComment(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -43,7 +42,6 @@ export default function NewcommentCommentForm({
       toast.error("Please fill out all fields");
       return;
     }
-
 
     const payload = {
       text: comment,
@@ -81,7 +79,6 @@ export default function NewcommentCommentForm({
     }
   }, [ipfsHash]);
 
-  console.log(ipfsHash, "result");
 
   return (
     <div className="w-[35rem]">
