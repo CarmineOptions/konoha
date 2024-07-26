@@ -101,7 +101,8 @@ export default function Proposal({
     <div>loading contract {proposalId?.toString()}</div>
   ) : (
     <div>
-      <div className="w-full max-w-[50rem] flex flex-row items-center gap-1 p-2 pl-0 rounded-lg bg-slate-200">
+      <div className="w-[50rem] max-w-[50rem] grid grid-cols-2 items-center gap-1 p-2 pl-0 rounded-lg bg-slate-200">
+        <div className="flex items-center">
         <div className="self-stretch pl-5 pr-4 mr-4 font-mono border-r grid text-slate-400 place-content-center border-slate-400">
           {index}
         </div>
@@ -113,7 +114,11 @@ export default function Proposal({
           >
             {proposal_type[data.valueOf()["to_upgrade"]]}
           </div>
-          <div className="flex items-center gap-2">
+         
+        </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2">
             <button
               className="px-3 py-2 text-sm font-semibold bg-green-300 rounded-lg transition-all hover:bg-green-400"
               onClick={() => vote(true)}
@@ -134,7 +139,6 @@ export default function Proposal({
               Comment
             </button>
           </div>
-        </div>
       </div>
 
       {/* Add New Comment Modal */}
