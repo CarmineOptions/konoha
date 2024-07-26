@@ -1,15 +1,24 @@
 mod airdrop;
-mod amm_types {
-    mod basic;
-}
 mod constants;
 mod contract;
+mod discussion;
 mod merkle_tree;
-//mod options;
 mod proposals;
+mod staking;
+mod streaming;
 mod token;
 mod traits;
 mod treasury;
 mod types;
 mod upgrades;
+mod vesting;
 mod voting_token;
+mod treasury_types {
+    mod carmine;
+    mod zklend {
+        mod interfaces;
+    }
+    mod nostra {
+        mod interface;
+    }
+}

@@ -5,30 +5,28 @@ trait IUpgrades<TContractState> {
 
 #[starknet::component]
 mod upgrades {
-    use traits::TryInto;
-    use option::OptionTrait;
-    use traits::Into;
-
-    use starknet::SyscallResultTrait;
-    use starknet::SyscallResult;
-    use starknet::syscalls;
-    use starknet::ClassHash;
-    use starknet::ContractAddress;
-    use starknet::class_hash;
-
-    use konoha::types::PropDetails;
-    use konoha::contract::Governance;
+    use core::SpanTrait;
+    use core::array::ArrayTrait;
+    use core::result::ResultTrait;
+    use konoha::airdrop::airdrop as airdrop_component;
     use konoha::contract::Governance::ContractState;
+    use konoha::contract::Governance;
 
     use konoha::proposals::proposals as proposals_component;
     use konoha::proposals::proposals::ProposalsImpl;
-    use konoha::airdrop::airdrop as airdrop_component;
-    use konoha::traits::IAMMDispatcher;
-    use konoha::traits::IAMMDispatcherTrait;
-    use konoha::traits::IGovernanceTokenDispatcher;
-    use konoha::traits::IGovernanceTokenDispatcherTrait;
-    use konoha::traits::get_amm_address_self;
     use konoha::traits::get_governance_token_address_self;
+
+    use konoha::types::{CustomProposalConfig, PropDetails};
+    use option::OptionTrait;
+    use starknet::ClassHash;
+    use starknet::ContractAddress;
+    use starknet::SyscallResult;
+
+    use starknet::SyscallResultTrait;
+    use starknet::class_hash;
+    use starknet::syscalls;
+    use traits::Into;
+    use traits::TryInto;
 
     #[storage]
     struct Storage {
@@ -74,31 +72,69 @@ mod upgrades {
             let impl_hash = prop_details.payload;
 
             // Apply the upgrade
-            // TODO use full match/switch when supported
             match contract_type {
                 0 => {
-                    let amm_addr: ContractAddress = get_amm_address_self();
-                    IAMMDispatcher { contract_address: amm_addr }
-                        .upgrade(impl_hash.try_into().unwrap());
+                    panic!("Carmine Options AMM upgrade not supported, use generic proposals");
                 },
-                _ => {
-                    if (contract_type == 1) {
-                        let impl_hash_classhash: ClassHash = impl_hash.try_into().unwrap();
-                        syscalls::replace_class_syscall(impl_hash_classhash);
-                    } else if (contract_type == 2) {
-                        let govtoken_addr = get_governance_token_address_self();
-                        IGovernanceTokenDispatcher { contract_address: govtoken_addr }
-                            .upgrade(impl_hash);
-                    } else if (contract_type == 3) {
-                        let mut airdrop_comp = get_dep_component_mut!(ref self, Airdrop);
-                        airdrop_comp.merkle_root.write(impl_hash);
+                1 => {
+                    let impl_hash_classhash: ClassHash = impl_hash.try_into().unwrap();
+                    let res = syscalls::replace_class_syscall(impl_hash_classhash);
+                    res.expect('upgrade failed');
+                },
+                2 => { panic!("CARM upgrade not supported, use generic proposals"); },
+                3 => {
+                    let mut airdrop_comp = get_dep_component_mut!(ref self, Airdrop);
+                    airdrop_comp.merkle_root.write(impl_hash);
+                },
+                4 => (),
+                5 => {
+                    // custom proposal
+                    let custom_proposal_type: u32 = impl_hash
+                        .try_into()
+                        .expect('custom prop type fit in u32');
+                    let config: CustomProposalConfig = proposals_comp
+                        .custom_proposal_type
+                        .read(custom_proposal_type);
+
+                    let prop_id_: u32 = prop_id.try_into().unwrap();
+                    let mut calldata_len = proposals_comp
+                        .custom_proposal_payload
+                        .read((prop_id_, 0));
+                    let mut calldata: Array<felt252> = ArrayTrait::new();
+                    let mut i: u32 = 1;
+                    while (calldata_len != 0) {
+                        calldata.append(proposals_comp.custom_proposal_payload.read((prop_id_, i)));
+                        i += 1;
+                        calldata_len -= 1;
+                    };
+
+                    if (config.library_call) {
+                        let res = syscalls::library_call_syscall(
+                            config.target.try_into().expect('unable to convert>classhash'),
+                            config.selector,
+                            calldata.span()
+                        );
+                        res.expect('libcall failed');
                     } else {
-                        assert(
-                            contract_type == 4, 'invalid contract_type'
-                        ); // type 4 is no-op, signal vote
+                        let res = syscalls::call_contract_syscall(
+                            config.target.try_into().expect('unable to convert>addr'),
+                            config.selector,
+                            calldata.span()
+                        );
+                        res.expect('contract call failed');
                     }
-                }
-            }
+                },
+                6 => {
+                    // arbitrary proposal
+                    let res = syscalls::library_call_syscall(
+                        impl_hash.try_into().expect('unable to convert>classhash'),
+                        selector!("execute_arbitrary_proposal"),
+                        ArrayTrait::new().span()
+                    );
+                    res.expect('libcall failed');
+                },
+                _ => { panic_with_felt252('invalid to_upgrade') }
+            };
             self.proposal_applied.write(prop_id, true); // Mark the proposal as applied
             self
                 .emit(

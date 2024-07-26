@@ -1,8 +1,8 @@
-use starknet::SyscallResult;
-use starknet::syscalls::storage_read_syscall;
-use starknet::syscalls::storage_write_syscall;
-use starknet::storage_address_from_base_and_offset;
 use core::serde::Serde;
+use starknet::ContractAddress;
+use starknet::SyscallResult;
+use starknet::storage_address_from_base_and_offset;
+use starknet::syscalls::{storage_read_syscall, storage_write_syscall, ClassHash};
 
 #[derive(Copy, Drop, Serde, starknet::Store)]
 struct PropDetails {
@@ -16,8 +16,19 @@ struct VoteCounts {
 }
 
 type BlockNumber = felt252;
-type VoteStatus = felt252; // 0 = not voted, 1 = yay, -1 = nay
+type VoteStatus = felt252; // 0 = not voted, 1 = yay, 2 = nay
 type ContractType =
-    u64; // for Carmine 0 = amm, 1 = governance, 2 = CARM token, 3 = merkle tree root, 4 = no-op/signal vote
-type OptionSide = felt252;
-type OptionType = felt252;
+    u64; // for Carmine 0 = amm, 1 = governance, 2 = CARM token, 3 = merkle tree root, 4 = no-op/signal vote, 5 = custom proposal
+
+#[derive(Copy, Drop, Serde, starknet::Store)]
+struct CustomProposalConfig {
+    target: felt252, //class hash if library call, contract address if regular call
+    selector: felt252,
+    library_call: bool
+}
+
+#[derive(Drop, Serde, starknet::Store)]
+struct Comment {
+    user: ContractAddress,
+    ipfs_hash: ByteArray,
+}

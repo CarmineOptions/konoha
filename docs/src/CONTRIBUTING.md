@@ -1,7 +1,5 @@
 # Contributor Guidelines
 
-We are now focusing on the ODHack hackathon, new issues will be released on hackathon start.
-
 1. Task Claiming
     - Comment: 'I would like to take this task,' including the estimated delivery timeline (start and completion dates) and a brief summary of relevant skills (required for complex tasks).
     - Join the contributors' Telegram group for updates and discussions.
