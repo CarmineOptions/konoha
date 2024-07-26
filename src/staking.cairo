@@ -358,43 +358,24 @@ mod staking {
         }
 
         fn _supply(self: @ComponentState<TContractState>, t: u64) -> u128 {
-            let mut epoch = self.epoch.read();
-            let mut point: Point = self.point_history.read(epoch);
-            
-            let mut t_i = point.ts;
-            let mut i = epoch;
+            let mut total_supply: u128 = 0;
+            let address_count = self.address_count.read();
         
+            let mut i = 0;
             loop {
-                if i == 0 {
+                if i >= address_count {
                     break;
                 }
+                
+                let addr: ContractAddress = self.address_list.read(i);
+                let balance = self.get_balance_of(addr, t); // Use get_balance_of_at
+                
+                total_supply += balance;
         
-                let last_point = point;
-                point = self.point_history.read(i);
-                
-                if t < point.ts {
-                    i -= 1;
-                    continue;
-                }
-                
-                let dt = if t > last_point.ts { t - last_point.ts } else { 0 };
-                
-                if point.bias > point.slope * dt.into() {
-                    point.bias -= point.slope * dt.into();
-                } else {
-                    point.bias = 0;
-                }
-        
-                if t_i > last_point.ts {
-                    let d_slope = self.slope_changes.read(last_point.ts);
-                    point.slope += d_slope;
-                }
-                
-                t_i = last_point.ts;
-                i -= 1;
+                i += 1;
             };
-            
-            point.bias
+        
+            total_supply
         }
         fn get_address_by_index(self: @ComponentState<TContractState>, index: u32) -> ContractAddress {
             self.address_list.read(index)
