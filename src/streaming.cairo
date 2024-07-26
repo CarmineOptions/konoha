@@ -22,6 +22,7 @@ trait IStreaming<TContractState> {
     fn get_stream_info(
         ref self: TContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
     ) -> (u128, u128, bool);
+
 }
 
 #[starknet::component]
@@ -29,6 +30,8 @@ mod streaming {
     use konoha::contract::Governance;
     use konoha::contract::{IGovernanceDispatcher, IGovernanceDispatcherTrait};
     use konoha::traits::{IGovernanceTokenDispatcher, IGovernanceTokenDispatcherTrait};
+    use konoha::treasury::{ITreasuryDispatcher, ITreasuryDispatcherTrait};
+
     use starknet::ContractAddress;
     use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
     use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
@@ -122,20 +125,23 @@ mod streaming {
             // Update the storage with the new claimed amount
             self.streams.write(key, (currently_claimable, total_amount, is_minting));
 
-            if is_minting{
+            if is_minting {
                 let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
                 IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() }
                     .mint(recipient, amount_to_claim.into());
             } else {
-                let erc20_token = IERC20Dispatcher { contract_address: get_contract_address() };
+                            // Ensure only the owner can perform the transfer
+                let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
+                let governance_token_address = self_dsp.get_governance_token_address();
+                let erc20_token = IERC20Dispatcher { contract_address: governance_token_address };
 
                 let balance = erc20_token.balance_of(get_contract_address());
-                assert(balance >= amount_to_claim.into(), 'Insufficient transfer balance');
+                assert(balance >= amount_to_claim.into(), 'Insufficient cancel balance');
 
-                erc20_token.approve(recipient, amount_to_claim.try_into().unwrap());
-                erc20_token.transfer(recipient, amount_to_claim.try_into().unwrap());
+                let status = erc20_token.transfer(recipient, amount_to_claim.try_into().unwrap());
+                assert(status, 'Token transfer failed');
             }
-                
+            
 
             self.emit(StreamClaimed { recipient, start_time, end_time, total_amount, });
         }
@@ -159,13 +165,15 @@ mod streaming {
                 IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() }
                 .mint(get_caller_address(), to_distribute.into());
             }else {
-                let erc20_token = IERC20Dispatcher { contract_address: get_contract_address() };
-
+                let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
+                let governance_token_address = self_dsp.get_governance_token_address();
+                let erc20_token = IERC20Dispatcher { contract_address: governance_token_address };
+        
                 let balance = erc20_token.balance_of(get_contract_address());
-                assert(balance >= to_distribute.into(), 'Insufficient transfer balance');
-
-                erc20_token.approve(get_caller_address(), to_distribute.try_into().unwrap());
-                erc20_token.transfer(get_caller_address(), to_distribute.try_into().unwrap());
+                assert(balance >= to_distribute.into(), 'Insufficient cancel balance');
+        
+                let status = erc20_token.transfer(get_caller_address(), to_distribute.try_into().unwrap());
+                assert(status, 'Token transfer failed');
             }
             
             self
