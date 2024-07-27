@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useAccount, useContractWrite } from "@starknet-react/core";
-import { CONTRACT_ADDR, formatAddressBravoos } from "../lib/config";
+import { CONTRACT_ADDR, formatAddress,  } from "../lib/config";
 import {byteArray} from "starknet"
 
 import { submitCommentApi } from "../api/apiService";
@@ -29,8 +29,12 @@ export default function NewcommentCommentForm({
     return [tx];
   }, [ipfsHash]);
 
+
+
+
   const { writeAsync } = useContractWrite({ calls });
   async function submitComment(e: React.FormEvent<HTMLFormElement>) {
+
     e.preventDefault();
 
     if (!isConnected) {
@@ -45,7 +49,7 @@ export default function NewcommentCommentForm({
 
     const payload = {
       text: comment,
-      address: formatAddressBravoos(address),
+      address: formatAddress(address),
     };
 
     setIsLoading(true);
@@ -78,6 +82,8 @@ export default function NewcommentCommentForm({
       updateProposal();
     }
   }, [ipfsHash]);
+
+
 
 
   return (
