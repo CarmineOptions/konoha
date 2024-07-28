@@ -24,7 +24,7 @@ function Root({ children }: { children: React.ReactNode }) {
 
     const testnetOptions: RpcProviderOptions = {
         // nodeUrl: apiUrl("call", { network: "testnet" }),
-        nodeUrl: "https://free-rpc.nethermind.io/sepolia-juno",
+        nodeUrl: "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
         // chainId: SN_SEPOLIA_CHAINID,
     };
 
