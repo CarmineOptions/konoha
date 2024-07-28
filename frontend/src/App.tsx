@@ -31,7 +31,7 @@ function App() {
             <Header />
             {isModalOpen && (
                 <dialog className="fixed inset-0 z-50 flex items-center justify-center w-full h-full p-6 bg-black bg-opacity-50">
-                    <div className="relative flex flex-col items-center gap-4 p-8 bg-white rounded-lg">
+                    <div className="relative flex flex-col items-center gap-4 p-8 bg-white rounded-lg w-[50%] h-[50%]">
                         {/* Close modal button */}
                         <button
                             className="absolute right-3 top-3 text-slate-400"
@@ -52,7 +52,7 @@ function App() {
                                 />
                             </svg>
                         </button>
-                        <p className="text-xl font-bold">New proposal</p>
+                        <p className="text-xl font-bold">New treasury proposal</p>
                         {/* New proposal form */}
                         <NewProposalForm setIsModalOpen={setIsModalOpen} />
                     </div>
