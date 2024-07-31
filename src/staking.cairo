@@ -15,6 +15,7 @@ trait IStaking<TContractState> {
     fn get_voting_token_address(self: @TContractState) -> ContractAddress;
 
     fn get_current_supply(ref self: TContractState, timestamp: u64) -> u128;
+    fn get_total_supply(ref self: TContractState, timestamp: u64) -> u128;
     fn get_balance_of(self: @TContractState, addr: ContractAddress, timestamp: u64) -> u128;
     fn get_locked_balance(self: @TContractState, addr: ContractAddress) -> (u128, u64);
 }
@@ -122,9 +123,14 @@ mod staking {
                 (locked_amount * remaining_time.into()) / total_lock_duration.into()
             }
         }
+        //returns total supply that is locked
+        fn get_total_supply(ref self: ComponentState<TContractState>, timestamp: u64) -> u128 {
+            let total_supply = self.total_locked_amount.read();
+            total_supply
+        }
 
+        //returns supply at current timestamp
         fn get_current_supply(ref self: ComponentState<TContractState>, timestamp: u64) -> u128 {
-            // Update the total supply to the current timestamp
             self._update_total_supply(timestamp);
             let total_bias = self.total_bias.read();
 
@@ -182,7 +188,6 @@ mod staking {
             self.total_bias.write(self.total_bias.read() + amount);
 
             self._checkpoint(caller, old_locked, new_locked);
-
 
             token.transfer_from(caller, get_contract_address(), amount.into());
 
@@ -416,6 +421,9 @@ mod staking {
 
         fn _update_total_supply(ref self: ComponentState<TContractState>, current_time: u64) {
             let last_update_time = self.last_update_time.read();
+            println!("LAST UPDATE: {}", last_update_time);
+            println!("CURRENT TIME: {}", current_time);
+
             if current_time > last_update_time {
                 let elapsed_time = current_time - last_update_time;
                 let total_slope = self.total_slope.read();
@@ -423,7 +431,15 @@ mod staking {
 
                 // Calculate the fractional years as an integer
                 let elapsed_years_scaled = (elapsed_time * FRACTION_SCALE) / SECONDS_IN_YEAR;
+
+                // Calculate decay using integer arithmetic
                 let decay = (total_slope * elapsed_years_scaled.into()) / FRACTION_SCALE.into();
+
+                println!("ELAPSED TIME = {}", elapsed_time);
+                println!("ELAPSED YEARS (scaled) = {}", elapsed_years_scaled);
+                println!("TOTAL SLOPE = {}", total_slope);
+                println!("OLD BIAS = {}", old_bias);
+                println!("DECAY = {}", decay);
 
                 // Compute the new bias, ensuring it doesn't go below zero
                 let new_bias = if old_bias > decay {
@@ -434,9 +450,11 @@ mod staking {
 
                 // Update the total bias
                 self.total_bias.write(new_bias);
+                println!("NEW BIAS {}", new_bias);
 
                 // Update the last update time
                 self.last_update_time.write(current_time);
+                println!("Updated Last Update Time: {}", self.last_update_time.read());
             }
         }
     }
