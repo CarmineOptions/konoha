@@ -289,7 +289,6 @@ fn test_linear_decay() {
     println!("Expected balance after another week: {}", expected_balance_after_week_year);
     println!("");
 }
-
 #[test]
 fn test_total_supply() {
     let (gov, voting_token, floating_token) = deploy_governance_and_both_tokens();
@@ -391,9 +390,9 @@ fn test_total_supply() {
 
     let final_supply = staking.get_current_supply(timestamp_after_week_year);
 
-    let expected_final_supply = 6940;
+    let expected_final_supply = 6943;
     assert_eq!(
-        final_supply + 980, expected_final_supply, "Supply after year should match expected supply"
+        final_supply, expected_final_supply, "Supply after year should match expected supply"
     );
 
     println!("Total supply after year: {}", final_supply);

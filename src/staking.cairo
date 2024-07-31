@@ -34,7 +34,10 @@ mod staking {
 
     const WEEK: u64 = 7 * 86400; // 7 days in seconds
     const MAXTIME: u64 = 4 * 365 * 86400; // 4 years in seconds
-    const ONE_YEAR: u64 = 31536000; // 365 days
+    const ONE_YEAR: u128 = 31536000; // 365 days
+    // Define constants for calculations
+    const SECONDS_IN_YEAR: u64 = 31536000; // Number of seconds in a year
+    const FRACTION_SCALE: u64 = 1_000; // Scale factor for fractions
 
     //deposit types
     const DEPOSIT_TYPE_CREATE: u8 = 0;
@@ -61,8 +64,6 @@ mod staking {
         user_point_epoch: LegacyMap::<ContractAddress, u64>, //latest epoch number for user
         slope_changes: LegacyMap::<u64, u128>, //scheduled change in slope
         locked: LegacyMap::<ContractAddress, LockedBalance>, //locked amount
-        address_list: LegacyMap::<u32, ContractAddress>,
-        address_count: u32,
         total_locked_amount: u128,
         total_bias: u128,
         total_slope: u128,
@@ -123,20 +124,12 @@ mod staking {
         }
 
         fn get_current_supply(ref self: ComponentState<TContractState>, timestamp: u64) -> u128 {
-            //let current_time = get_block_timestamp();
+            // Update the total supply to the current timestamp
             self._update_total_supply(timestamp);
-
-            let total_locked_amount = self.total_locked_amount.read();
             let total_bias = self.total_bias.read();
 
-            // Decayed total supply
-            if total_bias > total_locked_amount {
-                total_bias
-            } else {
-                total_locked_amount
-            }
+            total_bias
         }
-
 
         fn get_locked_balance(
             self: @ComponentState<TContractState>, addr: ContractAddress
@@ -160,15 +153,17 @@ mod staking {
             amount: u128,
             lock_duration: u64
         ) {
+            let current_time = get_block_timestamp();
+
+            self._update_total_supply(current_time);
             let old_locked: LockedBalance = self.locked.read(caller);
             assert(old_locked.amount == 0, 'Withdraw old tokens first');
             assert(amount > 0, 'Need non-zero amount');
 
-            let unlock_date = get_block_timestamp() + lock_duration.into();
-            assert(unlock_date > get_block_timestamp(), 'can only lock in the future(CL)');
-            assert(
-                unlock_date <= get_block_timestamp() + MAXTIME, 'Voting lock can be 4 years max'
-            );
+            let unlock_date = current_time + lock_duration;
+            assert(unlock_date > current_time, 'can only lock in the future(CL)');
+
+            //maybe a max time assertion?
 
             let new_locked = LockedBalance { amount, end: unlock_date };
 
@@ -176,21 +171,23 @@ mod staking {
 
             let balance = token.balance_of(caller);
             assert(balance >= amount.into(), 'Insufficient balance');
-
-            token.transfer_from(caller, get_contract_address(), amount.into());
+            self._update_total_supply(current_time);
 
             self.locked.write(caller, new_locked);
             self.total_locked_amount.write(self.total_locked_amount.read() + amount);
 
-            let new_slope = amount / lock_duration.into();
+            let new_slope = amount / (lock_duration.into() / ONE_YEAR);
+            let previous_total_slope = self.total_slope.read();
+            self.total_slope.write(previous_total_slope + new_slope);
             self.total_bias.write(self.total_bias.read() + amount);
-            self.total_slope.write(self.total_slope.read() + new_slope);
+
             self._checkpoint(caller, old_locked, new_locked);
 
-            let voting_token = IERC20Dispatcher {
-                contract_address: get_governance_token_address_self()
-            };
-            voting_token.mint(caller, amount.into());
+
+            token.transfer_from(caller, get_contract_address(), amount.into());
+
+            //removed voting minting - can be done in voting_token.cairo but I did not do that
+
             self
                 .emit(
                     Deposit {
@@ -198,7 +195,7 @@ mod staking {
                         amount,
                         locktime: unlock_date,
                         type_: DEPOSIT_TYPE_CREATE,
-                        ts: get_block_timestamp(),
+                        ts: current_time,
                     }
                 );
         }
@@ -208,16 +205,11 @@ mod staking {
         ) {
             let old_locked: LockedBalance = self.locked.read(caller);
             let current_time = get_block_timestamp();
-            self.total_locked_amount.write(self.total_locked_amount.read() + amount);
+            self._update_total_supply(current_time);
 
-            // Update the total bias and slope
-            let remaining_duration = old_locked.end - current_time;
-            let new_slope = amount / remaining_duration.into();
-            self.total_bias.write(self.total_bias.read() + amount);
-            self.total_slope.write(self.total_slope.read() + new_slope);
             assert(amount > 0, 'Need non-zero amount');
             assert(old_locked.amount > 0, 'No existing lock found');
-            assert(old_locked.end > get_block_timestamp(), 'Cannot add to expired lock');
+            assert(old_locked.end > current_time, 'Cannot add to expired lock');
 
             let new_locked = LockedBalance {
                 amount: old_locked.amount + amount, end: old_locked.end
@@ -231,6 +223,13 @@ mod staking {
             token.transfer_from(caller, get_contract_address(), amount.into());
 
             self.locked.write(caller, new_locked);
+            self.total_locked_amount.write(self.total_locked_amount.read() + amount);
+
+            let remaining_duration = old_locked.end - current_time;
+            let new_slope = amount / remaining_duration.into();
+            self.total_bias.write(self.total_bias.read() + amount);
+            self.total_slope.write(self.total_slope.read() + new_slope);
+
             self._checkpoint(caller, old_locked, new_locked);
 
             self
@@ -240,11 +239,10 @@ mod staking {
                         amount,
                         locktime: old_locked.end,
                         type_: DEPOSIT_TYPE_INCREASE_AMOUNT,
-                        ts: get_block_timestamp(),
+                        ts: current_time,
                     }
                 );
         }
-
         fn extend_unlock_date(ref self: ComponentState<TContractState>, unlock_date: u64) {
             let current_time = get_block_timestamp();
             self._update_total_supply(current_time);
@@ -252,17 +250,15 @@ mod staking {
             let caller = get_caller_address();
             let old_locked: LockedBalance = self.locked.read(caller);
 
-            // Update the total slope for the old and new durations
+            assert(old_locked.amount > 0, 'No existing lock found');
+            assert(old_locked.end > current_time, 'Lock expired');
+            assert(unlock_date > old_locked.end, 'Can only increase lock duration');
+            assert(unlock_date <= current_time + MAXTIME, 'Voting lock can be 4 years max');
+
             let old_slope = old_locked.amount / (old_locked.end - current_time).into();
             let new_slope = old_locked.amount / (unlock_date - current_time).into();
 
             self.total_slope.write(self.total_slope.read() - old_slope + new_slope);
-            assert(old_locked.amount > 0, 'No existing lock found');
-            assert(old_locked.end > get_block_timestamp(), 'Lock expired');
-            assert(unlock_date > old_locked.end, 'Can only increase lock duration');
-            assert(
-                unlock_date <= get_block_timestamp() + MAXTIME, 'Voting lock can be 4 years max'
-            );
 
             let new_locked = LockedBalance { amount: old_locked.amount, end: unlock_date };
 
@@ -276,11 +272,10 @@ mod staking {
                         amount: 0,
                         locktime: unlock_date,
                         type_: DEPOSIT_TYPE_INCREASE_TIME,
-                        ts: get_block_timestamp(),
+                        ts: current_time,
                     }
                 );
         }
-
         fn withdraw(ref self: ComponentState<TContractState>, caller: ContractAddress) {
             let LockedBalance { amount: locked_amount, end: locked_end_date } = self
                 .locked
@@ -424,24 +419,25 @@ mod staking {
             if current_time > last_update_time {
                 let elapsed_time = current_time - last_update_time;
                 let total_slope = self.total_slope.read();
-                let total_bias = self.total_bias.read();
+                let old_bias = self.total_bias.read();
 
-                let decayed_bias = if total_bias > total_slope * elapsed_time.into() {
-                    total_bias - total_slope * elapsed_time.into()
+                // Calculate the fractional years as an integer
+                let elapsed_years_scaled = (elapsed_time * FRACTION_SCALE) / SECONDS_IN_YEAR;
+                let decay = (total_slope * elapsed_years_scaled.into()) / FRACTION_SCALE.into();
+
+                // Compute the new bias, ensuring it doesn't go below zero
+                let new_bias = if old_bias > decay {
+                    old_bias - decay
                 } else {
                     0
                 };
 
-                self.total_bias.write(decayed_bias);
+                // Update the total bias
+                self.total_bias.write(new_bias);
 
+                // Update the last update time
                 self.last_update_time.write(current_time);
             }
-        }
-
-        fn get_address_by_index(
-            self: @ComponentState<TContractState>, index: u32
-        ) -> ContractAddress {
-            self.address_list.read(index)
         }
     }
 }
