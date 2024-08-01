@@ -18,7 +18,8 @@ function App() {
         args: [],
         abi,
         address: CONTRACT_ADDR,
-        watch: true,
+        watch: false,
+        retry: false
     });
 
     // Check if there is an error, if there is, display the error message
