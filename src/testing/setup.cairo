@@ -54,7 +54,6 @@ fn deploy_and_distribute_gov_tokens(recipient: ContractAddress) -> IERC20Dispatc
     token
 }
 
-
 fn test_vote_upgrade_root(new_merkle_root: felt252) {
     let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
     let gov_contract = deploy_governance(token_contract.contract_address);
@@ -67,6 +66,7 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
 
     start_prank(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
+    println!("Proposal ID {}", prop_id);
     start_prank(CheatTarget::One(gov_contract_addr), second_address.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
@@ -80,9 +80,27 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
 }
 
 fn check_if_healthy(gov_contract_addr: ContractAddress) -> bool {
-    // TODO
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
-    dispatcher.get_proposal_status(0);
-    let prop_details = dispatcher.get_proposal_details(0);
-    (prop_details.payload + prop_details.to_upgrade) != 0
+    let upgrades_dispatcher = IUpgradesDispatcher { contract_address: gov_contract_addr };
+    
+    // Get the latest proposal ID
+    let latest_proposal_id = dispatcher.get_latest_proposal_id();
+
+    // Get the proposal details
+    let new_prop_details = dispatcher.get_proposal_details(latest_proposal_id);
+    
+    // Get the current contract type and version
+    let (current_type, current_version) = proposals_dispatcher.get_proposal_details();
+    
+    // Check if the proposal is for the same contract type
+    if new_prop_details.contract_type != current_type {
+        return false;
+    }
+    
+    // Check if the proposed version is higher than the current version
+    if new_prop_details.new_version <= current_version {
+        return false;
+    }
+    //return true if same prop type, and version number is indeed "newer"    
+    true
 }
