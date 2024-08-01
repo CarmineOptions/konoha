@@ -82,6 +82,7 @@ export default function NewProposalForm({
         }
     }
 
+
     return (
         <form onSubmit={submitProposal}>
             <select className='border border-gray-300 rounded-lg p-1 w-full' onChange={handleSelectChange}>
