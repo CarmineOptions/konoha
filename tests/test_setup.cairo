@@ -38,100 +38,106 @@ fn test_healthy_upgrade() {
 
     // Initialize the dispatcher for proposals
     let proposals_dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
-    
+
     // Step 2: Stake tokens
     stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
 
     // Simulate transactions as admin
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
 
+    //submit_proposal(payload, type)
+
     // Step 3: Submit an initial proposal
-    let initial_payload = 42;
-    let initial_proposal_id: u128 = proposals_dispatcher.submit_proposal(initial_payload, 1).try_into().unwrap();
+    let prop_id_1: u128 = proposals_dispatcher.submit_proposal(42, 1).try_into().unwrap();
 
     // Retrieve the details of the initial proposal
-    let initial_proposal_details = proposals_dispatcher.get_proposal_details(initial_proposal_id.try_into().unwrap());
-    assert!(initial_proposal_details.payload == initial_payload, "Initial proposal payload mismatch");
+    let initial_proposal_details = proposals_dispatcher
+        .get_proposal_details(prop_id_1.try_into().unwrap());
+    assert!(initial_proposal_details.payload == 42, "Initial proposal payload mismatch");
+    assert_eq!(prop_id_1, 0, "Unexpected prop ID 1: {}", prop_id_1);
 
-    // Step 4: Submit an upgrade proposal
-    let upgrade_payload = 43; // Payload for the upgrade proposal
-    let upgrade_proposal_id: u128 = proposals_dispatcher.submit_proposal(upgrade_payload, 3).try_into().unwrap();
+    //new proposal in the governance
 
-    // Retrieve the details of the upgrade proposal
-    let upgrade_proposal_details = proposals_dispatcher.get_proposal_details(upgrade_proposal_id.try_into().unwrap());
-    assert!(upgrade_proposal_details.payload == upgrade_payload, "Upgrade proposal payload mismatch");
+    let prop_id_2: u128 = proposals_dispatcher.submit_proposal(43, 1).try_into().unwrap();
+    let update_proposal_details = proposals_dispatcher
+        .get_proposal_details(prop_id_2.try_into().unwrap());
+    assert!(update_proposal_details.payload == 43, "Update proposal payload mismatch");
+    assert_eq!(prop_id_2, 1, "Unexpected prop ID 2: {}", prop_id_1);
 
-    // Step 5: Perform health check on the upgrade
     let is_healthy = check_if_healthy(gov_contract_addr);
-    assert!(is_healthy == true, "The contract upgrade should be healthy");
+    assert!(is_healthy, "unhealthy gov state");
 }
 
-
 #[test]
-fn test_upgrade_with_invalid_proposal_id() {
+fn test_unhealthy_type() {
     // Step 1: Deploy governance and tokens
     let (gov, _voting, floating) = deploy_governance_and_both_tokens();
     set_staking_curve(gov.contract_address);
     let gov_contract_addr = gov.contract_address;
-
-    // Initialize the dispatcher for proposals
     let proposals_dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
-    
-    // Step 2: Stake tokens
     stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
 
-    // Simulate transactions as admin
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
 
-    // Step 3: Submit an initial proposal
-    let initial_payload = 42;
-    let initial_proposal_id: u128 = proposals_dispatcher.submit_proposal(initial_payload, 1).try_into().unwrap();
+    //submit_proposal(payload, type)
 
-    // Submit an upgrade proposal with an invalid ID (e.g., reusing the initial proposal ID)
-    let upgrade_payload = 43; 
-    let invalid_proposal_id: u128 = initial_proposal_id; // Using the same ID as the initial proposal
+    let prop_id_1: u128 = proposals_dispatcher.submit_proposal(42, 1).try_into().unwrap();
+    assert_eq!(prop_id_1, 0, "Unexpected prop ID 1: {}", prop_id_1);
 
-    // This is expected to fail or be considered invalid in a real-world scenario
-    // But we'll just mock the behavior for the purpose of this test
-    let result = proposals_dispatcher.submit_proposal(upgrade_payload, 1); // Should fail in practice
+    let initial_proposal_details = proposals_dispatcher
+        .get_proposal_details(prop_id_1.try_into().unwrap());
+    assert!(initial_proposal_details.payload == 42, "Initial proposal payload mismatch");
+
+    //new proposal in the governance
+
+    let prop_id_2: u128 = proposals_dispatcher.submit_proposal(43, 3).try_into().unwrap();
+    let update_proposal_details = proposals_dispatcher
+        .get_proposal_details(prop_id_2.try_into().unwrap());
+    assert!(update_proposal_details.payload == 43, "Update proposal payload mismatch");
+    assert_eq!(prop_id_2, 1, "Unexpected prop ID 2: {}", prop_id_1);
+
+    let live_proposals = proposals_dispatcher.get_live_proposals();
+    assert!(live_proposals.len() == 2, "Unexpected number of live proposals: {}", live_proposals.len());
     
-    // To simulate failure, you would need your submit_proposal function to handle this properly
-    //assert!(result.is_err(), "Submitting an upgrade with an invalid ID should fail");
-
-    // Perform health check to see if it detects the issue
     let is_healthy = check_if_healthy(gov_contract_addr);
-    assert!(!is_healthy, "The contract upgrade should be considered unhealthy due to invalid proposal ID");
+    assert!(!is_healthy, "shld be unhealthy gov state - type");
 }
 
 #[test]
-fn test_upgrade_with_invalid_version() {
-    // Step 1: Deploy governance and tokens
+fn test_unhealthy_version() {
     let (gov, _voting, floating) = deploy_governance_and_both_tokens();
     set_staking_curve(gov.contract_address);
     let gov_contract_addr = gov.contract_address;
-
-    // Initialize the dispatcher for proposals
     let proposals_dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
-    
-    // Step 2: Stake tokens
     stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
 
-    // Simulate transactions as admin
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
 
-    // Step 3: Submit an initial proposal
-    let initial_payload = 42;
-    let initial_proposal_id: u128 = proposals_dispatcher.submit_proposal(initial_payload, 1).try_into().unwrap();
+    // Submit the first proposal (valid version)
+    let prop_id_1: u128 = proposals_dispatcher.submit_proposal(42, 1).try_into().unwrap();
+    assert_eq!(prop_id_1, 0, "Unexpected prop ID 1: {}", prop_id_1);
 
-    // Submit an upgrade proposal with the same or lower version
-    let upgrade_payload = 43; 
-    let same_version_proposal_id: u128 = proposals_dispatcher.submit_proposal(upgrade_payload, 1).try_into().unwrap(); // Same version as initial
+    let initial_proposal_details = proposals_dispatcher
+        .get_proposal_details(prop_id_1.try_into().unwrap());
+    assert!(initial_proposal_details.payload == 42, "Initial proposal payload mismatch");
+    
+    // Submit the second proposal with a lower version (unhealthy)
+    let prop_id_2: u128 = proposals_dispatcher.submit_proposal(41, 1).try_into().unwrap();
+    let update_proposal_details = proposals_dispatcher
+        .get_proposal_details(prop_id_2.try_into().unwrap());
+    assert!(update_proposal_details.payload == 41, "Update proposal payload mismatch");
+    assert_eq!(prop_id_2, 1, "Unexpected prop ID 2: {}", prop_id_2);
 
-    // Retrieve the details of the upgrade proposal
-    let upgrade_proposal_details = proposals_dispatcher.get_proposal_details(same_version_proposal_id.try_into().unwrap());
-    assert!(upgrade_proposal_details.payload == upgrade_payload, "Upgrade proposal payload mismatch");
+    // Check the status of both proposals
+    let status_1 = proposals_dispatcher.get_proposal_status(prop_id_1.into());
+    let status_2 = proposals_dispatcher.get_proposal_status(prop_id_2.into());
 
-    // Perform health check to see if it detects the issue
+    // Assuming that '1' represents a passed proposal status
+    let proposal_passed_status = 1;
+    assert_eq!(status_1, proposal_passed_status, "Proposal 1 should have passed, but did not.");
+    assert_eq!(status_2, proposal_passed_status, "Proposal 2 should have passed, but did not.");
+
+    // Now check if the governance state is healthy (it should not be, due to the invalid version proposal)
     let is_healthy = check_if_healthy(gov_contract_addr);
-    assert!(!is_healthy, "The contract upgrade should be considered unhealthy due to invalid version");
+    assert!(!is_healthy, "Governance state should be unhealthy due to version downgrade.");
 }

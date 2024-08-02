@@ -66,7 +66,6 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
 
     start_prank(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
-    println!("Proposal ID {}", prop_id);
     start_prank(CheatTarget::One(gov_contract_addr), second_address.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
@@ -81,26 +80,39 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
 
 fn check_if_healthy(gov_contract_addr: ContractAddress) -> bool {
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
-    let upgrades_dispatcher = IUpgradesDispatcher { contract_address: gov_contract_addr };
-    
-    // Get the latest proposal ID
-    let latest_proposal_id = dispatcher.get_latest_proposal_id();
 
-    // Get the proposal details
-    let new_prop_details = dispatcher.get_proposal_details(latest_proposal_id);
+    // Get all live proposals
+    let live_proposals = dispatcher.get_live_proposals();
     
-    // Get the current contract type and version
-    let (current_type, current_version) = proposals_dispatcher.get_proposal_details();
-    
-    // Check if the proposal is for the same contract type
-    if new_prop_details.contract_type != current_type {
+    // Find the highest proposal ID
+    let mut latest_proposal_id: felt252 = 0;
+    for prop_id in live_proposals.iter() {
+        if *prop_id > latest_proposal_id {
+            latest_proposal_id = *prop_id;
+        }
+    }
+
+    // If no proposals found, return false
+    if latest_proposal_id == 0 {
         return false;
     }
-    
-    // Check if the proposed version is higher than the current version
-    if new_prop_details.new_version <= current_version {
+
+    // Retrieve the details of the latest proposal
+    let latest_proposal_details = dispatcher.get_proposal_details(latest_proposal_id);
+    if latest_proposal_details.to_upgrade == 0 || latest_proposal_details.to_upgrade == 2 || latest_proposal_details.to_upgrade > 6 {
         return false;
     }
-    //return true if same prop type, and version number is indeed "newer"    
+
+    // Get the previous proposal ID
+    let previous_proposal_id = latest_proposal_id - 1;
+    
+    // Retrieve the details of the previous proposal
+    let previous_proposal_details = dispatcher.get_proposal_details(previous_proposal_id);
+
+    // Ensure it's a new version number
+    if latest_proposal_details.payload <= previous_proposal_details.payload {
+        return false;
+    }
+
     true
 }
