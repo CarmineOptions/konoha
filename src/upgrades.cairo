@@ -1,6 +1,7 @@
 #[starknet::interface]
 trait IUpgrades<TContractState> {
     fn apply_passed_proposal(ref self: TContractState, prop_id: felt252);
+    fn get_latest_upgrade(self: @TContractState) -> (u64, u64);
 }
 
 #[starknet::component]
@@ -31,7 +32,8 @@ mod upgrades {
     #[storage]
     struct Storage {
         proposal_applied: LegacyMap::<felt252, bool>,
-        amm_address: ContractAddress
+        amm_address: ContractAddress,
+        latest_upgrade: (u64, u64), // (prop_id, upgrade_type)
     }
 
     #[derive(starknet::Event, Drop)]
@@ -54,6 +56,9 @@ mod upgrades {
         impl Proposals: proposals_component::HasComponent<TContractState>,
         impl Airdrop: airdrop_component::HasComponent<TContractState>
     > of super::IUpgrades<ComponentState<TContractState>> {
+        fn get_latest_upgrade(self: @ComponentState<TContractState>) -> (u64, u64) {
+            self.latest_upgrade.read()
+        }
         fn apply_passed_proposal(ref self: ComponentState<TContractState>, prop_id: felt252) {
             let proposals_comp = get_dep_component!(@self, Proposals);
             let status = proposals_comp
@@ -136,6 +141,8 @@ mod upgrades {
                 _ => { panic_with_felt252('invalid to_upgrade') }
             };
             self.proposal_applied.write(prop_id, true); // Mark the proposal as applied
+            let upgrade_type: u64 = contract_type.try_into().unwrap();
+            self.latest_upgrade.write((prop_id.try_into().unwrap(), upgrade_type));        
             self
                 .emit(
                     Upgraded {
@@ -144,5 +151,7 @@ mod upgrades {
                     }
                 );
         }
+
     }
+
 }

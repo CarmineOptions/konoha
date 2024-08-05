@@ -16,9 +16,12 @@ use openzeppelin::token::erc20::interface::{
     IERC20Dispatcher, IERC20DispatcherTrait, IERC20CamelOnlyDispatcher,
     IERC20CamelOnlyDispatcherTrait
 };
+
+use konoha::health::{IHealthDispatcher, IHealthDispatcherTrait};
+
 use snforge_std::{
     BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget,
-    prank, CheatSpan
+    prank, CheatSpan, get_class_hash
 };
 use starknet::ContractAddress;
 
@@ -26,36 +29,91 @@ use starknet::get_block_timestamp;
 
 use super::setup::{
     admin_addr, first_address, second_address, deploy_governance, deploy_and_distribute_gov_tokens,
-    deploy_governance_and_both_tokens, test_vote_upgrade_root, check_if_healthy
+    deploy_governance_and_both_tokens, test_vote_upgrade_root
 };
 use super::staking_tests::{set_staking_curve, stake_all, stake_half};
 
+
 #[test]
 fn test_healthy_upgrade() {
-    // Step 1: Deploy governance and tokens
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
+
+    let proposals_dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
+    let upgrades_dispatcher = IUpgradesDispatcher { contract_address: gov.contract_address };
+
+    // Submit first proposal
+    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
+    let prop_id = proposals_dispatcher.submit_proposal(42, 3);
+    println!("Submitted proposal ID: {}", prop_id); // Debug print
+
+    // Vote on the first proposal
+    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
+    proposals_dispatcher.vote(prop_id, 1);
+
+    // Check the status of the first proposal
+    assert_eq!(proposals_dispatcher.get_proposal_status(prop_id), 1, "Proposal not passed!");
+
+    let is_healthy = check_if_healthy(gov.contract_address);
+    assert!(is_healthy, "Governance should be healthy bc empty");
+
+    upgrades_dispatcher.apply_passed_proposal(prop_id);
+
+    // Submit second proposal
+    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
+    let prop_id1 = proposals_dispatcher.submit_proposal(43, 3);
+    println!("Submitted second proposal ID: {}", prop_id1); // Debug print
+
+    // Vote on the second proposal
+    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
+    proposals_dispatcher.vote(prop_id1, 1);
+
+    // Check the status of the second proposal
+    assert_eq!(proposals_dispatcher.get_proposal_status(prop_id1), 1, "Proposal not passed!");
+
+    let is_healthy = check_if_healthy(gov.contract_address);
+    assert!(is_healthy, "Governance should be healthy after same type to type (3) upgrade.");
+
+    upgrades_dispatcher.apply_passed_proposal(prop_id1);
+}
+
+#[test]
+fn test_unhealthy_upgrade() {
     let (gov, _voting, floating) = deploy_governance_and_both_tokens();
     set_staking_curve(gov.contract_address);
     stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
     let dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
 
+    // Submit first proposal
     start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
-    let prop_id = dispatcher.submit_proposal(42, 1);
-
-    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
+    let prop_id = dispatcher.submit_proposal(42, 3);
     dispatcher.vote(prop_id, 1);
+    assert!(dispatcher.get_proposal_status(prop_id) == 1, "proposal not passed!");
 
-    assert_eq!(dispatcher.get_proposal_status(prop_id), 1, "Proposal not passed!");
-    //proposal ID is 0 and payload is 42
+    // Check health (should be healthy)
+    let is_healthy = check_if_healthy(gov.contract_address);
+    assert!(is_healthy == true, "Governance should be healthy after first proposal");
 
-    let upgrade_dispatcher = IUpgradesDispatcher { contract_address: gov.contract_address };
-    upgrade_dispatcher.apply_passed_proposal(0);
+    // Apply the proposal
+    IUpgradesDispatcher { contract_address: gov.contract_address }.apply_passed_proposal(prop_id);
 
-    let live_proposals = dispatcher.get_live_proposals();
-    let live_count = live_proposals.len();
-    assert_eq!(live_count, 1, "Unexpected number of live proposals: {}", live_count);
+    // Submit second proposal (different type)
+    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
+    let prop_id2 = dispatcher.submit_proposal(43, 5);
+    dispatcher.vote(prop_id2, 1);
+    assert!(dispatcher.get_proposal_status(prop_id2) == 1, "second proposal not passed!");
+    
+    let proposals_dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
+    let upgrades_dispatcher = IUpgradesDispatcher { contract_address: gov.contract_address };
+    let (_, last_upgrade_type) = upgrades_dispatcher.get_latest_upgrade();
+    let current_prop_id = proposals_dispatcher.get_latest_proposal_id();
+    let current_prop_details = proposals_dispatcher.get_proposal_details(current_prop_id);
 
-    // Check if the governance is healthy
-    //assert!(check_if_healthy(gov.contract_address), "New governance state is not healthy");
+    println!("Governance Type {}:", last_upgrade_type);
+    println!("Upgrading Type {}:", current_prop_details.to_upgrade );
+
+    // Check health again (should be unhealthy due to type mismatch)
+    let is_healthy = check_if_healthy(gov.contract_address);
+    assert!(is_healthy == false, "Governance should be unhealthy after second proposal of different type");
 }
-
-

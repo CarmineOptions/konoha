@@ -5,7 +5,6 @@ use core::traits::TryInto;
 use debug::PrintTrait;
 use konoha::constants;
 
-
 use konoha::contract::IGovernanceDispatcher;
 use konoha::contract::IGovernanceDispatcherTrait;
 use konoha::proposals::IProposalsDispatcher;
@@ -34,7 +33,6 @@ fn deploy_governance(token_address: ContractAddress) -> IGovernanceDispatcher {
     let (address, _) = gov_contract.deploy(@args).expect('unable to deploy governance');
     IGovernanceDispatcher { contract_address: address }
 }
-
 
 fn deploy_and_distribute_gov_tokens(recipient: ContractAddress) -> IERC20Dispatcher {
     let mut calldata = ArrayTrait::new();
@@ -78,41 +76,21 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
     assert(check_if_healthy(gov_contract_addr), 'new gov not healthy');
 }
 
-fn check_if_healthy(gov_contract_addr: ContractAddress) -> bool {
-    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+//fn check_if_healthy(self: @TContractState, gov_contract_addr: ContractAddress) -> bool;
 
-    // Get all live proposals
-    let live_proposals = dispatcher.get_live_proposals();
+fn check_if_health(gov_contract_addr: ContractAddress) -> bool {
+    let proposals_dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
+    let upgrades_dispatcher = IUpgradesDispatcher { contract_address: gov.contract_address };
+
+    //this is the type of the current governance
+    let (_, last_upgrade_type) = upgrades_dispatcher.get_latest_upgrade();
     
-    // Find the highest proposal ID
-    let mut latest_proposal_id: felt252 = 0;
-    for prop_id in live_proposals.iter() {
-        if *prop_id > latest_proposal_id {
-            latest_proposal_id = *prop_id;
-        }
-    }
+    let current_prop_id = proposals_dispatcher.get_latest_proposal_id();
 
-    // If no proposals found, return false
-    if latest_proposal_id == 0 {
+    let current_prop_details = proposals_dispatcher.get_proposal_details(current_prop_id);
+
+    if current_prop_details.to_upgrade != last_upgrade_type{
         return false;
-    }
-
-    // Retrieve the details of the latest proposal
-    let latest_proposal_details = dispatcher.get_proposal_details(latest_proposal_id);
-    if latest_proposal_details.to_upgrade == 0 || latest_proposal_details.to_upgrade == 2 || latest_proposal_details.to_upgrade > 6 {
-        return false;
-    }
-
-    // Get the previous proposal ID
-    let previous_proposal_id = latest_proposal_id - 1;
-    
-    // Retrieve the details of the previous proposal
-    let previous_proposal_details = dispatcher.get_proposal_details(previous_proposal_id);
-
-    // Ensure it's a new version number
-    if latest_proposal_details.payload <= previous_proposal_details.payload {
-        return false;
-    }
-
-    true
+    } 
+    return true;
 }
