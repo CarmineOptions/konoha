@@ -7,6 +7,8 @@ use starknet::ContractAddress;
 trait IProposals<TContractState> {
     fn vote(ref self: TContractState, prop_id: felt252, opinion: felt252);
     fn get_proposal_details(self: @TContractState, prop_id: felt252) -> PropDetails;
+    fn get_latest_proposal_id(self: @TContractState) -> felt252;
+
     fn get_vote_counts(self: @TContractState, prop_id: felt252) -> (u128, u128);
     fn submit_proposal(
         ref self: TContractState, payload: felt252, to_upgrade: ContractType
@@ -34,6 +36,7 @@ trait IProposals<TContractState> {
         prop_id: felt252,
     );
     fn get_total_delegated_to(self: @TContractState, to_addr: ContractAddress) -> u128;
+
 }
 
 #[starknet::component]
@@ -298,6 +301,10 @@ mod proposals {
             self: @ComponentState<TContractState>, prop_id: felt252
         ) -> PropDetails {
             self.proposal_details.read(prop_id)
+        }
+
+        fn get_latest_proposal_id(self: @ComponentState<TContractState>) -> felt252 {
+            self.get_free_prop_id_timestamp() - 1
         }
 
         fn get_live_proposals(self: @ComponentState<TContractState>) -> Array<felt252> {
