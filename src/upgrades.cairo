@@ -36,6 +36,7 @@ mod upgrades {
         latest_upgrade: (u64, u64), // (prop_id, upgrade_type)
     }
 
+
     #[derive(starknet::Event, Drop)]
     #[event]
     enum Event {
@@ -142,7 +143,7 @@ mod upgrades {
             };
             self.proposal_applied.write(prop_id, true); // Mark the proposal as applied
             let upgrade_type: u64 = contract_type.try_into().unwrap();
-            self.latest_upgrade.write((prop_id.try_into().unwrap(), upgrade_type));        
+            self.latest_upgrade.write((prop_id.try_into().unwrap(), upgrade_type));
             self
                 .emit(
                     Upgraded {
@@ -151,7 +152,5 @@ mod upgrades {
                     }
                 );
         }
-
     }
-
 }
