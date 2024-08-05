@@ -421,8 +421,6 @@ mod staking {
 
         fn _update_total_supply(ref self: ComponentState<TContractState>, current_time: u64) {
             let last_update_time = self.last_update_time.read();
-            println!("LAST UPDATE: {}", last_update_time);
-            println!("CURRENT TIME: {}", current_time);
 
             if current_time > last_update_time {
                 let elapsed_time = current_time - last_update_time;
@@ -435,12 +433,6 @@ mod staking {
                 // Calculate decay using integer arithmetic
                 let decay = (total_slope * elapsed_years_scaled.into()) / FRACTION_SCALE.into();
 
-                println!("ELAPSED TIME = {}", elapsed_time);
-                println!("ELAPSED YEARS (scaled) = {}", elapsed_years_scaled);
-                println!("TOTAL SLOPE = {}", total_slope);
-                println!("OLD BIAS = {}", old_bias);
-                println!("DECAY = {}", decay);
-
                 // Compute the new bias, ensuring it doesn't go below zero
                 let new_bias = if old_bias > decay {
                     old_bias - decay
@@ -450,11 +442,9 @@ mod staking {
 
                 // Update the total bias
                 self.total_bias.write(new_bias);
-                println!("NEW BIAS {}", new_bias);
 
                 // Update the last update time
                 self.last_update_time.write(current_time);
-                println!("Updated Last Update Time: {}", self.last_update_time.read());
             }
         }
     }
