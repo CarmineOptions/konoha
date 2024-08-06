@@ -76,21 +76,13 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
     assert(check_if_healthy(gov_contract_addr), 'new gov not healthy');
 }
 
-//fn check_if_healthy(self: @TContractState, gov_contract_addr: ContractAddress) -> bool;
+fn check_if_healthy(gov_address: ContractAddress) -> bool {
+    let proposals_dispatcher = IProposalsDispatcher { contract_address: gov_address };
+    let upgrades_dispatcher = IUpgradesDispatcher { contract_address: gov_address };
 
-fn check_if_health(gov_contract_addr: ContractAddress) -> bool {
-    let proposals_dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
-    let upgrades_dispatcher = IUpgradesDispatcher { contract_address: gov.contract_address };
-
-    //this is the type of the current governance
     let (_, last_upgrade_type) = upgrades_dispatcher.get_latest_upgrade();
-    
     let current_prop_id = proposals_dispatcher.get_latest_proposal_id();
-
     let current_prop_details = proposals_dispatcher.get_proposal_details(current_prop_id);
 
-    if current_prop_details.to_upgrade != last_upgrade_type{
-        return false;
-    } 
-    return true;
+    last_upgrade_type.into() == current_prop_details.to_upgrade
 }

@@ -36,7 +36,6 @@ trait IProposals<TContractState> {
         prop_id: felt252,
     );
     fn get_total_delegated_to(self: @TContractState, to_addr: ContractAddress) -> u128;
-
 }
 
 #[starknet::component]
