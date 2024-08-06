@@ -16,7 +16,7 @@ use openzeppelin::token::erc20::interface::{
     IERC20CamelOnlyDispatcherTrait
 };
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget,
+    BlockId, declare, ContractClassTrait, ContractClass, start_cheat_caller_address, start_cheat_block_timestamp, CheatTarget,
     prank, CheatSpan
 };
 use starknet::ContractAddress;
@@ -41,10 +41,10 @@ fn test_express_proposal() {
 
     let dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
 
-    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
-    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
 
     assert!(dispatcher.get_proposal_status(prop_id) == 1, "proposal not passed!");
@@ -57,13 +57,13 @@ fn test_proposal_expiry() {
     stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
     let dispatcher = IProposalsDispatcher { contract_address: gov.contract_address };
 
-    start_prank(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov.contract_address), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
     //simulate passage of time
     let current_timestamp = get_block_timestamp();
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
-    start_warp(CheatTarget::One(gov.contract_address), end_timestamp + 1);
+    start_cheat_block_timestamp(CheatTarget::One(gov.contract_address), end_timestamp + 1);
 
     let status = dispatcher.get_proposal_status(prop_id);
     assert!(status == constants::MINUS_ONE, "proposal not expired!");
@@ -88,7 +88,7 @@ fn test_vote_on_expired_proposal() {
     //simulate passage of time
     let current_timestamp = get_block_timestamp();
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
-    start_warp(CheatTarget::One(gov.contract_address), end_timestamp + 1);
+    start_cheat_block_timestamp(CheatTarget::One(gov.contract_address), end_timestamp + 1);
 
     prank(
         CheatTarget::One(gov.contract_address),
@@ -142,7 +142,7 @@ fn test_vote_on_quorum_not_met() {
     assert(total_votes < quorum_threshold, 'Total votes >= quorum threshold');
     let current_timestamp = get_block_timestamp();
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
-    start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
+    start_cheat_block_timestamp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
     assert(
         dispatcher.get_proposal_status(prop_id) == constants::MINUS_ONE,
         'Proposal pass & quorum not met'
@@ -220,7 +220,7 @@ fn test_delegate_vote_with_incorrect_calldata() {
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let mut calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
     let addr: felt252 = 0x4;
     calldata.append((addr.try_into().unwrap(), 50000.try_into().unwrap()));
@@ -238,10 +238,10 @@ fn test_withdraw_delegation_with_incorrect_calldata() {
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
     stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
-    start_prank(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap());
     let mut calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
     calldata.append((second_address.try_into().unwrap(), 50000.try_into().unwrap()));
     dispatcher
@@ -323,10 +323,10 @@ fn test_delegate_vote_and_delegation_withdrawal() {
     dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 1);
 
     stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
-    start_prank(CheatTarget::One(gov_contract_addr), second_address.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), second_address.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
 
     prank(
@@ -365,7 +365,7 @@ fn test_withdraw_more_than_delegated_amount() {
     let calldata: Array<(ContractAddress, u128)> = ArrayTrait::new();
     dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 10.try_into().unwrap());
 
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
     prank(
@@ -404,7 +404,7 @@ fn test_full_withdraw_and_vote() {
     dispatcher.delegate_vote(second_address.try_into().unwrap(), calldata, 10.try_into().unwrap());
 
     stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(42, 1);
 
     prank(
@@ -416,7 +416,7 @@ fn test_full_withdraw_and_vote() {
     calldata.append((second_address.try_into().unwrap(), 10));
     dispatcher.withdraw_delegation(second_address.try_into().unwrap(), calldata, 10, prop_id);
 
-    start_prank(CheatTarget::One(gov_contract_addr), second_address.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), second_address.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
 }
 
@@ -428,7 +428,7 @@ fn test_successful_proposal_submission() {
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
     stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let prop_id_1: u128 = dispatcher.submit_proposal(42, 1).try_into().unwrap();
     let prop_id_2: u128 = dispatcher.submit_proposal(43, 1).try_into().unwrap();
 
@@ -463,7 +463,7 @@ fn test_add_comment_on_non_live_proposal() {
     //simulate passage of time
     let current_timestamp = get_block_timestamp();
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
-    start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
+    start_cheat_block_timestamp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
 
     IDiscussionDispatcher { contract_address: gov_contract_addr }
         .add_comment(prop_id.try_into().unwrap(), ipfs_hash);

@@ -16,7 +16,7 @@ use konoha::upgrades::IUpgradesDispatcherTrait;
 use openzeppelin::token::erc20::interface::IERC20;
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget
+    BlockId, declare, ContractClassTrait, ContractClass, start_cheat_caller_address, start_cheat_block_timestamp, CheatTarget
 };
 use starknet::ContractAddress;
 use starknet::get_block_timestamp;
@@ -92,14 +92,14 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
 
     let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
 
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     let prop_id = dispatcher.submit_proposal(new_merkle_root, 3);
 
-    start_prank(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), first_address.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
-    start_prank(CheatTarget::One(gov_contract_addr), second_address.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), second_address.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
-    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
     dispatcher.vote(prop_id, 1);
 
     assert(dispatcher.get_proposal_status(prop_id) == 1, 'proposal not passed!');

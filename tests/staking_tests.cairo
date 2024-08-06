@@ -3,8 +3,8 @@ use konoha::staking::{IStakingDispatcher, IStakingDispatcherTrait};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, CheatTarget, prank, CheatSpan, start_warp,
-    stop_warp
+    BlockId, declare, ContractClassTrait, ContractClass, CheatTarget, prank, CheatSpan, start_cheat_block_timestamp,
+    stop_cheat_block_timestamp
 };
 use starknet::{ContractAddress, get_block_timestamp};
 use super::setup::{admin_addr, first_address, second_address, deploy_governance_and_both_tokens};
@@ -70,9 +70,9 @@ fn test_basic_stake_unstake() {
     let stake_id = staking.stake(ONE_MONTH, balance_of_staker);
 
     let current_timestamp = get_block_timestamp();
-    start_warp(CheatTarget::One(gov.contract_address), current_timestamp + ONE_MONTH + 1);
+    start_cheat_block_timestamp(CheatTarget::One(gov.contract_address), current_timestamp + ONE_MONTH + 1);
     staking.unstake(stake_id);
-    stop_warp(CheatTarget::One(gov.contract_address));
+    stop_cheat_block_timestamp(CheatTarget::One(gov.contract_address));
 }
 
 #[test]
@@ -98,7 +98,7 @@ fn test_multiple_overlapping_stake_unstake() {
     assert(voting.balance_of(admin) == 420 + 2342, 'wrong bal yearone+monthone');
     assert(staking.get_total_voting_power(admin) == 420 + 2342, 'voting power baad');
 
-    start_warp(CheatTarget::One(gov.contract_address), time_zero + ONE_MONTH + 1);
+    start_cheat_block_timestamp(CheatTarget::One(gov.contract_address), time_zero + ONE_MONTH + 1);
     assert(staking.get_total_voting_power(admin) == 2342, 'voting power baaad');
     prank(CheatTarget::One(gov.contract_address), admin, CheatSpan::TargetCalls(1));
     staking.unstake(stake_id_month_one);
@@ -110,9 +110,9 @@ fn test_multiple_overlapping_stake_unstake() {
     prank(CheatTarget::One(gov.contract_address), admin, CheatSpan::TargetCalls(1));
     let stake_id_month_one_three_months = staking.stake(ONE_MONTH * 3, 101);
     assert(voting.balance_of(admin) == 2342 + 121, 'wrong bal yearone+monthtwo');
-    stop_warp(CheatTarget::One(gov.contract_address));
+    stop_cheat_block_timestamp(CheatTarget::One(gov.contract_address));
 
-    start_warp(CheatTarget::One(gov.contract_address), time_zero + ONE_YEAR * 4 + 1);
+    start_cheat_block_timestamp(CheatTarget::One(gov.contract_address), time_zero + ONE_YEAR * 4 + 1);
     assert(staking.get_total_voting_power(admin) == 0, 'voting power baaaaad');
     prank(CheatTarget::One(gov.contract_address), admin, CheatSpan::TargetCalls(1));
     staking.unstake(stake_id_year);

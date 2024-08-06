@@ -7,7 +7,7 @@ use debug::PrintTrait;
 use konoha::vesting::{IVestingDispatcher, IVestingDispatcherTrait, IVesting};
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget,
+    BlockId, declare, ContractClassTrait, ContractClass, start_cheat_caller_address, start_cheat_block_timestamp, CheatTarget,
     prank, CheatSpan
 };
 use starknet::{ContractAddress, get_caller_address};
@@ -30,8 +30,8 @@ fn test_unauthorized_add_vesting_schedule() {
 
     let caller = get_caller_address();
 
-    start_warp(CheatTarget::All, 1);
-    start_prank(CheatTarget::One(gov.contract_address), caller);
+    start_cheat_block_timestamp(CheatTarget::All, 1);
+    start_cheat_caller_address(CheatTarget::One(gov.contract_address), caller);
 
     let grantee: ContractAddress = 0x1.try_into().unwrap();
 
@@ -46,8 +46,8 @@ fn test_unauthorized_vest_early() {
 
     let gov_vesting = IVestingDispatcher { contract_address: gov.contract_address };
 
-    start_warp(CheatTarget::All, 1);
-    start_prank(CheatTarget::One(gov.contract_address), gov.contract_address);
+    start_cheat_block_timestamp(CheatTarget::All, 1);
+    start_cheat_caller_address(CheatTarget::One(gov.contract_address), gov.contract_address);
 
     let grantee: ContractAddress = 0x1.try_into().unwrap();
 
@@ -64,14 +64,14 @@ fn test_vest_twice() {
 
     let gov_vesting = IVestingDispatcher { contract_address: gov.contract_address };
 
-    start_warp(CheatTarget::All, 1);
-    start_prank(CheatTarget::One(gov.contract_address), gov.contract_address);
+    start_cheat_block_timestamp(CheatTarget::All, 1);
+    start_cheat_caller_address(CheatTarget::One(gov.contract_address), gov.contract_address);
 
     let grantee: ContractAddress = 0x1.try_into().unwrap();
 
     gov_vesting.add_linear_vesting_schedule(10, 10, 10, 1000000, grantee);
 
-    start_warp(CheatTarget::All, 11);
+    start_cheat_block_timestamp(CheatTarget::All, 11);
 
     gov_vesting.vest(grantee, 10);
     gov_vesting.vest(grantee, 10);
@@ -88,18 +88,18 @@ fn test_add_simple_vesting_schedule() {
     let grantee: ContractAddress = 0x1.try_into().unwrap();
     gov_vesting.add_linear_vesting_schedule(10, 10, 10, 1000001, grantee);
 
-    start_warp(CheatTarget::All, 11); // past first vest
+    start_cheat_block_timestamp(CheatTarget::All, 11); // past first vest
     // anyone can claim for the grantee
     gov_vesting.vest(grantee, 10);
     assert(tok.balance_of(grantee) == 100000, 'vesting unsuccessful');
 
     // grantee themselves can claim too
-    start_prank(CheatTarget::One(gov.contract_address), grantee);
-    start_warp(CheatTarget::All, 21); // past second vest
+    start_cheat_caller_address(CheatTarget::One(gov.contract_address), grantee);
+    start_cheat_block_timestamp(CheatTarget::All, 21); // past second vest
     gov_vesting.vest(grantee, 20);
     assert(tok.balance_of(grantee) == 200000, 'vesting unsuccessful');
 
-    start_warp(CheatTarget::All, 101); // past last vest. no requirement to vest in order
+    start_cheat_block_timestamp(CheatTarget::All, 101); // past last vest. no requirement to vest in order
     gov_vesting.vest(grantee, 100);
     // leftover tokens are included in last vest. (remainder after division)
     assert(tok.balance_of(grantee) == 300001, 'vesting unsuccessful');
