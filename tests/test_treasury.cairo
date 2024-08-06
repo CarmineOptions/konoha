@@ -15,7 +15,7 @@ use openzeppelin::access::ownable::interface::{
 };
 use openzeppelin::upgrades::interface::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, roll
+    BlockId, declare, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, cheat_block_number
 };
 use starknet::{ContractAddress, get_block_number, ClassHash};
 mod testStorage {
@@ -253,7 +253,7 @@ fn test_deposit_withdraw_carmine() {
     treasury_dispatcher
         .provide_liquidity_to_carm_AMM(eth_addr, usdc_addr, eth_addr, 0, to_deposit.into());
 
-    roll(
+    cheat_block_number(
         CheatTarget::All, get_block_number() + 1, CheatSpan::Indefinite
     ); // to bypass sandwich guard
     treasury_dispatcher
@@ -298,7 +298,7 @@ fn test_deposit_withdraw_zklend() {
 
     assert(bal_before_deposit == bal_after_deposit + deposit_amt, 'deposit to zklend failed');
 
-    roll(
+    cheat_block_number(
         CheatTarget::All, get_block_number() + 1, CheatSpan::Indefinite
     ); // to bypass sandwich guard
 

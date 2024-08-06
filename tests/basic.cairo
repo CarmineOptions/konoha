@@ -8,7 +8,7 @@ use konoha::proposals::{IProposalsDispatcher, IProposalsDispatcherTrait};
 use konoha::upgrades::IUpgradesDispatcher;
 use konoha::upgrades::IUpgradesDispatcherTrait;
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, start_prank, CheatTarget, start_warp
+    BlockId, declare, ContractClassTrait, ContractClass, start_cheat_caller_address, CheatTarget, start_cheat_block_timestamp
 };
 use starknet::{ContractAddress, get_block_timestamp};
 
@@ -52,12 +52,12 @@ fn test_upgrade_mainnet_to_master() {
 
     // declare current and submit proposal
     let new_contract: ContractClass = declare("Governance").expect('unable to declare governance');
-    start_prank(CheatTarget::One(gov_contract_addr), team1_address);
+    start_cheat_caller_address(CheatTarget::One(gov_contract_addr), team1_address);
     let new_prop_id = dispatcher.submit_proposal(new_contract.class_hash.into(), 1);
     loop {
         match top_carm_holders.pop_front() {
             Option::Some(holder) => {
-                start_prank(CheatTarget::One(gov_contract_addr), holder);
+                start_cheat_caller_address(CheatTarget::One(gov_contract_addr), holder);
                 dispatcher.vote(new_prop_id, 1);
             },
             Option::None(()) => { break (); },
@@ -67,7 +67,7 @@ fn test_upgrade_mainnet_to_master() {
     //simulate passage of time
     let current_timestamp = get_block_timestamp();
     let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
-    start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
+    start_cheat_block_timestamp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
 
     assert(dispatcher.get_proposal_status(new_prop_id) == 1, 'proposal not passed!');
 

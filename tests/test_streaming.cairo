@@ -12,7 +12,7 @@ use konoha::vesting::{IVestingDispatcher, IVestingDispatcherTrait, IVesting};
 
 use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, start_prank, start_warp, CheatTarget,
+    BlockId, declare, ContractClassTrait, ContractClass, start_cheat_caller_address, start_cheat_block_timestamp, CheatTarget,
     prank, CheatSpan
 };
 use starknet::{get_block_timestamp, get_caller_address, get_contract_address, ContractAddress};
@@ -80,7 +80,7 @@ fn test_claimed_amount() {
     let total_amount: u128 = 0;
     streaming.add_new_stream(recipient, start_time, end_time, total_amount);
 
-    start_warp(CheatTarget::One(gov.contract_address), 150);
+    start_cheat_block_timestamp(CheatTarget::One(gov.contract_address), 150);
     //shouldn't have anything to claim
     streaming.claim_stream(recipient, start_time, end_time);
 }
@@ -98,7 +98,7 @@ fn test_stream_started() {
     let end_time: u64 = 200;
     let total_amount: u128 = 100000;
     streaming.add_new_stream(recipient, start_time, end_time, total_amount);
-    start_warp(CheatTarget::One(gov.contract_address), 50); // before of stream
+    start_cheat_block_timestamp(CheatTarget::One(gov.contract_address), 50); // before of stream
 
     streaming.claim_stream(recipient, start_time, end_time);
 }
@@ -117,7 +117,7 @@ fn test_claim_stream() {
     streaming.add_new_stream(recipient, start_time, end_time, total_amount);
     let (claimable_amount, total_amount) = streaming
         .get_stream_info(recipient, start_time, end_time,);
-    start_warp(CheatTarget::One(gov.contract_address), 150);
+    start_cheat_block_timestamp(CheatTarget::One(gov.contract_address), 150);
 
     streaming.claim_stream(recipient, start_time, end_time);
 
@@ -149,7 +149,7 @@ fn test_cancel_stream() {
 
     streaming.add_new_stream(recipient, start_time, end_time, total_amount);
 
-    start_warp(CheatTarget::One(gov.contract_address), 150);
+    start_cheat_block_timestamp(CheatTarget::One(gov.contract_address), 150);
 
     //test cancel_stream
     streaming.cancel_stream(recipient, start_time, end_time);
