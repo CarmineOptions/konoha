@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { useAccount, useContractWrite } from "@starknet-react/core";
-import { CONTRACT_ADDR, formatAddress,  } from "../lib/config";
-import {byteArray} from "starknet"
+import { useAccount } from "@starknet-react/core";
+import { CONTRACT_ADDR, formatAddress } from "../lib/config";
+import { CallData, Contract } from "starknet";
 
 import { submitCommentApi } from "../api/apiService";
+import { abi } from "../lib/abi";
 export default function NewcommentCommentForm({
   setIsModalOpen,
   propId,
@@ -12,29 +13,13 @@ export default function NewcommentCommentForm({
   setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   propId: string;
 }) {
-  const { isConnected, address } = useAccount();
+  const { isConnected, address, account } = useAccount();
   const [comment, setComment] = React.useState<string>("");
   const [ipfsHash, setIpfsHash] = useState<string>("");
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
 
-  const calls = useMemo(() => {
-    const tx = {
-      contractAddress: CONTRACT_ADDR,
-      entrypoint: "add_comment",
-      calldata: [
-       propId.toString(),
-       byteArray.byteArrayFromString(ipfsHash)
-      ],
-    };
-    return [tx];
-  }, [ipfsHash]);
-
-
-
-
-  const { writeAsync } = useContractWrite({ calls });
+  const konoha_contract = new Contract(abi, CONTRACT_ADDR, account);
   async function submitComment(e: React.FormEvent<HTMLFormElement>) {
-
     e.preventDefault();
 
     if (!isConnected) {
@@ -68,7 +53,9 @@ export default function NewcommentCommentForm({
   useEffect(() => {
     const updateProposal = async () => {
       try {
-        await writeAsync();
+        await konoha_contract.add_comment(
+          CallData.compile([propId.toString(), ipfsHash.toString()])
+        );
         toast.success("Proposal updated successfully");
         setIsModalOpen(false);
       } catch (error) {
@@ -82,9 +69,6 @@ export default function NewcommentCommentForm({
       updateProposal();
     }
   }, [ipfsHash]);
-
-
-
 
   return (
     <div className="w-[35rem]">
