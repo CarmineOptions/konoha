@@ -20,7 +20,7 @@ use snforge_std::{
 };
 use starknet::ContractAddress;
 use starknet::get_block_timestamp;
-use super::staking_tests::set_floating_token_address;
+//use super::staking_tests::set_floating_token_address;
 
 const GOV_TOKEN_INITIAL_SUPPLY: u256 = 1000000000000000000;
 
