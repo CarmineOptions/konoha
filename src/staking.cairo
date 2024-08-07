@@ -24,6 +24,7 @@ trait IStaking<TContractState> {
 mod staking {
     use core::traits::Into;
     use integer::u256_from_felt252;
+    use konoha::govtoken::{burn};
     use konoha::traits::{
         get_governance_token_address_self, IERC20Dispatcher, IERC20DispatcherTrait
     };
@@ -34,7 +35,7 @@ mod staking {
     use super::IStaking;
 
     const WEEK: u64 = 7 * 86400; // 7 days in seconds
-    const MAXTIME: u64 = 4 * 365 * 86400; // 4 years in seconds
+    const MAXTIME: u64 = 2 * 365 * 86400; // 4 years in seconds
     const ONE_YEAR: u128 = 31536000; // 365 days
     // Define constants for calculations
     const SECONDS_IN_YEAR: u64 = 31536000; // Number of seconds in a year
@@ -125,15 +126,13 @@ mod staking {
         }
         //returns total supply that is locked
         fn get_total_supply(ref self: ComponentState<TContractState>, timestamp: u64) -> u128 {
-            let total_supply = self.total_locked_amount.read();
-            total_supply
+            self.total_locked_amount.read()
         }
 
         //returns supply at current timestamp
         fn get_current_supply(ref self: ComponentState<TContractState>, timestamp: u64) -> u128 {
             self._update_total_supply(timestamp);
             let total_bias = self.total_bias.read();
-
             total_bias
         }
 
@@ -168,9 +167,9 @@ mod staking {
 
             let unlock_date = current_time + lock_duration;
             assert(unlock_date > current_time, 'can only lock in the future(CL)');
+            assert(unlock_date <= current_time + MAXTIME, 'Voting lock can be 2 years max');
 
             //maybe a max time assertion?
-
             let new_locked = LockedBalance { amount, end: unlock_date };
 
             let token = IERC20Dispatcher { contract_address: self.floating_token_address.read() };
@@ -258,7 +257,7 @@ mod staking {
             assert(old_locked.amount > 0, 'No existing lock found');
             assert(old_locked.end > current_time, 'Lock expired');
             assert(unlock_date > old_locked.end, 'Can only increase lock duration');
-            assert(unlock_date <= current_time + MAXTIME, 'Voting lock can be 4 years max');
+            assert(unlock_date <= current_time + MAXTIME, 'Voting lock can be 2 years max');
 
             let old_slope = old_locked.amount / (old_locked.end - current_time).into();
             let new_slope = old_locked.amount / (unlock_date - current_time).into();
@@ -320,6 +319,9 @@ mod staking {
 
             let token = IERC20Dispatcher { contract_address: self.floating_token_address.read() };
             token.transfer(caller, locked_amount.into());
+
+            //should I be transfering tokens to caller or burn them?
+            //token.burn(caller, locked_amount.into());
 
             self.emit(Withdraw { caller, amount: locked_amount, ts: current_time });
         }

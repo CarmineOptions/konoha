@@ -26,7 +26,6 @@ const ONE_WEEK: u64 = 604800;
 const ONE_MONTH: u64 = 2629743; // 30.44 days
 const ONE_YEAR: u64 = 31536000;
 const TWO_YEARS: u64 = 31536000 + 31536000;
-const FOUR_YEAR: u64 = 126144000;
 
 fn setup_staking(
     gov: ContractAddress, floating_token: ContractAddress, voting_token: ContractAddress
@@ -216,7 +215,7 @@ fn test_linear_decay() {
 
     // Define amount and lock duration
     let amount: u128 = 4000;
-    let lock_duration = FOUR_YEAR;
+    let lock_duration = TWO_YEARS;
 
     // Approve staking contract to spend admin's tokens
     prank(CheatTarget::One(floating_token.contract_address), admin, CheatSpan::TargetCalls(1));
@@ -257,12 +256,11 @@ fn test_linear_decay() {
     //let (post_locked_amount, post_locked_end) = staking.get_locked_balance(admin);
     //println!("Locked Amount {}, Lock Time {}", post_locked_amount, post_locked_end);
 
-    // Expected balance after one year should be 2000 tokens
-    let expected_balance_after_one_year = 3000;
+    let expected_balance_after_one_year = 2000;
     assert_eq!(
         balance_after_one_year,
         expected_balance_after_one_year,
-        "Balance after one year should be 3000 tokens"
+        "Balance after one year should be 2000 tokens"
     );
 
     println!("Expected balance after one year: {}", expected_balance_after_one_year);
@@ -279,16 +277,16 @@ fn test_linear_decay() {
     //println!("Locked Amount {}, Lock Time {}", last_locked_amount, last_locked_end);
 
     // Expected balance after one year should be 2000 tokens
-    let expected_balance_after_week_year = 2980;
+    let expected_balance_after_week_year = 1961;
     assert_eq!(
         balance_after_week_year,
         expected_balance_after_week_year,
-        "Balance after one year should be 2000 tokens"
+        "Balance after another week should be 1961"
     );
 
     println!("Expected balance after another week: {}", expected_balance_after_week_year);
-    println!("");
 }
+
 #[test]
 fn test_total_supply() {
     let (gov, voting_token, floating_token) = deploy_governance_and_both_tokens();
@@ -315,7 +313,7 @@ fn test_total_supply() {
     let amount: u128 = 4000;
     let user1_amount: u128 = 4000;
     let user2_amount: u128 = 1000;
-    let lock_duration = FOUR_YEAR;
+    let lock_duration = TWO_YEARS;
 
     prank(CheatTarget::One(floating_token.contract_address), admin, CheatSpan::TargetCalls(2));
     floating_token_dispatcher.transfer(user1, user1_amount.into());
@@ -365,8 +363,8 @@ fn test_total_supply() {
 
     println!("Total supply after year: {}", supply_after_year);
 
-    // Expected supply after one year (rough estimate)
-    let expected_supply_year = (amount / 4) * 3 + (user1_amount / 4) * 3;
+    // Expected supply after one year
+    let expected_supply_year = 4000;
     assert_eq!(
         supply_after_year, expected_supply_year, "Supply after year should match expected supply"
     );
@@ -389,8 +387,8 @@ fn test_total_supply() {
     println!("Balance after another week (user2): {}", balance_after_one_year_user2);
 
     let final_supply = staking.get_current_supply(timestamp_after_week_year);
-
-    let expected_final_supply = 6943;
+    //interger arithmetic varies by a few tokens... is this a huge pressing issue?
+    let expected_final_supply = 4905;
     assert_eq!(
         final_supply, expected_final_supply, "Supply after year should match expected supply"
     );
