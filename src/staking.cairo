@@ -24,7 +24,6 @@ trait IStaking<TContractState> {
 mod staking {
     use core::traits::Into;
     use integer::u256_from_felt252;
-    use konoha::govtoken::{burn};
     use konoha::traits::{
         get_governance_token_address_self, IERC20Dispatcher, IERC20DispatcherTrait
     };
