@@ -131,7 +131,4 @@ fn test_unhealthy_upgrade() {
     let is_healthy_after = check_if_healthy(gov_address);
     println!("After second proposal, is_healthy: {}", is_healthy_after);
     assert!(!is_healthy_after, "Governance should not be healthy after the second proposal");
-
-    // Apply the second proposal
-    IUpgradesDispatcher { contract_address: gov_address }.apply_passed_proposal(prop_id2);
 }

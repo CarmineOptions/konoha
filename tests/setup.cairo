@@ -109,6 +109,13 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
     assert(check_if_healthy(gov_contract_addr), 'new gov not healthy');
 }
 
+//if trying to apply_passed_proposal throws error:
+//Requested contract address ContractAddress(PatriciaKey(StarkFelt("0x0000000000000000000000000000000000000000000000000000000000000000"))) is not deployed.
+//if health check fails
+
+//health check completed for checking governance type. 
+//TODO: version history
+
 fn check_if_healthy(gov_address: ContractAddress) -> bool {
     println!("Health contract address: {:?}", gov_address);
 

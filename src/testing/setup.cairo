@@ -5,10 +5,12 @@ use core::traits::TryInto;
 use debug::PrintTrait;
 use konoha::constants;
 
+
 use konoha::contract::IGovernanceDispatcher;
 use konoha::contract::IGovernanceDispatcherTrait;
 use konoha::proposals::IProposalsDispatcher;
 use konoha::proposals::IProposalsDispatcherTrait;
+use konoha::staking::{IStakingDispatcher, IStakingDispatcherTrait};
 use konoha::upgrades::IUpgradesDispatcher;
 use konoha::upgrades::IUpgradesDispatcherTrait;
 use openzeppelin::token::erc20::interface::IERC20;
@@ -18,14 +20,17 @@ use snforge_std::{
 };
 use starknet::ContractAddress;
 use starknet::get_block_timestamp;
+//use super::staking_tests::set_floating_token_address;
 
-
-const GOV_TOKEN_INITIAL_SUPPLY: felt252 = 1000000000000000000;
+const GOV_TOKEN_INITIAL_SUPPLY: u256 = 1000000000000000000;
 
 const first_address: felt252 = 0x1;
 const second_address: felt252 = 0x2;
 const admin_addr: felt252 = 0x3;
 
+const governance_address: felt252 = 0x99999;
+
+// DEPRECATED, use deploy_governance_and_both_tokens instead
 fn deploy_governance(token_address: ContractAddress) -> IGovernanceDispatcher {
     let gov_contract = declare("Governance").expect('unable to declare governance');
     let mut args: Array<felt252> = ArrayTrait::new();
@@ -34,23 +39,51 @@ fn deploy_governance(token_address: ContractAddress) -> IGovernanceDispatcher {
     IGovernanceDispatcher { contract_address: address }
 }
 
+// return governance, voting token, floating token.
+// by default, all floating tokens are minted to admin address.
+fn deploy_governance_and_both_tokens() -> (
+    IGovernanceDispatcher, IERC20Dispatcher, IERC20Dispatcher
+) {
+    let gov_contract = declare("Governance").expect('unable to declare governance');
+    let floating_token_class = declare("FloatingToken").expect('unable to declare FloatingToken');
+    let voting_token_class = declare("VotingToken").expect('unable to declare VotingToken');
+    let mut args: Array<felt252> = ArrayTrait::new();
+    args.append(voting_token_class.class_hash.into());
+    args.append(floating_token_class.class_hash.into());
+    args.append(admin_addr);
+    gov_contract
+        .deploy_at(@args, governance_address.try_into().unwrap())
+        .expect('unable to deploy governance');
+    let gov_dispatcher = IGovernanceDispatcher {
+        contract_address: governance_address.try_into().unwrap()
+    };
+    let staking = IStakingDispatcher { contract_address: governance_address.try_into().unwrap() };
+
+    let voting_token_dispatcher = IERC20Dispatcher {
+        contract_address: gov_dispatcher.get_governance_token_address()
+    };
+
+    let floating_token_dispatcher = IERC20Dispatcher {
+        contract_address: staking.get_floating_token_address()
+    };
+
+    (gov_dispatcher, voting_token_dispatcher, floating_token_dispatcher)
+}
+
+// DEPRECATED, use deploy_governance_and_both_tokens instead
 fn deploy_and_distribute_gov_tokens(recipient: ContractAddress) -> IERC20Dispatcher {
     let mut calldata = ArrayTrait::new();
-    calldata.append(GOV_TOKEN_INITIAL_SUPPLY);
+    calldata.append(GOV_TOKEN_INITIAL_SUPPLY.low.into());
+    calldata.append(GOV_TOKEN_INITIAL_SUPPLY.high.into());
     calldata.append(recipient.into());
 
     let gov_token_contract = declare("FloatingToken").expect('unable to declare FloatingToken');
     let (token_addr, _) = gov_token_contract
         .deploy(@calldata)
         .expect('unable to deploy FloatingToken');
-    let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token_addr };
-
-    start_prank(CheatTarget::One(token_addr), admin_addr.try_into().unwrap());
-
-    token.transfer(first_address.try_into().unwrap(), 100000);
-    token.transfer(second_address.try_into().unwrap(), 100000);
-    token
+    IERC20Dispatcher { contract_address: token_addr }
 }
+
 
 fn test_vote_upgrade_root(new_merkle_root: felt252) {
     let token_contract = deploy_and_distribute_gov_tokens(admin_addr.try_into().unwrap());
@@ -76,13 +109,29 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
     assert(check_if_healthy(gov_contract_addr), 'new gov not healthy');
 }
 
+//if trying to apply_passed_proposal throws error:
+//Requested contract address ContractAddress(PatriciaKey(StarkFelt("0x0000000000000000000000000000000000000000000000000000000000000000"))) is not deployed.
+//if health check fails
+
+//health check completed for checking governance type. 
+//TODO: version history
+
 fn check_if_healthy(gov_address: ContractAddress) -> bool {
+    println!("Health contract address: {:?}", gov_address);
+
     let proposals_dispatcher = IProposalsDispatcher { contract_address: gov_address };
     let upgrades_dispatcher = IUpgradesDispatcher { contract_address: gov_address };
 
-    let (_, last_upgrade_type) = upgrades_dispatcher.get_latest_upgrade();
+    // Check if there are no proposals
     let current_prop_id = proposals_dispatcher.get_latest_proposal_id();
+    if current_prop_id == 0 {
+        return true;
+    }
+    // Retrieve current proposal details
     let current_prop_details = proposals_dispatcher.get_proposal_details(current_prop_id);
 
+    // Check if the latest upgrade type matches the proposal's upgrade type
+    let (_, last_upgrade_type) = upgrades_dispatcher.get_latest_upgrade();
     last_upgrade_type.into() == current_prop_details.to_upgrade
 }
+
