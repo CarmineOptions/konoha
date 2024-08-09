@@ -8,6 +8,8 @@ trait IStreaming<TContractState> {
         start_time: u64,
         end_time: u64,
         total_amount: u128,
+        is_minting: bool,
+        token_address: ContractAddress
     );
 
     fn claim_stream(
@@ -20,7 +22,8 @@ trait IStreaming<TContractState> {
 
     fn get_stream_info(
         ref self: TContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
-    ) -> (u128, u128);
+    ) -> (u128, u128, bool);
+
 }
 
 #[starknet::component]
@@ -28,14 +31,17 @@ mod streaming {
     use konoha::contract::Governance;
     use konoha::contract::{IGovernanceDispatcher, IGovernanceDispatcherTrait};
     use konoha::traits::{IGovernanceTokenDispatcher, IGovernanceTokenDispatcherTrait};
+    use konoha::treasury::{ITreasuryDispatcher, ITreasuryDispatcherTrait};
+
     use starknet::ContractAddress;
     use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
+    use openzeppelin::token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
 
     #[storage]
     struct Storage {
         streams: LegacyMap::<
-            (ContractAddress, u64, u64), (u128, u128)
-        > // (already_claimed, total_amount)
+            (ContractAddress, u64, u64), (u128, u128, bool, ContractAddress)
+        > // (already_claimed, total_amount, is_minting)
     }
 
     #[derive(starknet::Event, Drop, Serde)]
@@ -52,6 +58,7 @@ mod streaming {
         start_time: u64,
         end_time: u64,
         total_amount: u128,
+        token_address: ContractAddress,
     }
 
     #[derive(starknet::Event, Drop, Serde)]
@@ -80,6 +87,8 @@ mod streaming {
             start_time: u64,
             end_time: u64,
             total_amount: u128,
+            is_minting: bool,
+            token_address: ContractAddress,
         ) {
             let key = (recipient, start_time, end_time);
 
@@ -87,9 +96,9 @@ mod streaming {
             assert(start_time < end_time, 'starts first');
 
             let mut claimable_amount = 0;
-            self.streams.write(key, (claimable_amount, total_amount));
+            self.streams.write(key, (claimable_amount, total_amount, is_minting, token_address));
 
-            self.emit(StreamCreated { recipient, start_time, end_time, total_amount, });
+            self.emit(StreamCreated { recipient, start_time, end_time, total_amount, token_address});
         }
 
         fn claim_stream(
@@ -101,7 +110,7 @@ mod streaming {
             let current_time = get_block_timestamp();
 
             let key = (recipient, start_time, end_time);
-            let (already_claimed, total_amount): (u128, u128) = self.streams.read(key);
+            let (already_claimed, total_amount, is_minting, token_address): (u128, u128, bool, ContractAddress) = self.streams.read(key);
             assert(current_time > start_time, 'stream has not started');
 
             let elapsed_time = if current_time > end_time {
@@ -117,11 +126,25 @@ mod streaming {
             assert(amount_to_claim > 0, 'nothing to claim');
 
             // Update the storage with the new claimed amount
-            self.streams.write(key, (currently_claimable, total_amount));
+            self.streams.write(key, (currently_claimable, total_amount, is_minting));
 
-            let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
-            IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() }
-                .mint(recipient, amount_to_claim.into());
+            if is_minting {
+                let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
+                IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() }
+                    .mint(recipient, amount_to_claim.into());
+            } else {
+                // Use the token_address from the stream info
+                let erc20_token = IERC20Dispatcher { contract_address: token_address };
+            
+                // Check the balance of this contract for the specific token
+                let balance = erc20_token.balance_of(get_contract_address());
+                assert(balance >= amount_to_claim.into(), 'Insufficient token balance');
+            
+                // Transfer the tokens from this contract to the recipient
+                let status = erc20_token.transfer(recipient, amount_to_claim.try_into().unwrap());
+                assert(status, 'Token transfer failed');
+            }
+            
 
             self.emit(StreamClaimed { recipient, start_time, end_time, total_amount, });
         }
@@ -135,16 +158,28 @@ mod streaming {
             let key: (ContractAddress, u64, u64) = (recipient, start_time, end_time);
 
             // Read from the streams LegacyMap
-            let (already_claimed, total_amount): (u128, u128) = self.streams.read(key);
+            let (already_claimed, total_amount, is_minting, token_address): (u128, u128, bool, ContractAddress) = self.streams.read(key);
             let to_distribute: u256 = total_amount.into() - already_claimed.into();
 
             // Cancel stream
-            self.streams.write(key, (0, 0));
-
-            let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
-            IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() }
-                .mint(get_caller_address(), to_distribute.into());
-
+            self.streams.write(key, (0, 0, is_minting));
+            if is_minting {
+                let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
+                IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() }
+                    .mint(recipient, to_distribute.into());
+            } else {
+                // Use the token_address from the stream info
+                let erc20_token = IERC20Dispatcher { contract_address: token_address };
+            
+                // Check the balance of this contract for the specific token
+                let balance = erc20_token.balance_of(get_contract_address());
+                assert(balance >= to_distribute.into(), 'Insufficient token balance');
+            
+                // Transfer the tokens from this contract to the recipient
+                let status = erc20_token.transfer(recipient, to_distribute.try_into().unwrap());
+                assert(status, 'Token transfer failed');
+            }    
+            
             self
                 .emit(
                     StreamCanceled {
@@ -158,10 +193,10 @@ mod streaming {
             recipient: ContractAddress,
             start_time: u64,
             end_time: u64,
-        ) -> (u128, u128) {
+        ) -> (u128, u128, bool, ContractAddress) {
             let key: (ContractAddress, u64, u64) = (recipient, start_time, end_time);
-            let (currently_claimable, total_amount): (u128, u128) = self.streams.read(key);
-            (currently_claimable, total_amount)
+            let (currently_claimable, total_amount, is_minting, token_address): (u128, u128, bool, ContractAddress) = self.streams.read(key);
+            (currently_claimable, total_amount, is_minting, token_address)
         }
     }
 }
