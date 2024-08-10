@@ -14,6 +14,8 @@ use snforge_std::{
     prank, CheatSpan
 };
 use starknet::ContractAddress;
+
+use starknet::contract_address_const;
 use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
 
 use super::setup::{deploy_governance_and_both_tokens};
@@ -24,18 +26,20 @@ fn start_stream(
     start_time: u64,
     end_time: u64,
     total_amount: u128,
-    is_minting: bool
+    is_minting: bool,
+    token_address: ContractAddress
 ) {
     prank(CheatTarget::One(gov), gov, CheatSpan::TargetCalls(4));
     let streaming = IStreamingDispatcher { contract_address: gov };
-    streaming.add_new_stream(recipient, start_time, end_time, total_amount, is_minting);
+    streaming
+        .add_new_stream(recipient, start_time, end_time, total_amount, is_minting, token_address);
 }
 
 #[test]
 fn test_transfer_actions() {
     // Deploy contracts and initialize interfaces
     let (gov, _, _) = deploy_governance_and_both_tokens();
-    let recipient: ContractAddress = 0x2.try_into().unwrap();
+    let recipient: ContractAddress = contract_address_const::<2>();
     let start_time: u64 = 100;
     let end_time: u64 = 200;
     let total_amount: u128 = 100000;
@@ -45,47 +49,58 @@ fn test_transfer_actions() {
     let streaming = IStreamingDispatcher { contract_address: gov.contract_address };
     let governance_token_address = IGovernanceDispatcher { contract_address: gov.contract_address }
         .get_governance_token_address();
-    let erc20 = IERC20Dispatcher { contract_address: governance_token_address };
+    let governance_token = IERC20Dispatcher { contract_address: governance_token_address };
 
     // Mint tokens to the streaming contract and recipient
     let mint_amount: u128 = 200000; // Mint more than total_amount
     let initial_recipient_funds: u128 = 10000; // Allocate 10,000 tokens to recipient
 
-    let governance_token = IGovernanceTokenDispatcher {
+    let governance_token_minter = IGovernanceTokenDispatcher {
         contract_address: governance_token_address
     };
     prank(
         CheatTarget::One(governance_token_address), gov.contract_address, CheatSpan::TargetCalls(2)
     );
-    governance_token.mint(gov.contract_address, mint_amount.into());
-    governance_token.mint(recipient, initial_recipient_funds.into());
+    governance_token_minter.mint(gov.contract_address, mint_amount.into());
+    governance_token_minter.mint(recipient, initial_recipient_funds.into());
 
     // Verify that the streaming contract's balance is sufficient
-    let streaming_initial_balance = erc20.balance_of(gov.contract_address);
-    let recipient_initial_balance = erc20.balance_of(recipient);
+    let streaming_initial_balance = governance_token.balance_of(gov.contract_address);
+    let recipient_initial_balance = governance_token.balance_of(recipient);
     println!("Streaming contract address: {:?}", gov.contract_address);
     println!("Amount minted to streaming contract: {}", mint_amount);
     println!("Streaming contract balance after minting: {}", streaming_initial_balance);
     println!("Recipient initial balance after minting: {}", recipient_initial_balance);
 
     // Start stream with is_minting set to false
-    start_stream(gov.contract_address, recipient, start_time, end_time, total_amount, false);
+    start_stream(
+        gov.contract_address,
+        recipient,
+        start_time,
+        end_time,
+        total_amount,
+        false,
+        governance_token_address
+    );
 
     // Verify the stream creation
-    let (claimed_amount, stored_total_amount, is_minting) = streaming
+    let (claimed_amount, stored_total_amount, is_minting, token_address) = streaming
         .get_stream_info(recipient, start_time, end_time);
     println!("Stream created with recipient: {:?}", recipient);
     println!("Stream total amount: {}", stored_total_amount);
+    println!("Streaming: {:?} token", token_address);
     println!("Stream is minting: {}", is_minting);
     println!("Claimed amount before claiming: {}", claimed_amount);
+
+    governance_token.approve(gov.contract_address, total_amount.into());
 
     // Advance time and claim the stream
     start_warp(CheatTarget::One(gov.contract_address), 150);
     streaming.claim_stream(recipient, start_time, end_time);
 
     // Verify claiming
-    let (claimed_amount, _, _) = streaming.get_stream_info(recipient, start_time, end_time);
-    let recipient_balance = erc20.balance_of(recipient);
+    let (claimed_amount, _, _, _) = streaming.get_stream_info(recipient, start_time, end_time);
+    let recipient_balance = governance_token.balance_of(recipient);
     println!("Amount claimed by recipient: {}", claimed_amount);
     println!("Recipient address: {:?}", recipient);
     println!("Recipient balance after claiming: {}", recipient_balance);
@@ -94,9 +109,9 @@ fn test_transfer_actions() {
     streaming.cancel_stream(recipient, start_time, end_time);
 
     // Verify cancellation
-    let (cancelled_claimed_amount, stored_total_amount, _) = streaming
+    let (cancelled_claimed_amount, stored_total_amount, _, _) = streaming
         .get_stream_info(recipient, start_time, end_time);
-    let streaming_balance_after = erc20.balance_of(gov.contract_address);
+    let streaming_balance_after = governance_token.balance_of(gov.contract_address);
     let unclaimed_amount = mint_amount - expected_claimed_amount;
     println!("Stream canceled.");
     println!("Claimed amount after cancel: {}", cancelled_claimed_amount);
@@ -135,7 +150,6 @@ fn test_transfer_actions() {
     );
 }
 
-
 #[test]
 fn test_mint_actions() {
     let (gov, _, _) = deploy_governance_and_both_tokens();
@@ -150,21 +164,32 @@ fn test_mint_actions() {
         contract_address: IGovernanceDispatcher { contract_address: gov.contract_address }
             .get_governance_token_address()
     };
+    let governance_token_address = IGovernanceDispatcher { contract_address: gov.contract_address }
+        .get_governance_token_address();
 
     // Test with minting
-    start_stream(gov.contract_address, recipient, start_time, end_time, total_amount, true);
+    start_stream(
+        gov.contract_address,
+        recipient,
+        start_time,
+        end_time,
+        total_amount,
+        true,
+        governance_token_address
+    );
 
-    let (claimed_amount, stored_total_amount, is_minting) = streaming
+    let (claimed_amount, stored_total_amount, is_minting, token_address) = streaming
         .get_stream_info(recipient, start_time, end_time);
     assert_eq!(claimed_amount, 0, "Incorrect claimed amount after stream creation (minting)");
     assert_eq!(stored_total_amount, total_amount, "Incorrect total amount stored (minting)");
     assert_eq!(is_minting, true, "Stream should be set to minting");
+    println!("Streaming: {:?} token", token_address);
 
     // Test claim with minting
     start_warp(CheatTarget::One(gov.contract_address), 150);
     streaming.claim_stream(recipient, start_time, end_time);
 
-    let (claimed_amount, stored_total_amount, _) = streaming
+    let (claimed_amount, stored_total_amount, _, _) = streaming
         .get_stream_info(recipient, start_time, end_time);
     assert_eq!(
         stored_total_amount,
@@ -187,7 +212,7 @@ fn test_mint_actions() {
     // Test cancel with minting
     streaming.cancel_stream(recipient, start_time, end_time);
 
-    let (cancelled_claimed_amount, stored_total_amount, _) = streaming
+    let (cancelled_claimed_amount, stored_total_amount, _, _) = streaming
         .get_stream_info(recipient, start_time, end_time);
     assert_eq!(
         cancelled_claimed_amount,

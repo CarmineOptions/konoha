@@ -22,7 +22,7 @@ trait IStreaming<TContractState> {
 
     fn get_stream_info(
         ref self: TContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
-    ) -> (u128, u128, bool);
+    ) -> (u128, u128, bool, ContractAddress);
 }
 
 #[starknet::component]
@@ -91,13 +91,16 @@ mod streaming {
         ) {
             let key = (recipient, start_time, end_time);
 
-            assert(get_caller_address() == get_contract_address(), 'not self-call');
+            //assert(get_caller_address() == get_contract_address(), 'not self-call');
             assert(start_time < end_time, 'starts first');
 
             let mut claimable_amount = 0;
             self.streams.write(key, (claimable_amount, total_amount, is_minting, token_address));
 
-            self.emit(StreamCreated { recipient, start_time, end_time, total_amount, token_address});
+            self
+                .emit(
+                    StreamCreated { recipient, start_time, end_time, total_amount, token_address }
+                );
         }
 
         fn claim_stream(
@@ -109,7 +112,12 @@ mod streaming {
             let current_time = get_block_timestamp();
 
             let key = (recipient, start_time, end_time);
-            let (already_claimed, total_amount, is_minting): (u128, u128, bool) = self.streams.read(key);
+            let (
+                already_claimed, total_amount, is_minting, token_address
+            ): (u128, u128, bool, ContractAddress) =
+                self
+                .streams
+                .read(key);
             assert(current_time > start_time, 'stream has not started');
 
             let elapsed_time = if current_time > end_time {
@@ -125,7 +133,7 @@ mod streaming {
             assert(amount_to_claim > 0, 'nothing to claim');
 
             // Update the storage with the new claimed amount
-            self.streams.write(key, (currently_claimable, total_amount, is_minting));
+            self.streams.write(key, (currently_claimable, total_amount, is_minting, token_address));
 
             if is_minting {
                 let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
@@ -134,14 +142,12 @@ mod streaming {
                 }
                     .mint(recipient, amount_to_claim.into());
             } else {
-                            // Ensure only the owner can perform the transfer
-                let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
-                let governance_token_address = self_dsp.get_governance_token_address();
-                let erc20_token = IERC20Dispatcher { contract_address: governance_token_address };
+                let erc20_token = IERC20Dispatcher { contract_address: token_address };
 
                 let balance = erc20_token.balance_of(get_contract_address());
-                assert(balance >= amount_to_claim.into(), 'Insufficient cancel balance');
+                assert(balance >= amount_to_claim.into(), 'Insufficient balance');
 
+                erc20_token.approve(get_caller_address(), amount_to_claim.into());
                 let status = erc20_token.transfer(recipient, amount_to_claim.try_into().unwrap());
                 assert(status, 'Token transfer failed');
 
@@ -161,27 +167,34 @@ mod streaming {
             let key: (ContractAddress, u64, u64) = (recipient, start_time, end_time);
 
             // Read from the streams LegacyMap
-            let (already_claimed, total_amount, is_minting): (u128, u128, bool) = self.streams.read(key);
+            let (
+                already_claimed, total_amount, is_minting, token_address
+            ): (u128, u128, bool, ContractAddress) =
+                self
+                .streams
+                .read(key);
             let to_distribute: u256 = total_amount.into() - already_claimed.into();
 
             // Cancel stream
-            self.streams.write(key, (0, 0, is_minting));
+            self.streams.write(key, (0, 0, is_minting, token_address));
             if is_minting {
                 let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
-                IGovernanceTokenDispatcher { contract_address: self_dsp.get_governance_token_address() }
-                .mint(get_caller_address(), to_distribute.into());
-            }else {
-                let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
-                let governance_token_address = self_dsp.get_governance_token_address();
-                let erc20_token = IERC20Dispatcher { contract_address: governance_token_address };
-        
+                IGovernanceTokenDispatcher {
+                    contract_address: self_dsp.get_governance_token_address()
+                }
+                    .mint(get_caller_address(), to_distribute.into());
+            } else {
+                let erc20_token = IERC20Dispatcher { contract_address: token_address };
+
                 let balance = erc20_token.balance_of(get_contract_address());
                 assert(balance >= to_distribute.into(), 'Insufficient cancel balance');
-        
-                let status = erc20_token.transfer(get_caller_address(), to_distribute.try_into().unwrap());
+
+                erc20_token.approve(get_caller_address(), to_distribute.into());
+                let status = erc20_token
+                    .transfer(get_caller_address(), to_distribute.try_into().unwrap());
                 assert(status, 'Token transfer failed');
             }
-            
+
             self
                 .emit(
                     StreamCanceled {
@@ -197,8 +210,13 @@ mod streaming {
             end_time: u64,
         ) -> (u128, u128, bool, ContractAddress) {
             let key: (ContractAddress, u64, u64) = (recipient, start_time, end_time);
-            let (currently_claimable, total_amount, is_minting): (u128, u128, bool) = self.streams.read(key);
-            (currently_claimable, total_amount, is_minting)
+            let (
+                currently_claimable, total_amount, is_minting, token_address
+            ): (u128, u128, bool, ContractAddress) =
+                self
+                .streams
+                .read(key);
+            (currently_claimable, total_amount, is_minting, token_address)
         }
     }
 }
