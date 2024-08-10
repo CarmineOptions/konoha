@@ -2,18 +2,19 @@ import React from "react";
 // import { useBlock } from "@starknet-react/core";
 import Header from "./components/Header";
 import { useContractRead } from "@starknet-react/core";
-import Tokens from "./helpers/tokens";
+//import Tokens from "./helpers/tokens";
 import { abi } from "./lib/abi";
 import Proposal from "./components/Proposal";
 import { CONTRACT_ADDR } from "./lib/config";
 import NewProposalForm from "./components/NewProposalForm";
+import CustomProposalForm from "./components/CustomProposal";
 // import { useAccount } from "@starknet-react/core";
 
 function App() {
-    const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const [isModalOpen, setIsModalOpen] = React.useState(false);   
 
     // Call the contract function get_live_proposals to get the live proposals
-    const { data, isError, isLoading, error } = useContractRead({
+    const { data, isError, isLoading,error } = useContractRead({
         functionName: "get_live_proposals",
         args: [],
         abi,
@@ -34,7 +35,7 @@ function App() {
             {isModalOpen && (
                 <dialog
                     className="fixed inset-0 z-50 flex items-center justify-center w-full h-full p-6 bg-black bg-opacity-50">
-                    <div className="relative flex flex-col items-center gap-5 p-8 bg-white rounded-lg w-[50%] h-[55%]">
+                    <div className="relative flex flex-col items-center gap-5 p-8 bg-white rounded-lg w-[50%] h-max">
                         {/* Close modal button */}
                         <button
                             className="absolute right-3 top-3 text-slate-400"
@@ -55,9 +56,10 @@ function App() {
                                 />
                             </svg>
                         </button>
-                        <p className="text-xl font-bold">New treasury proposal</p>
+                        <p className="text-xl font-bold">New proposal</p>
                         {/* New proposal form */}
                         <NewProposalForm setIsModalOpen={setIsModalOpen}/>
+                        <CustomProposalForm setIsModalOpen={setIsModalOpen}/>
                     </div>
                 </dialog>
             )}
@@ -80,18 +82,6 @@ function App() {
                 <div className="max-w-[50rem] w-full text-sm text-slate-300">
                     It may take a few seconds for new proposals to appear here
                     after they are submitted.
-                </div>
-                <h1 className='w-full text-3xl font-bold my-5'>Treasury status</h1>
-                <div className='w-full'>
-                    {/* Map over the Tokens array to create a list item for each token */}
-                        {Tokens.map((token, index) => {
-                            return(
-                                <ul key={index} className='flex justify-between border rounded-xl border-black p-3 mb-5 bg-amber-50'>
-                                    <li>{token}</li>
-                                    <li className='font-bold'>0</li>
-                                </ul>
-                            )
-                        })}
                 </div>
                 {isLoading ? (
                     <div className="text-center">loading...</div>
