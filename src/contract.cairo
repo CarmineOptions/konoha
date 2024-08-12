@@ -158,15 +158,10 @@ mod Governance {
 
         let staking = IStakingDispatcher { contract_address: governance_address };
         staking.set_floating_token_address(floating_token_address);
-        let ONE_MONTH: u64 = 2629743; // 30.44 days
-        let THREE_MONTHS = ONE_MONTH * 3;
-        let SIX_MONTHS = ONE_MONTH * 6;
-        let ONE_YEAR: u64 = 31536000; // 365 days
-        staking.set_curve_point(ONE_MONTH, 100);
-        staking.set_curve_point(THREE_MONTHS, 120);
-        staking.set_curve_point(SIX_MONTHS, 160);
-        staking.set_curve_point(ONE_YEAR, 250);
+        staking.set_voting_token_address(voting_token_address);
+    // No need to set curve points for linear decay model
     }
+
 
     #[abi(embed_v0)]
     impl Governance of super::IGovernance<ContractState> {
