@@ -1,12 +1,7 @@
 export const CONTRACT_ADDR =
-	"0x03a71a6e71f77fce28191f7ec4ea5f134a73ea0130033af3d6989816b230023e";
+	"0x057dfabb5a506bfd1937062562a1adf45c7c4c62d0377ccfc59a0b42d7ab3212";
 export const TOKEN_CONTRACT =
 	"0x2b91dd683bc4bcae7a9c5d0cbeba0e8d62fa657742e4640f1e8163dc10e9bd7";
-
-// export const formatAddress = (addr: string) => {
-// 	if (addr.length === 66) return addr;
-// 	return addr.padStart(66, "0");
-// };
 
 export const formatAddress = (addr: string) =>
 	addr.length === 66
