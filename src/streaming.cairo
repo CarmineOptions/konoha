@@ -23,6 +23,9 @@ trait IStreaming<TContractState> {
     fn get_stream_info(
         ref self: TContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
     ) -> (u128, u128, bool, ContractAddress);
+
+    fn set_treasury_address(ref self: TContractState, address: ContractAddress);
+    fn get_treasury_address(self: @TContractState) -> ContractAddress;
 }
 
 #[starknet::component]
@@ -40,7 +43,8 @@ mod streaming {
     struct Storage {
         streams: LegacyMap::<
             (ContractAddress, u64, u64), (u128, u128, bool, ContractAddress)
-        > // (already_claimed, total_amount, is_minting)
+        >, // (already_claimed, total_amount, is_minting)
+        treasury_address: ContractAddress
     }
 
     #[derive(starknet::Event, Drop, Serde)]
@@ -80,6 +84,18 @@ mod streaming {
     impl Streaming<
         TContractState, +HasComponent<TContractState>
     > of super::IStreaming<ComponentState<TContractState>> {
+        fn set_treasury_address(
+            ref self: ComponentState<TContractState>, address: ContractAddress
+        ) {
+            let caller = get_caller_address();
+            let myaddr = get_contract_address();
+            assert(caller == myaddr, 'can only call from proposal');
+            self.treasury_address.write(address);
+        }
+
+        fn get_treasury_address(self: @ComponentState<TContractState>) -> ContractAddress {
+            self.treasury_address.read()
+        }
         fn add_new_stream(
             ref self: ComponentState<TContractState>,
             recipient: ContractAddress,
@@ -136,22 +152,24 @@ mod streaming {
             self.streams.write(key, (currently_claimable, total_amount, is_minting, token_address));
 
             if is_minting {
+                // Mint tokens to the recipient if minting is enabled
                 let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
                 IGovernanceTokenDispatcher {
                     contract_address: self_dsp.get_governance_token_address()
                 }
                     .mint(recipient, amount_to_claim.into());
             } else {
+                // Transfer tokens using the Treasury contract if minting is disabled
+                let treasury_address = self.get_treasury_address();
+                let treasury = ITreasuryDispatcher { contract_address: treasury_address };
+
+                let success = treasury
+                    .send_tokens_to_address(recipient, amount_to_claim.into(), token_address);
+                assert!(success, "Token transfer via Treasury failed");
+
+                // Optionally print the balance after transfer (if needed)
                 let erc20_token = IERC20Dispatcher { contract_address: token_address };
-
-                let balance = erc20_token.balance_of(get_contract_address());
-                assert(balance >= amount_to_claim.into(), 'Insufficient balance');
-
-                erc20_token.approve(get_caller_address(), amount_to_claim.into());
-                let status = erc20_token.transfer(recipient, amount_to_claim.try_into().unwrap());
-                assert(status, 'Token transfer failed');
-
-                let balance_after = erc20_token.balance_of(get_contract_address());
+                let balance_after = erc20_token.balance_of(treasury_address);
                 println!("Streaming contract balance after transfer: {}", balance_after);
             }
 
@@ -178,21 +196,25 @@ mod streaming {
             // Cancel stream
             self.streams.write(key, (0, 0, is_minting, token_address));
             if is_minting {
+                // Mint tokens to the recipient if minting is enabled
                 let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
                 IGovernanceTokenDispatcher {
                     contract_address: self_dsp.get_governance_token_address()
                 }
-                    .mint(get_caller_address(), to_distribute.into());
+                    .mint(recipient, to_distribute.into());
             } else {
+                // Transfer tokens using the Treasury contract if minting is disabled
+                let treasury_address = self.get_treasury_address();
+                let treasury = ITreasuryDispatcher { contract_address: treasury_address };
+
+                let success = treasury
+                    .send_tokens_to_address(recipient, to_distribute.into(), token_address);
+                assert!(success, "Token transfer via Treasury failed");
+
+                // Optionally print the balance after transfer (if needed)
                 let erc20_token = IERC20Dispatcher { contract_address: token_address };
-
-                let balance = erc20_token.balance_of(get_contract_address());
-                assert(balance >= to_distribute.into(), 'Insufficient cancel balance');
-
-                erc20_token.approve(get_caller_address(), to_distribute.into());
-                let status = erc20_token
-                    .transfer(get_caller_address(), to_distribute.try_into().unwrap());
-                assert(status, 'Token transfer failed');
+                let balance_after = erc20_token.balance_of(treasury_address);
+                println!("Streaming contract balance after transfer: {}", balance_after);
             }
 
             self
