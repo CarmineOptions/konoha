@@ -15,7 +15,7 @@ use openzeppelin::access::ownable::interface::{
 };
 use openzeppelin::upgrades::interface::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, roll
+    BlockId, declare, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, roll, start_warp
 };
 use starknet::{ContractAddress, get_block_number, ClassHash};
 mod testStorage {
@@ -63,6 +63,111 @@ fn get_important_addresses() -> (
     );
 }
 
+#[test]
+#[fork("SEPOLIA")]
+fn test_transfer_stream() {
+    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
+    let recipient: ContractAddress = 0x2.try_into().unwrap();
+    let start_time: u64 = 100;
+    let end_time: u64 = 200;
+    let total_amount: u128 = 1000000000000000000; // 1 token with 18 decimals
+    let is_minting: bool = false;
+    let token_address: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7.try_into().unwrap();
+
+    let treasury = ITreasuryDispatcher { contract_address: treasury_contract_address };
+    let token = IERC20Dispatcher { contract_address: token_address };
+
+    // Transfer tokens to treasury
+    prank(CheatTarget::One(token_address), gov_contract_address, CheatSpan::TargetCalls(1));
+    token.transfer(treasury_contract_address, total_amount.into());
+
+    let balance1 = token.balance_of(treasury_contract_address);
+    println!("treasury tokens: {},", balance1);
+
+    // Add new stream
+    prank(CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
+    treasury.add_new_stream(recipient, start_time, end_time, total_amount, is_minting, token_address);
+
+    // Verify stream info
+    let (claimed, total, is_minting_stored, token_stored) = treasury.get_stream_info(recipient, start_time, end_time);
+    assert(claimed == 0, 'Initial claim should be 0');
+    assert(total == total_amount, 'Total amount mismatch');
+    assert(is_minting_stored == is_minting, 'Is minting mismatch');
+    assert(token_stored == token_address, 'Token address mismatch');
+
+    // Claim midway
+    start_warp(CheatTarget::One(treasury_contract_address), 150);
+    let recipient_balance_before = token.balance_of(recipient);
+    prank(CheatTarget::One(treasury_contract_address), recipient, CheatSpan::TargetCalls(1));
+    treasury.claim_stream(recipient, start_time, end_time);
+
+    // Verify claimed amount
+    let (claimed_midway, _, _, _) = treasury.get_stream_info(recipient, start_time, end_time);
+    let recipient_balance_after = token.balance_of(recipient);
+    assert(claimed_midway > 0 && claimed_midway < total_amount, 'Midway claim incorrect');
+    assert(recipient_balance_after > recipient_balance_before, 'Recipient balance not increased');
+
+    // Cancel stream
+    let recipient_balance_before_cancel = token.balance_of(recipient);
+    prank(CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
+    treasury.cancel_stream(recipient, start_time, end_time);
+
+    // Verify stream is cancelled and remaining tokens transferred
+    let (claimed_final, total_final, _, _) = treasury.get_stream_info(recipient, start_time, end_time);
+    let recipient_balance_after_cancel = token.balance_of(recipient);
+    assert(claimed_final == 0 && total_final == 0, 'Stream not properly cancelled');
+    assert(recipient_balance_after_cancel > recipient_balance_before_cancel, 'Remaining tokens');
+}
+
+#[test]
+#[fork("SEPOLIA")]
+fn test_mint_stream() {
+    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
+    
+    // Print addresses for debugging
+    println!("Governor address: {:?}", gov_contract_address);
+    println!("Treasury address: {:?}", treasury_contract_address);
+
+    let recipient: ContractAddress = 0x2.try_into().unwrap();
+    let start_time: u64 = 100;
+    let end_time: u64 = 200;
+    let total_amount: u128 = 1000000000000000000; // 1 token with 18 decimals
+    let is_minting: bool = true;
+    let token_address: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7.try_into().unwrap();
+
+    let treasury = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    // Add new stream
+    println!("Adding new stream...");
+    prank(CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
+    treasury.add_new_stream(recipient, start_time, end_time, total_amount, is_minting, token_address);
+    
+    // Verify stream info
+    let (claimed, total, is_minting_stored, token_stored) = treasury.get_stream_info(recipient, start_time, end_time);
+    assert(claimed == 0, 'Initial claim should be 0');
+    assert(total == total_amount, 'Total amount mismatch');
+    assert(is_minting_stored == is_minting, 'Is minting mismatch');
+    assert(token_stored == token_address, 'Token address mismatch');
+    println!("Stream info: claimed={}, total={}, is_minting={:?}, token={:?}", claimed, total, is_minting_stored, token_stored);
+
+    // Claim midway
+    println!("Claiming stream...");
+    start_warp(CheatTarget::One(treasury_contract_address), 150);
+    prank(CheatTarget::One(treasury_contract_address), recipient, CheatSpan::TargetCalls(1));
+    treasury.claim_stream(recipient, start_time, end_time);
+
+    // Verify claimed amount
+    let (claimed_midway, _, _, _) = treasury.get_stream_info(recipient, start_time, end_time);
+    assert(claimed_midway > 0 && claimed_midway < total_amount, 'Midway claim incorrect');
+
+    // Cancel stream
+    prank(CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
+    treasury.cancel_stream(recipient, start_time, end_time);
+
+    // Verify stream is cancelled
+    let (claimed_final, total_final, _, _) = treasury.get_stream_info(recipient, start_time, end_time);
+    assert(claimed_final == 0 && total_final == 0, 'Stream not properly cancelled');
+}
 
 #[test]
 #[fork("SEPOLIA")]
