@@ -408,6 +408,8 @@ mod Treasury {
                 );
         }
 
+        //starts a new stream through the treasury.
+        //mint = true to mint CRM, false to transfer treasury tokens to recipient
         fn add_new_stream(
             ref self: ContractState,
             recipient: ContractAddress,
@@ -429,7 +431,7 @@ mod Treasury {
                     StreamCreated { recipient, start_time, end_time, total_amount, token_address }
                 );
         }
-
+        //claim tokens from a time between the start and end of the stream
         fn claim_stream(
             ref self: ContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
         ) {
@@ -454,13 +456,18 @@ mod Treasury {
             self.streams.write(key, (currently_claimable, total_amount, is_minting, token_address));
 
             if is_minting {
-                let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
-                IGovernanceTokenDispatcher {
-                    contract_address: self_dsp.get_governance_token_address()
-                }
-                    .mint(recipient, amount_to_claim.into());
+                let governance_dispatcher = IGovernanceDispatcher {
+                    contract_address: get_contract_address()
+                };
+                let governance_token_address = governance_dispatcher.get_governance_token_address();
+                let governance_token_dispatcher = IGovernanceTokenDispatcher {
+                    contract_address: governance_token_address,
+                };
+
+                // Mint the tokens directly to the recipient
+                governance_token_dispatcher.mint(recipient, amount_to_claim.into());
             } else {
-                
+                //transfer treasury tokens
                 self.internal_send_tokens(recipient, amount_to_claim.into(), token_address);
             }
 
@@ -471,7 +478,7 @@ mod Treasury {
                     }
                 );
         }
-
+        //end the stream and mint the rest of the CRM tokens to user
         fn cancel_stream(
             ref self: ContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
         ) {
@@ -481,14 +488,18 @@ mod Treasury {
 
             let to_distribute = total_amount - already_claimed;
 
-            self.streams.write(key, (0, 0, false, token_address));
+            self.streams.write(key, (0, 0, is_minting, token_address));
 
             if is_minting {
-                let self_dsp = IGovernanceDispatcher { contract_address: get_contract_address() };
-                IGovernanceTokenDispatcher {
-                    contract_address: self_dsp.get_governance_token_address()
-                }
-                    .mint(recipient, to_distribute.into());
+                let governance_dispatcher = IGovernanceDispatcher {
+                    contract_address: get_contract_address()
+                };
+                let governance_token_address = governance_dispatcher.get_governance_token_address();
+                let governance_token_dispatcher = IGovernanceTokenDispatcher {
+                    contract_address: governance_token_address,
+                };
+                //mints the rest of the tokens to the recipient
+                governance_token_dispatcher.mint(recipient, to_distribute.into());
             } else {
                 self.internal_send_tokens(recipient, to_distribute.into(), token_address);
             }
