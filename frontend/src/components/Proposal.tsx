@@ -12,10 +12,8 @@ import Comments from "./Comments";
 
 export default function Proposal({
   proposalId,
-  index,
 }: {
   proposalId: bigint;
-  index: number;
 }) {
   const { isConnected } = useAccount();
   const [isNewCommentModalOpen, setIsNewCommentModalOpen] =
@@ -103,7 +101,7 @@ export default function Proposal({
       <div className="w-[50rem] max-w-[50rem] grid grid-cols-2 items-center gap-1 p-2 pl-0 rounded-lg bg-slate-200">
         <div className="flex items-center">
         <div className="self-stretch pl-5 pr-4 mr-4 font-mono border-r grid text-slate-400 place-content-center border-slate-400">
-          {index}
+          {proposalId.toString()}
         </div>
         <div>Type:</div>
         <div className="flex justify-between items-center gap-20">

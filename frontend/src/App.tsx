@@ -60,7 +60,6 @@ function App() {
                             <Proposal
                                 key={index}
                                 proposalId={proposal}
-                                index={index}
                             />
                         );
                     })
