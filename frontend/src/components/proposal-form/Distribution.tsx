@@ -24,7 +24,7 @@ export const Distribution: React.FC<DistributionProps> = ({ onSubmit }) => {
       toast.error('Address must start with 0x');
       return;
     }
-    
+
     const [wholePart, fractionalPart = ''] = amount.split('.');
     const amountWei = BigInt(wholePart + fractionalPart.padEnd(18, '0')).toString();
     const calldata = [recipient, tok, amountWei];
@@ -52,6 +52,7 @@ export const Distribution: React.FC<DistributionProps> = ({ onSubmit }) => {
           onChange={(e) => setToken(e.target.value)}
         >
           <option value="ETH">ETH</option>
+          <option value="STRK">STRK</option>
         </select>
       </div>
       <div>

@@ -20,7 +20,7 @@ export default function Proposal({
     React.useState<boolean>(false);
   const [isCommentModalOpen, setIsCommentModalOpen] =
     React.useState<boolean>(false);
-    
+
   // Call the contract function get_proposal_details with the proposalId to get the proposal details
   const { data, isLoading } = useContractRead({
     functionName: "get_proposal_details",
@@ -29,7 +29,7 @@ export default function Proposal({
     address: CONTRACT_ADDR,
     watch: false,
     retry: false
-  });  
+  });
 
   // Convert the proposal type from number to string
   const proposal_type = {
@@ -38,7 +38,12 @@ export default function Proposal({
     2: "CARM token",
     3: "merkle tree root",
     4: "no-op/signal vote",
+    5: "custom"
   };
+
+  const custom_proposal_type = {
+    0: "treasury distribution"
+  }
 
   const { writeAsync: write_yes } = useContractWrite({
     calls: [
@@ -95,47 +100,49 @@ export default function Proposal({
 
 
   return isLoading ? (
-    <div>loading contract {proposalId?.toString()}</div>
+    <div>loading proposal {proposalId?.toString()}</div>
   ) : (
     <div>
       <div className="w-[50rem] max-w-[50rem] grid grid-cols-2 items-center gap-1 p-2 pl-0 rounded-lg bg-slate-200">
         <div className="flex items-center">
-        <div className="self-stretch pl-5 pr-4 mr-4 font-mono border-r grid text-slate-400 place-content-center border-slate-400">
-          {proposalId.toString()}
-        </div>
-        <div>Type:</div>
-        <div className="flex justify-between items-center gap-20">
-          <div
-            className="flex-grow font-bold hover:underline cursor-pointer"
-            onClick={() => setIsCommentModalOpen(true)}
-          >
-            {proposal_type[data.valueOf()["to_upgrade"]]}
+          <div className="self-stretch pl-5 pr-4 mr-4 font-mono border-r grid text-slate-400 place-content-center border-slate-400">
+            {proposalId.toString()}
           </div>
-         
-        </div>
+          <div>Type: </div>
+          <div className="flex justify-between items-center gap-20">
+            <div
+              className="flex-grow font-bold hover:underline cursor-pointer"
+              onClick={() => setIsCommentModalOpen(true)}
+            >
+              {data.valueOf()["to_upgrade"] == 5
+                ? custom_proposal_type[data.valueOf()["payload"]] || "unknown"
+                : proposal_type[data.valueOf()["to_upgrade"]]}
+            </div>
+
+          </div>
         </div>
 
         <div className="flex items-center justify-end gap-2">
-            <button
-              className="px-3 py-2 text-sm font-semibold bg-green-300 rounded-lg transition-all hover:bg-green-400"
-              onClick={() => vote(true)}
-            >
-               Vote Yes
-            </button>
-            <button
-              className="px-3 py-2 text-sm font-semibold bg-red-300 rounded-lg transition-all hover:bg-red-400"
-              onClick={() => vote(false)}
-            >
-              Vote No
-            </button>
+          <button
+            className="px-3 py-2 text-sm font-semibold bg-green-300 rounded-lg transition-all hover:bg-green-400"
+            onClick={() => vote(true)}
+          >
+            Vote Yes
+          </button>
+          <button
+            className="px-3 py-2 text-sm font-semibold bg-red-300 rounded-lg transition-all hover:bg-red-400"
+            onClick={() => vote(false)}
+          >
+            Vote No
+          </button>
 
-            <button
-              onClick={() => setIsNewCommentModalOpen(true)}
-              className="px-3 py-2 text-sm font-semibold bg-orange-300 hover:bg-orange-400  text-black transition-all rounded-lg"
-            >
-              Comment
-            </button>
-          </div>
+          <button
+            onClick={() => setIsNewCommentModalOpen(true)}
+            className="px-3 py-2 text-sm font-semibold bg-orange-300 hover:bg-orange-400  text-black transition-all rounded-lg"
+          >
+            Comment
+          </button>
+        </div>
       </div>
 
       {/* Add New Comment Modal */}
