@@ -13,7 +13,7 @@ export const Distribution: React.FC<DistributionProps> = ({ onSubmit }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    let tok;
+    let tok: string;
     if(token == "ETH") {
       tok = ETH_ADDRESS;
     } else if (token == "STRK") {
@@ -24,7 +24,9 @@ export const Distribution: React.FC<DistributionProps> = ({ onSubmit }) => {
       toast.error('Address must start with 0x');
       return;
     }
-    const amountWei = parseFloat(amount).toString();
+    
+    const [wholePart, fractionalPart = ''] = amount.split('.');
+    const amountWei = BigInt(wholePart + fractionalPart.padEnd(18, '0')).toString();
     const calldata = [recipient, tok, amountWei];
     onSubmit(calldata);
   };

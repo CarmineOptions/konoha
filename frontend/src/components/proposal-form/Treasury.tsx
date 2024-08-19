@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import { CONTRACT_ADDR } from "../../lib/config";
 
 const treasuryProposalTypes = ["distribution", "zklend", "nostra", "carmine"];
-
+const treasuryProposalTypetoId = {"distribution": 0, "zklend": 1, "nostra": 2, "carmine": 3}
 
 export default function Treasury({
     setIsModalOpen,
@@ -14,7 +14,6 @@ export default function Treasury({
 }) {
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const { isConnected } = useAccount();
-    const [calldata, setCalldata] = useState<string[]>([]);
 
     const { writeAsync } = useContractWrite({ calls: [] });
 
@@ -28,17 +27,20 @@ export default function Treasury({
             toast.error('Please fill out all fields');
             return;
         }
+
+        const selectedTypeId = treasuryProposalTypetoId[selectedType];
         
-        setCalldata(newCalldata);
-        if (!selectedType || calldata.length === 0) return [];
+        if (!selectedType || newCalldata.length === 0) return [];
         const calls = [{
             contractAddress: CONTRACT_ADDR,
             entrypoint: 'submit_custom_proposal',
             calldata: [
-                selectedType,
-                ...calldata.map(data => data.toString()),
+                selectedTypeId,
+                newCalldata.length,
+                ...newCalldata.map(data => data.toString()),
             ],
         }];
+        console.log("calling writeAsync with calls", calls);
         try {
             await writeAsync({ calls: calls });
             toast.success('Custom proposal submitted');
