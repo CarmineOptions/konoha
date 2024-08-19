@@ -8,6 +8,7 @@ import Proposal from "./components/Proposal";
 import { CONTRACT_ADDR } from "./lib/config";
 // import { useAccount } from "@starknet-react/core";
 import SubmitProposalModal from "./components/SubmitProposalModal";
+import TreasuryStatus from "./components/TreasuryStatus";
 
 function App() {
     const [isModalOpen, setIsModalOpen] = React.useState(false);   
@@ -34,7 +35,7 @@ function App() {
             <SubmitProposalModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
             {/* List of proposals */}
-            <div className="flex max-w-[50rem] flex-col items-center w-full gap-2 p-6">
+            <div className="flex max-w-[50rem] flex-col items-center w-full pt-6 gap-2">
                 <div className="flex flex-row items-start w-full">
                     <div className="flex-grow text-2xl font-bold">
                         Proposals
@@ -65,6 +66,8 @@ function App() {
                     })
                 )}
             </div>
+
+            <TreasuryStatus />
         </main>
     );
 }

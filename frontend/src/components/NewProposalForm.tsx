@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import toast from "react-hot-toast";
 import { CONTRACT_ADDR } from "../lib/config";
 import { useAccount, useContractWrite } from "@starknet-react/core";
-import CustomProposal from "./CustomProposal";
+//import CustomProposal from "./CustomProposal";
+import Treasury from "./proposal-form/Treasury";
 
 const proposalTypes = ["airdrop", "signal vote", "AMM", "governance", "treasury"];
 
@@ -15,7 +16,7 @@ export default function NewProposalForm({
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [payload, setPayload] = useState<string>("");
 
-  const calls = React.useMemo(() => {
+  const calls = useMemo(() => {
     if (!selectedType) return [];
     const typeIndex = proposalTypes.indexOf(selectedType);
     return [{
@@ -47,7 +48,8 @@ export default function NewProposalForm({
   }
 
   return (
-    <form onSubmit={submitProposal} className="space-y-4">
+    //<!---->
+    <>
       <div className="flex justify-between space-x-2">
         {proposalTypes.map((type) => (
           <button
@@ -64,29 +66,26 @@ export default function NewProposalForm({
       </div>
       
       {selectedType && selectedType !== "treasury" && (
-        <div>
-          <label htmlFor="payload" className="block mb-2">Payload</label>
-          <input
-            id="payload"
-            type="text"
-            placeholder="(integer or hex, e.g.: 1 or 0x1)"
-            className="w-full p-2 border rounded-lg border-slate-300"
-            value={payload}
-            onChange={(e) => setPayload(e.target.value)}
-          />
-        </div>
+        <form onSubmit={submitProposal} className="w-full space-y-2">
+            <label htmlFor="payload" className="block">Payload</label>
+            <input
+              id="payload"
+              type="text"
+              placeholder="(integer or hex, e.g.: 1 or 0x1)"
+              className="w-full p-2 border rounded-lg border-slate-300"
+              value={payload}
+              onChange={(e) => setPayload(e.target.value)}
+            />
+            <button
+              type="submit"
+              className="w-full p-2 bg-blue-500 text-white rounded-lg"
+            >
+              Submit
+            </button>
+        </form>
       )}
       
-      {selectedType === "treasury" && <CustomProposal setIsModalOpen={setIsModalOpen}/>}
-      
-      {selectedType !== "treasury" && (
-        <button
-          type="submit"
-          className="w-full p-2 bg-blue-500 text-white rounded-lg"
-        >
-          Submit
-        </button>
-      )}
-    </form>
+      {selectedType === "treasury" && <Treasury setIsModalOpen={setIsModalOpen}/>}
+    </>
   );
 }
