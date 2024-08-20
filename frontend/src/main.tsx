@@ -1,4 +1,4 @@
-import { mainnet } from "@starknet-react/chains";
+import { mainnet, sepolia } from "@starknet-react/chains";
 import {
     StarknetConfig,
     argent,
@@ -17,7 +17,7 @@ import { Toaster } from "react-hot-toast";
 // import { apiUrl } from "./api";
 
 function Root({ children }: { children: React.ReactNode }) {
-    const chains = [mainnet];
+    const chains = [mainnet, sepolia];
 
     // const SN_SEPOLIA_CHAINID =
     //     "0x534e5f5345504f4c4941" as constants.StarknetChainId;
@@ -31,7 +31,6 @@ function Root({ children }: { children: React.ReactNode }) {
     const provider = jsonRpcProvider({
         rpc: () => testnetOptions,
     });
-    // const provider = publicProvider();
     const { connectors } = useInjectedConnectors({
         // Show these connectors if the user has no connector installed.
         recommended: [argent(), braavos()],

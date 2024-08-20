@@ -1,5 +1,6 @@
 mod airdrop_tests;
 mod basic;
+mod deploy;
 mod proposals_tests;
 mod setup;
 mod staking_tests;

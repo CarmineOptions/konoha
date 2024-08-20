@@ -34,6 +34,7 @@ trait IProposals<TContractState> {
         prop_id: felt252,
     );
     fn get_total_delegated_to(self: @TContractState, to_addr: ContractAddress) -> u128;
+    fn add_custom_proposal_config(ref self: TContractState, config: CustomProposalConfig) -> u32;
 }
 
 #[starknet::component]
@@ -268,16 +269,6 @@ mod proposals {
                 res = self.custom_proposal_type.read(i);
             };
             i
-        }
-
-        fn add_custom_proposal_config(
-            ref self: ComponentState<TContractState>, config: CustomProposalConfig
-        ) -> u32 {
-            let idx = self._find_free_custom_proposal_type();
-            assert(config.target.is_non_zero(), 'target must be nonzero');
-            assert(config.selector.is_non_zero(), 'selector must be nonzero');
-            self.custom_proposal_type.write(idx, config);
-            idx
         }
     }
 
@@ -551,6 +542,17 @@ mod proposals {
             self: @ComponentState<TContractState>, i: u32
         ) -> CustomProposalConfig {
             self.custom_proposal_type.read(i)
+        }
+
+        fn add_custom_proposal_config(
+            ref self: ComponentState<TContractState>, config: CustomProposalConfig
+        ) -> u32 {
+            assert(get_caller_address() == get_contract_address(), 'can only be called by self');
+            let idx = self._find_free_custom_proposal_type();
+            assert(config.target.is_non_zero(), 'target must be nonzero');
+            assert(config.selector.is_non_zero(), 'selector must be nonzero');
+            self.custom_proposal_type.write(idx, config);
+            idx
         }
     }
 }
