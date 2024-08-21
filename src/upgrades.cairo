@@ -1,3 +1,4 @@
+use starknet::ContractAddress;
 #[starknet::interface]
 trait IUpgrades<TContractState> {
     fn apply_passed_proposal(ref self: TContractState, prop_id: felt252);
@@ -13,11 +14,18 @@ mod upgrades {
     use konoha::contract::Governance::ContractState;
     use konoha::contract::Governance;
 
+    use konoha::contract::IGovernanceDispatcher;
+
+    use konoha::health::{IHealthCheckDispatcher, IHealthCheckDispatcherTrait};
+    use konoha::proposals::IProposalsDispatcher;
+
     use konoha::proposals::proposals as proposals_component;
     use konoha::proposals::proposals::ProposalsImpl;
+    use konoha::traits::IERC20Dispatcher;
     use konoha::traits::get_governance_token_address_self;
 
     use konoha::types::{CustomProposalConfig, PropDetails};
+    use konoha::upgrades::IUpgradesDispatcher;
     use option::OptionTrait;
     use starknet::ClassHash;
     use starknet::ContractAddress;

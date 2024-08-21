@@ -4,13 +4,13 @@ use core::traits::Into;
 use core::traits::TryInto;
 use debug::PrintTrait;
 use konoha::constants;
-
-
 use konoha::contract::IGovernanceDispatcher;
 use konoha::contract::IGovernanceDispatcherTrait;
 use konoha::proposals::IProposalsDispatcher;
 use konoha::proposals::IProposalsDispatcherTrait;
 use konoha::staking::{IStakingDispatcher, IStakingDispatcherTrait};
+
+use konoha::types::ContractType;
 use konoha::upgrades::IUpgradesDispatcher;
 use konoha::upgrades::IUpgradesDispatcherTrait;
 use openzeppelin::token::erc20::interface::IERC20;
@@ -109,10 +109,6 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
     assert(check_if_healthy(gov_contract_addr), 'new gov not healthy');
 }
 
-//if trying to apply_passed_proposal throws error:
-//Requested contract address ContractAddress(PatriciaKey(StarkFelt("0x0000000000000000000000000000000000000000000000000000000000000000"))) is not deployed.
-//if health check fails
-
 //health check completed for checking governance type. 
 //TODO: version history
 
@@ -132,6 +128,48 @@ fn check_if_healthy(gov_address: ContractAddress) -> bool {
 
     // Check if the latest upgrade type matches the proposal's upgrade type
     let (_, last_upgrade_type) = upgrades_dispatcher.get_latest_upgrade();
-    last_upgrade_type.into() == current_prop_details.to_upgrade
+
+    // Ensure that the type of the new proposal matches the required contract type
+    assert_correct_contract_type(current_prop_details.to_upgrade, last_upgrade_type.into());
+
+    if last_upgrade_type.into() != current_prop_details.to_upgrade {
+        return false;
+    }
+
+    // Check the governance state
+    let gov_token_addr = IGovernanceDispatcher { contract_address: gov_address }
+        .get_governance_token_address();
+    let total_eligible_votes_u256: u256 = IERC20Dispatcher { contract_address: gov_token_addr }
+        .total_supply();
+    assert(total_eligible_votes_u256.high == 0, 'unable to check quorum');
+    let total_eligible_votes: u128 = total_eligible_votes_u256.low;
+    assert(total_eligible_votes > 0, 'No eligible votes');
+
+    return true;
 }
 
+fn assert_correct_contract_type(
+    proposed_contract_type: felt252, previous_contract_type: u64
+) -> bool {
+    // Check if the proposed contract type is compatible with the previous contract type
+    if proposed_contract_type == 1 && previous_contract_type == 1 {
+        // Generic contract upgrade is allowed
+        return true;
+    } else if proposed_contract_type == 3 && previous_contract_type == 3 {
+        // Airdrop upgrade is allowed
+        return true;
+    } else if proposed_contract_type == 5 && previous_contract_type == 5 {
+        // Custom proposal is allowed
+        return true;
+    } else if proposed_contract_type == 6 && previous_contract_type == 6 {
+        // Arbitrary proposal is allowed
+        return true;
+    } else if (proposed_contract_type == 0 && previous_contract_type == 0)
+        || (proposed_contract_type == 2 && previous_contract_type == 2) {
+        return false;
+    //panic!("Carmine Options AMM and CARM upgrades are not supported, use custom proposals");
+    } else {
+        return false;
+    //panic!("Proposed contract type is not compatible with the current governance state");
+    }
+}
