@@ -2,6 +2,7 @@ mod airdrop;
 mod constants;
 mod contract;
 mod discussion;
+mod health;
 mod merkle_tree;
 mod proposals;
 mod staking;
