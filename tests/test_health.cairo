@@ -53,8 +53,8 @@ fn test_healthy_upgrade() {
     // Check the status of the first proposal
     assert_eq!(proposals_dispatcher.get_proposal_status(prop_id), 1, "Proposal not passed!");
 
-    //let is_healthy = check_if_healthy(gov.contract_address);
-    //assert!(is_healthy, "Governance should be healthy after first proposal");
+    let is_healthy = check_if_healthy(gov.contract_address);
+    assert!(is_healthy, "Governance should be healthy after first proposal");
 
     upgrades_dispatcher.apply_passed_proposal(prop_id);
 
@@ -71,10 +71,10 @@ fn test_healthy_upgrade() {
         proposals_dispatcher.get_proposal_status(prop_id1), 1, "Second proposal not passed!"
     );
 
-    //let is_healthy_after = check_if_healthy(gov.contract_address);
-    //assert!(
-    //    is_healthy_after, "Governance should be healthy after same type to type (3) upgrade."
-    //);
+    let is_healthy_after = check_if_healthy(gov.contract_address);
+    assert!(
+       is_healthy_after, "Governance should be healthy after same type to type (3) upgrade."
+    );
 
     upgrades_dispatcher.apply_passed_proposal(prop_id1);
 }
@@ -104,6 +104,8 @@ fn test_unhealthy_upgrade() {
     assert_eq!(dispatcher.get_proposal_status(prop_id), 1, "First proposal not passed!");
 
     // Check health (should be healthy)
+    let is_healthy = check_if_healthy(gov.contract_address);
+    assert!(is_healthy, "Governance should be healthy after first proposal");
 
     // Apply the first proposal
     IUpgradesDispatcher { contract_address: gov_address }.apply_passed_proposal(prop_id);
@@ -124,6 +126,8 @@ fn test_unhealthy_upgrade() {
 
     println!("Governance Type: {:?}", last_upgrade_type);
     println!("Upgrading Type: {:?}", current_prop_details.to_upgrade);
-// Check health after the second proposal
-
+    let is_healthy_after = check_if_healthy(gov.contract_address);
+    assert!(
+       !is_healthy_after, "Governance should be unhealthy."
+    );
 }

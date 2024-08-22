@@ -113,8 +113,6 @@ fn test_vote_upgrade_root(new_merkle_root: felt252) {
 //TODO: version history
 
 fn check_if_healthy(gov_address: ContractAddress) -> bool {
-    println!("Health contract address: {:?}", gov_address);
-
     let proposals_dispatcher = IProposalsDispatcher { contract_address: gov_address };
     let upgrades_dispatcher = IUpgradesDispatcher { contract_address: gov_address };
 
@@ -129,47 +127,55 @@ fn check_if_healthy(gov_address: ContractAddress) -> bool {
     // Check if the latest upgrade type matches the proposal's upgrade type
     let (_, last_upgrade_type) = upgrades_dispatcher.get_latest_upgrade();
 
+    if last_upgrade_type.into() != current_prop_details.to_upgrade{
+        return false;
+    }
+    
     // Ensure that the type of the new proposal matches the required contract type
-    assert_correct_contract_type(current_prop_details.to_upgrade, last_upgrade_type.into());
-
-    if last_upgrade_type.into() != current_prop_details.to_upgrade {
+    if !check_correct_contract_type(
+            current_prop_details.to_upgrade, last_upgrade_type.into()
+        ) {
         return false;
     }
 
     // Check the governance state
     let gov_token_addr = IGovernanceDispatcher { contract_address: gov_address }
         .get_governance_token_address();
-    let total_eligible_votes_u256: u256 = IERC20Dispatcher { contract_address: gov_token_addr }
+    let total_eligible_votes_u256: u256 = IERC20Dispatcher {
+        contract_address: gov_token_addr
+    }
         .total_supply();
-    assert(total_eligible_votes_u256.high == 0, 'unable to check quorum');
+    if total_eligible_votes_u256.high != 0 {
+        return false;
+    }
     let total_eligible_votes: u128 = total_eligible_votes_u256.low;
-    assert(total_eligible_votes > 0, 'No eligible votes');
+    if total_eligible_votes == 0 {
+        return false;
+    }
 
-    return true;
+    true
 }
 
-fn assert_correct_contract_type(
+fn check_correct_contract_type(
     proposed_contract_type: felt252, previous_contract_type: u64
 ) -> bool {
     // Check if the proposed contract type is compatible with the previous contract type
     if proposed_contract_type == 1 && previous_contract_type == 1 {
         // Generic contract upgrade is allowed
-        return true;
+        true
     } else if proposed_contract_type == 3 && previous_contract_type == 3 {
         // Airdrop upgrade is allowed
-        return true;
+        true
     } else if proposed_contract_type == 5 && previous_contract_type == 5 {
         // Custom proposal is allowed
-        return true;
+        true
     } else if proposed_contract_type == 6 && previous_contract_type == 6 {
         // Arbitrary proposal is allowed
-        return true;
+        true
     } else if (proposed_contract_type == 0 && previous_contract_type == 0)
         || (proposed_contract_type == 2 && previous_contract_type == 2) {
-        return false;
-    //panic!("Carmine Options AMM and CARM upgrades are not supported, use custom proposals");
+        false
     } else {
-        return false;
-    //panic!("Proposed contract type is not compatible with the current governance state");
+        false
     }
 }

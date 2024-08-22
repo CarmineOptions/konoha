@@ -136,7 +136,7 @@ mod upgrades {
                             calldata.span()
                         );
                         res.expect('contract call failed');
-                    }
+                    }   
                 },
                 6 => {
                     // arbitrary proposal

@@ -8,5 +8,5 @@ mod staking_tests;
 //mod test_treasury;
 //mod upgrades_tests;
 //mod vesting;
-mod test_setup;
+mod test_health;
 
