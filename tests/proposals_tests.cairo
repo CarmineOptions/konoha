@@ -31,7 +31,8 @@ use super::staking_tests::{set_staking_curve, stake_all, stake_half};
 
 
 const GOV_TOKEN_INITIAL_SUPPLY: felt252 = 1000000000000000000;
-
+const PROPOSAL_VOTING_SECONDS: u64 = consteval_int!(60 * 60 * 24 * 7);
+const QUORUM: u128 = 10;
 
 #[test]
 fn test_express_proposal() {
@@ -62,7 +63,7 @@ fn test_proposal_expiry() {
 
     //simulate passage of time
     let current_timestamp = get_block_timestamp();
-    let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
+    let end_timestamp = current_timestamp + PROPOSAL_VOTING_SECONDS;
     start_warp(CheatTarget::One(gov.contract_address), end_timestamp + 1);
 
     let status = dispatcher.get_proposal_status(prop_id);
@@ -87,7 +88,7 @@ fn test_vote_on_expired_proposal() {
 
     //simulate passage of time
     let current_timestamp = get_block_timestamp();
-    let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
+    let end_timestamp = current_timestamp + PROPOSAL_VOTING_SECONDS;
     start_warp(CheatTarget::One(gov.contract_address), end_timestamp + 1);
 
     prank(
@@ -137,11 +138,11 @@ fn test_vote_on_quorum_not_met() {
     }
         .totalSupply()
         .low;
-    let quorum_threshold = total_eligible_votes * constants::QUORUM / 100;
+    let quorum_threshold = total_eligible_votes * QUORUM / 100;
 
     assert(total_votes < quorum_threshold, 'Total votes >= quorum threshold');
     let current_timestamp = get_block_timestamp();
-    let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
+    let end_timestamp = current_timestamp + PROPOSAL_VOTING_SECONDS;
     start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
     assert(
         dispatcher.get_proposal_status(prop_id) == constants::MINUS_ONE,
@@ -462,7 +463,7 @@ fn test_add_comment_on_non_live_proposal() {
 
     //simulate passage of time
     let current_timestamp = get_block_timestamp();
-    let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
+    let end_timestamp = current_timestamp + PROPOSAL_VOTING_SECONDS;
     start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
 
     IDiscussionDispatcher { contract_address: gov_contract_addr }
