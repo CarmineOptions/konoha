@@ -116,4 +116,7 @@ Add the merkle root to the DeFiSpring contract, enabling users to claim their al
 ### 4. Claiming Tokens
 
 After the setup is complete, users can claim their tokens directly from the DeFiSpring contract using the claim function, providing their address, amount, and merkle proof.
+
+The process for claiming is the same as in the case of DeFi Spring, it's described in the defispring repository: [frontend](https://github.com/starknetfndn/defispring/tree/main/frontend) and [backend](https://github.com/starknetfndn/defispring/tree/main/backend).
+
 This approach ensures that the governance token remains non-transferable within the main Konoha system while still allowing for secure and efficient token distribution when necessary.
