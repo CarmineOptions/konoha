@@ -35,7 +35,9 @@ trait IProposals<TContractState> {
     );
     fn get_total_delegated_to(self: @TContractState, to_addr: ContractAddress) -> u128;
     fn add_custom_proposal_config(ref self: TContractState, config: CustomProposalConfig) -> u32;
-    fn set_default_proposal_params(ref self: TContractState, quorum: u32, proposal_voting_seconds: u32);
+    fn set_default_proposal_params(
+        ref self: TContractState, quorum: u32, proposal_voting_seconds: u32
+    );
 }
 
 #[starknet::component]
@@ -580,7 +582,9 @@ mod proposals {
             idx
         }
 
-        fn set_default_proposal_params(ref self: ComponentState<TContractState>, quorum: u32, proposal_voting_seconds: u32) {
+        fn set_default_proposal_params(
+            ref self: ComponentState<TContractState>, quorum: u32, proposal_voting_seconds: u32
+        ) {
             assert(get_caller_address() == get_contract_address(), 'can only be called by self');
             assert(quorum < 30, 'quorum must be <30');
             assert(quorum >= 1, 'quorum < 1?');

@@ -191,7 +191,8 @@ mod Governance {
 
         proposals.add_custom_proposal_config(send_tokens_custom_proposal_config);
 
-        let set_default_proposal_params_custom_proposal_config: CustomProposalConfig = CustomProposalConfig {
+        let set_default_proposal_params_custom_proposal_config: CustomProposalConfig =
+            CustomProposalConfig {
             target: governance_address.into(),
             selector: selector!("set_default_proposal_params"),
             library_call: false,
@@ -200,7 +201,10 @@ mod Governance {
 
         proposals.add_custom_proposal_config(set_default_proposal_params_custom_proposal_config);
 
-        proposals.set_default_proposal_params(quorum: 10, proposal_voting_seconds: consteval_int!(60 * 60 * 24 * 7)); // can be omitted to keep the default values
+        proposals
+            .set_default_proposal_params(
+                quorum: 10, proposal_voting_seconds: consteval_int!(60 * 60 * 24 * 7)
+            ); // can be omitted to keep the default values
     }
 
     #[abi(embed_v0)]
