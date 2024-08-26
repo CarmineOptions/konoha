@@ -1,4 +1,4 @@
-import { mainnet, sepolia, Chain } from "@starknet-react/chains";
+import { sepolia, Chain } from "@starknet-react/chains";
 import {
     StarknetConfig,
     argent,
@@ -13,7 +13,7 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 
 function Root({ children }: { children: React.ReactNode }) {
-    const chains = [mainnet, sepolia];
+    const chains = [sepolia];
 
     function rpc(chain: Chain) {
 
