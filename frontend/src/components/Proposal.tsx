@@ -19,6 +19,7 @@ const getProposalName = (type: number, payload: number) => {
     3: "merkle tree root",
     4: "no-op/signal vote",
     5: "custom",
+    6: "special generic proposal"
   };
 
   const customProposalTypes = {
