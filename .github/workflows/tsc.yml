@@ -1,22 +1,18 @@
-name: Typescript
+name: Notification bot – Typescript compile
 
 on:
-  push:
-    paths:
-      - '**.ts'
-      - '.github/'
-      - 'tsconfig.json'
-      - 'package.json'
   pull_request:
     paths:
       - '**.ts'
       - '.github/'
-      - 'tsconfig.json'
-      - 'package.json'
+      - 'notification-bot/**'
 
 jobs:
   compile:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: notification-bot
     steps:
         - name: Checkout (GitHub)
           uses: actions/checkout@v4
@@ -25,4 +21,4 @@ jobs:
           with:
             node-version: '22'
         - name: Run tsc
-          run: cd notification-bot; npm install --save-dev; tsc --project .
+          run: npm install --save-dev; tsc --project .

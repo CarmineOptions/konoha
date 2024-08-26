@@ -10,6 +10,29 @@ import toast from "react-hot-toast";
 import NewcommentCommentForm from "./NewProposalCommentForm";
 import Comments from "./Comments";
 
+// Convert the proposal type from number to string
+const getProposalName = (type: number, payload: number) => {
+  const proposalTypes = {
+    0: "amm",
+    1: "governance",
+    2: "CARM token",
+    3: "merkle tree root",
+    4: "no-op/signal vote",
+    5: "custom",
+    6: "special generic proposal"
+  };
+
+  const customProposalTypes = {
+    0: "treasury distribution",
+    1: "default proposal parameters"
+  };
+
+  return type === 5
+    ? customProposalTypes[payload] || "unknown"
+    : proposalTypes[type] || "unknown";
+};
+
+
 export default function Proposal({
   proposalId,
 }: {
@@ -30,20 +53,6 @@ export default function Proposal({
     watch: false,
     retry: false
   });
-
-  // Convert the proposal type from number to string
-  const proposal_type = {
-    0: "amm",
-    1: "governance",
-    2: "CARM token",
-    3: "merkle tree root",
-    4: "no-op/signal vote",
-    5: "custom"
-  };
-
-  const custom_proposal_type = {
-    0: "treasury distribution"
-  }
 
   const { writeAsync: write_yes } = useContractWrite({
     calls: [
@@ -114,9 +123,7 @@ export default function Proposal({
               className="flex-grow font-bold hover:underline cursor-pointer"
               onClick={() => setIsCommentModalOpen(true)}
             >
-              {data.valueOf()["to_upgrade"] == 5
-                ? custom_proposal_type[data.valueOf()["payload"]] || "unknown"
-                : proposal_type[data.valueOf()["to_upgrade"]]}
+              {getProposalName(data.valueOf()["to_upgrade"], data.valueOf()["payload"])}
             </div>
 
           </div>

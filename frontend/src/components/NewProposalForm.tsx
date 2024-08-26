@@ -4,8 +4,9 @@ import { CONTRACT_ADDR } from "../lib/config";
 import { useAccount, useContractWrite } from "@starknet-react/core";
 //import CustomProposal from "./CustomProposal";
 import Treasury from "./proposal-form/Treasury";
+import Config from "./proposal-form/ConfigProposal";
 
-const proposalTypes = ["airdrop", "signal vote", "AMM", "governance", "treasury"];
+const proposalTypes = ["airdrop", "signal vote", "AMM", "governance", "treasury", "config"];
 
 export default function NewProposalForm({
   setIsModalOpen,
@@ -56,36 +57,37 @@ export default function NewProposalForm({
             key={type}
             type="button"
             onClick={() => setSelectedType(type)}
-            className={`px-4 py-2 rounded flex-1 ${
-              selectedType === type ? "bg-blue-500 text-white" : "bg-gray-200"
-            }`}
+            className={`px-4 py-2 rounded flex-1 ${selectedType === type ? "bg-blue-500 text-white" : "bg-gray-200"
+              }`}
           >
             {type}
           </button>
         ))}
       </div>
-      
-      {selectedType && selectedType !== "treasury" && (
+
+      {selectedType && selectedType !== "treasury" && selectedType !== "config" && (
         <form onSubmit={submitProposal} className="w-full space-y-2">
-            <label htmlFor="payload" className="block">Payload</label>
-            <input
-              id="payload"
-              type="text"
-              placeholder="(integer or hex, e.g.: 1 or 0x1)"
-              className="w-full p-2 border rounded-lg border-slate-300"
-              value={payload}
-              onChange={(e) => setPayload(e.target.value)}
-            />
-            <button
-              type="submit"
-              className="w-full p-2 bg-blue-500 text-white rounded-lg"
-            >
-              Submit
-            </button>
+          <label htmlFor="payload" className="block">Payload</label>
+          <input
+            id="payload"
+            type="text"
+            placeholder="(integer or hex, e.g.: 1 or 0x1)"
+            className="w-full p-2 border rounded-lg border-slate-300"
+            value={payload}
+            onChange={(e) => setPayload(e.target.value)}
+          />
+          <button
+            type="submit"
+            className="w-full p-2 bg-blue-500 text-white rounded-lg"
+          >
+            Submit
+          </button>
         </form>
       )}
-      
-      {selectedType === "treasury" && <Treasury setIsModalOpen={setIsModalOpen}/>}
+
+      {selectedType === "config" && <Config setIsModalOpen={setIsModalOpen} />}
+
+      {selectedType === "treasury" && <Treasury setIsModalOpen={setIsModalOpen} />}
     </>
   );
 }
