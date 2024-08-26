@@ -23,7 +23,7 @@ mod testStorage {
     use starknet::ContractAddress;
     const zero_address: felt252 = 0;
     const GOV_CONTRACT_ADDRESS: felt252 =
-        0x0304256e5fade73a6fc8f49ed7c1c43ac34e6867426601b01204e1f7ba05b53d;
+        0x57dfabb5a506bfd1937062562a1adf45c7c4c62d0377ccfc59a0b42d7ab3212;
     const CARMINE_AMM_CONTRACT_ADDRESS: felt252 =
         0x047472e6755afc57ada9550b6a3ac93129cc4b5f98f51c73e0644d129fd208d9;
     const ZKLEND_MARKET_C0NTRACT_ADDRESS: felt252 =
@@ -43,22 +43,28 @@ fn get_important_addresses() -> (
         testStorage::ZKLEND_MARKET_C0NTRACT_ADDRESS
         .try_into()
         .unwrap();
-    let contract = declare("Treasury").expect('unable to declare');
     let mut calldata = ArrayTrait::new();
     gov_contract_address.serialize(ref calldata);
     AMM_contract_address.serialize(ref calldata);
     zklend_market_contract_address.serialize(ref calldata);
 
-    // Precalculate the address to obtain the contract address before the constructor call (deploy) itself
-    let contract_address = contract.precalculate_address(@calldata);
 
-    prank(CheatTarget::One(contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
-    let (deployed_contract, _) = contract.deploy(@calldata).unwrap();
+    //let contract = declare("Treasury").expect('unable to declare');
+    let treasury_address: ContractAddress = match declare("Treasury") {
+        Result::Ok(r) => {
+            let contract_address = r.precalculate_address(@calldata);
+            prank(CheatTarget::One(contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
+            let (deployed_contract, _) = r.deploy(@calldata).unwrap();
+            deployed_contract
+        },
+        // FIXME – this is suboptimal, but afaik no way to get this in current snforge version?
+        Result::Err(_) => 0x04c990da03da72bdfb10db5c04e8aaa9d5404a07fe454037facb7744c132d42c.try_into().unwrap() 
+    };
 
     return (
         gov_contract_address,
         AMM_contract_address,
-        deployed_contract,
+        treasury_address,
         zklend_market_contract_address
     );
 }
