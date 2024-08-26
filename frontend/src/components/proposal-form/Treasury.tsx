@@ -5,12 +5,12 @@ import { toast } from 'react-hot-toast';
 import { CONTRACT_ADDR } from "../../lib/config";
 
 const treasuryProposalTypes = ["distribution", "zklend", "nostra", "carmine"];
-const treasuryProposalTypetoId = {"distribution": 0, "zklend": 1, "nostra": 2, "carmine": 3}
+const treasuryProposalTypetoId = { "distribution": 0, "zklend": 2, "nostra": 3, "carmine": 4 }
 
 export default function Treasury({
     setIsModalOpen,
 }: {
-  setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    setIsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const { isConnected } = useAccount();
@@ -29,7 +29,7 @@ export default function Treasury({
         }
 
         const selectedTypeId = treasuryProposalTypetoId[selectedType];
-        
+
         if (!selectedType || newCalldata.length === 0) return [];
         const calls = [{
             contractAddress: CONTRACT_ADDR,
@@ -60,9 +60,8 @@ export default function Treasury({
                         key={type}
                         type="button"
                         onClick={() => setSelectedType(type)}
-                        className={`px-4 py-2 rounded flex-1 ${
-                            selectedType === type ? "bg-blue-500 text-white" : "bg-gray-200"
-                        }`}
+                        className={`px-4 py-2 rounded flex-1 ${selectedType === type ? "bg-blue-500 text-white" : "bg-gray-200"
+                            }`}
                     >
                         {type}
                     </button>

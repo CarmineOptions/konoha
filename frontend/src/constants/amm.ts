@@ -3,7 +3,6 @@ import config from "./config.json";
 export const NETWORK = config.NETWORK as "mainnet" | "testnet";
 export const API_URL = config.API_URL;
 export const AMM_ADDRESS = config.AMM_ADDRESS;
-export const GOVERNANCE_ADDRESS = config.GOVERNANCE_ADDRESS;
 export const ETH_ADDRESS = config.ETH_ADDRESS;
 export const USDC_ADDRESS = config.USDC_ADDRESS;
 export const BTC_ADDRESS = config.BTC_ADDRESS;
