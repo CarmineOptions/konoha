@@ -48,24 +48,24 @@ fn get_important_addresses() -> (
     AMM_contract_address.serialize(ref calldata);
     zklend_market_contract_address.serialize(ref calldata);
 
-
     //let contract = declare("Treasury").expect('unable to declare');
     let treasury_address: ContractAddress = match declare("Treasury") {
         Result::Ok(r) => {
             let contract_address = r.precalculate_address(@calldata);
-            prank(CheatTarget::One(contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
+            prank(
+                CheatTarget::One(contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+            );
             let (deployed_contract, _) = r.deploy(@calldata).unwrap();
             deployed_contract
         },
         // FIXME – this is suboptimal, but afaik no way to get this in current snforge version?
-        Result::Err(_) => 0x04c990da03da72bdfb10db5c04e8aaa9d5404a07fe454037facb7744c132d42c.try_into().unwrap() 
+        Result::Err(_) => 0x04c990da03da72bdfb10db5c04e8aaa9d5404a07fe454037facb7744c132d42c
+            .try_into()
+            .unwrap()
     };
 
     return (
-        gov_contract_address,
-        AMM_contract_address,
-        treasury_address,
-        zklend_market_contract_address
+        gov_contract_address, AMM_contract_address, treasury_address, zklend_market_contract_address
     );
 }
 
