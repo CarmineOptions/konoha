@@ -40,6 +40,8 @@ successfully
 
 [] Re-applying a proposal that has already passed : make sure the contract rejects the submission of a proposal that has expired in the past
 
+[] Change the quorum and proposal voting time
+
 
 ### Delegate_vote and withdraw_delegation functions 
 

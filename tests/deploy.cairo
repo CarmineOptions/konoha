@@ -15,6 +15,7 @@ fn test_deploy() {
     let mut args: Array<felt252> = ArrayTrait::new();
     args.append(voting_token_class);
     args.append(floating_token_class);
+    args.append(0);
     args.append(0x03f37e36c20E85e6F39b2C6F6e7ECEB2e3aAb40b94064f20983588cfe9f6fc60);
     gov_contract.deploy(@args).expect('unable to deploy governance');
 }

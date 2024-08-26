@@ -66,7 +66,7 @@ fn test_upgrade_mainnet_to_master() {
 
     //simulate passage of time
     let current_timestamp = get_block_timestamp();
-    let end_timestamp = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
+    let end_timestamp = current_timestamp + consteval_int!(60 * 60 * 24 * 7);
     start_warp(CheatTarget::One(gov_contract_addr), end_timestamp + 1);
 
     assert(dispatcher.get_proposal_status(new_prop_id) == 1, 'proposal not passed!');
