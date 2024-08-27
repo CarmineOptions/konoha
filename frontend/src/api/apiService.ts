@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BASE_API_URL } from "../constants/amm";
+import { BASE_API_URL } from "../lib/config";
 
 type CommentPayload = {
   address: string;

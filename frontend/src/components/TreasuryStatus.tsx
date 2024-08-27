@@ -1,4 +1,4 @@
-import { TREASURY_ADDRESS, ETH_ADDRESS, STRK_ADDRESS } from '../constants/config.json';
+import { TREASURY_ADDRESS, ETH_ADDRESS, STRK_ADDRESS } from '../lib/config';
 import React, { useMemo } from "react";
 import { useContractRead } from "@starknet-react/core";
 import { abi, formatBalance } from "../lib/erc20";
@@ -9,7 +9,7 @@ export default function TreasuryStatus() {
     { name: "STRK", address: STRK_ADDRESS },
   ];
 
-  const balanceReads = tokens.map(token => 
+  const balanceReads = tokens.map(token =>
     useContractRead({
       functionName: "balanceOf",
       args: [TREASURY_ADDRESS],
@@ -19,7 +19,7 @@ export default function TreasuryStatus() {
     })
   );
 
-  const balances = useMemo(() => 
+  const balances = useMemo(() =>
     tokens.map((token, index) => ({
       name: token.name,
       balance: balanceReads[index].data,
@@ -32,7 +32,7 @@ export default function TreasuryStatus() {
 
   return (
     <div className="p-6 mb-6">
-        <div className="flex w-full flex-grow pb-4 text-2xl font-bold">Treasury status</div>
+      <div className="flex w-full flex-grow pb-4 text-2xl font-bold">Treasury status</div>
       {isLoading ? (
         <div>Loading...</div>
       ) : (
