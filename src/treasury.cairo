@@ -3,6 +3,17 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 trait ITreasury<TContractState> {
+    fn add_transfer(
+        ref self: TContractState,
+        receiver: ContractAddress,
+        amount: u256,
+        token_addr: ContractAddress
+    );
+
+    fn cancel_transaction(ref self: TContractState, transfer_id: u64);
+
+    fn execute_current_pending(ref self: TContractState) -> bool;
+
     fn send_tokens_to_address(
         ref self: TContractState,
         receiver: ContractAddress,
@@ -70,11 +81,24 @@ mod Treasury {
     struct Storage {
         amm_address: ContractAddress,
         zklend_market_contract_address: ContractAddress,
+        transfers_on_cooldown: LegacyMap<u64, Transfer>,
+        current_transfer_pointer: u64,
+        last_transfer_id: u64,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage
     }
+
+    #[derive(Drop)]
+    struct Transfer {
+        token_addr: ContractAddress,
+        receiver: ContractAddress,
+        amount: u256,
+        is_finished: bool,
+        is_cancelled: bool
+    }
+
     #[derive(starknet::Event, Drop)]
     struct TokenSent {
         receiver: ContractAddress,
@@ -129,10 +153,26 @@ mod Treasury {
     }
 
 
+    #[derive(starknet::Event, Drop)]
+    struct TransferCancelled {
+        receiver: ContractAddress,
+        token_addr: ContractAddress,
+        initial_amount: u256
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct TransferPending {
+        receiver: ContractAddress,
+        token_addr: ContractAddress,
+        amount: u256
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         TokenSent: TokenSent,
+        TransferCancelled: TransferCancelled,
+        TransferPending: TransferPending,
         AMMAddressUpdated: AMMAddressUpdated,
         LiquidityProvided: LiquidityProvided,
         LiquidityWithdrawn: LiquidityWithdrawn,
@@ -172,10 +212,12 @@ mod Treasury {
         self.amm_address.write(AMM_contract_address);
         self.zklend_market_contract_address.write(zklend_market_contract_address);
         self.ownable.initializer(gov_contract_address);
+        self.current_transfer_pointer.write(0);
     }
 
     #[abi(embed_v0)]
     impl Treasury of super::ITreasury<ContractState> {
+        // TODO: Remove
         fn send_tokens_to_address(
             ref self: ContractState,
             receiver: ContractAddress,
@@ -189,6 +231,57 @@ mod Treasury {
             self.emit(TokenSent { receiver, token_addr, amount });
             return status;
         }
+
+        // TODO: Add transfers querying methods for frontend
+        
+        fn add_transfer(
+            ref self: ContractState,
+            receiver: ContractAddress,
+            amount: u256,
+            token_addr: ContractAddress
+        ) {
+            let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token_addr };
+            assert(token.balanceOf(get_contract_address()) >= amount, Errors::INSUFFICIENT_FUNDS);
+            let new_transfer_id = self.last_transfer_id.read() + 1;
+            self.last_transfer_id.write(new_transfer_id);
+            let transfer = Transfer {receiver, token_addr, amount, is_finished: false, is_cancelled: false};
+            self.transfers_on_cooldown.write(new_transfer_id, transfer);
+            self.emit(TransferPending { receiver, token_addr, amount });
+        }
+
+        fn cancel_transaction(ref self: ContractState, transfer_id: u64) {
+            // assert if guardian
+            let initial_transfer = self.transfers_on_cooldown.read(transfer_id);
+            let cancelation_event = TransferCancelled { 
+                initial_amount: initial_transfer.amount,
+                token_addr: initial_transfer.token_addr,
+                receiver: initial_transfer.receiver 
+            };
+            self.transfers_on_cooldown.write(transfer_id, Transfer {amount: 0, is_cancelled: true, ..initial_transfer});
+            self.emit(cancelation_event);
+        }
+
+        // Who can execute it?
+        fn execute_current_pending(ref self: ContractState) -> bool {
+            let current_id = self.current_transfer_pointer.read();
+            let transfer_pending = self.transfers_on_cooldown.read(current_id);
+            self.current_transfer_pointer.write(current_id + 1);
+            if transfer_pending.is_cancelled {
+                return false; // TODO: Add failure event?
+            }
+            let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: transfer_pending.token_addr };
+            let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
+            let sent_event = TokenSent { // Add .into() conversion?
+                amount: transfer_pending.amount,
+                token_addr: transfer_pending.token_addr,
+                receiver: transfer_pending.receiver 
+            };
+            self.transfers_on_cooldown.write(current_id, Transfer { is_finished: true, ..transfer_pending });
+            self.emit(sent_event);
+            return status;
+        }
+
+        // TODO: Implement guardians functionality
 
         fn update_AMM_address(ref self: ContractState, new_amm_address: ContractAddress) {
             self.ownable.assert_only_owner();
