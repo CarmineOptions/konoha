@@ -66,7 +66,7 @@ mod Treasury {
     use openzeppelin::access::ownable::interface::IOwnableTwoStep;
     use openzeppelin::upgrades::interface::IUpgradeable;
     use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address, ClassHash};
+    use starknet::{ContractAddress, get_caller_address, get_contract_address, get_block_timestamp, ClassHash};
     use super::{OptionType};
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
@@ -90,11 +90,12 @@ mod Treasury {
         upgradeable: UpgradeableComponent::Storage
     }
 
-    #[derive(Drop)]
+    #[derive(Drop, Serde, starknet::Store)]
     struct Transfer {
         token_addr: ContractAddress,
         receiver: ContractAddress,
         amount: u256,
+        cooldown_end: u64,
         is_finished: bool,
         is_cancelled: bool
     }
@@ -212,7 +213,6 @@ mod Treasury {
         self.amm_address.write(AMM_contract_address);
         self.zklend_market_contract_address.write(zklend_market_contract_address);
         self.ownable.initializer(gov_contract_address);
-        self.current_transfer_pointer.write(0);
     }
 
     #[abi(embed_v0)]
@@ -244,7 +244,8 @@ mod Treasury {
             assert(token.balanceOf(get_contract_address()) >= amount, Errors::INSUFFICIENT_FUNDS);
             let new_transfer_id = self.last_transfer_id.read() + 1;
             self.last_transfer_id.write(new_transfer_id);
-            let transfer = Transfer {receiver, token_addr, amount, is_finished: false, is_cancelled: false};
+            let COOLDOWN_TIME = 3600 * 48; // TODO: Move to constants
+            let transfer = Transfer {receiver, token_addr, amount, cooldown_end: get_block_timestamp() + COOLDOWN_TIME, is_finished: false, is_cancelled: false};
             self.transfers_on_cooldown.write(new_transfer_id, transfer);
             self.emit(TransferPending { receiver, token_addr, amount });
         }
@@ -261,21 +262,21 @@ mod Treasury {
             self.emit(cancelation_event);
         }
 
-        // Who can execute it?
         fn execute_current_pending(ref self: ContractState) -> bool {
             let current_id = self.current_transfer_pointer.read();
             let transfer_pending = self.transfers_on_cooldown.read(current_id);
             self.current_transfer_pointer.write(current_id + 1);
             if transfer_pending.is_cancelled {
-                return false; // TODO: Add failure event?
+                return false;
             }
             let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: transfer_pending.token_addr };
             let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
-            let sent_event = TokenSent { // Add .into() conversion?
+            let sent_event = TokenSent {
                 amount: transfer_pending.amount,
                 token_addr: transfer_pending.token_addr,
                 receiver: transfer_pending.receiver 
             };
+            
             self.transfers_on_cooldown.write(current_id, Transfer { is_finished: true, ..transfer_pending });
             self.emit(sent_event);
             return status;
