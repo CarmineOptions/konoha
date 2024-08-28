@@ -22,7 +22,7 @@ trait IVesting<TContractState> {
         grantee: ContractAddress
     );
     // MAYBE – streaming?
-// MAYBE – options on the govtoken?
+    // MAYBE – options on the govtoken?
 }
 
 #[starknet::component]
