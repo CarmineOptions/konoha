@@ -11,7 +11,7 @@ starknet = ">=2.0.0"
 contracts = { path = "../" }
 
 [dev-dependencies]
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.27.0" }
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.23.0" }
 
 [lib]
 sierra = true

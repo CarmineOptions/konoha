@@ -14,7 +14,7 @@ trait IGovernance<TContractState> {
 
     fn get_governance_token_address(self: @TContractState) -> ContractAddress;
     // rest in component
-    // AIRDROPS
+// AIRDROPS
 
     // in component
 
