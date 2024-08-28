@@ -13,7 +13,8 @@ use snforge_std::{
 use starknet::{ContractAddress, get_block_timestamp};
 
 
-// This proposes upgrading the current mainnet Carmine governance to the one in master, votes on it with multiple wallets and passes the upgrade turbo.
+// This proposes upgrading the current mainnet Carmine governance to the one in master, votes on it
+// with multiple wallets and passes the upgrade turbo.
 #[test]
 #[fork("MAINNET")]
 fn test_upgrade_mainnet_to_master() {

@@ -30,7 +30,8 @@
 //     );
 //     airdrop_contract.add_root(valid_root);
 
-//     start_prank(CheatTarget::One(airdrop_contract.contract_address), CLAIMEE_1.try_into().unwrap());
+//     start_prank(CheatTarget::One(airdrop_contract.contract_address),
+//     CLAIMEE_1.try_into().unwrap());
 //     let initial_proof = array![valid_proof_element];
 //     airdrop_contract.claim(CLAIMEE_1, valid_claim_amount, initial_proof.span());
 //     assert(
@@ -68,7 +69,8 @@
 //     contract.add_root(initial_root);
 //     start_prank(CheatTarget::One(contract.contract_address), CLAIMEE_1.try_into().unwrap());
 //     contract.claim(claim_amount, valid_proof_for_initial_root.span());
-//     assert(tok.balance_of(CLAIMEE_1.try_into().unwrap()) == claim_amount, 'initial claim failed');
+//     assert(tok.balance_of(CLAIMEE_1.try_into().unwrap()) == claim_amount, 'initial claim
+//     failed');
 
 //     // update root
 //     start_prank(CheatTarget::One(contract.contract_address), ADMIN_ADDR.try_into().unwrap());
@@ -79,7 +81,7 @@
 //     contract.claim(claim_amount, new_proof_not_matching_old_root.span());
 //     // check fail : to do, use should panic ?
 
-//     // claim with new root + old proof, should fail 
+//     // claim with new root + old proof, should fail
 //     contract.claim(claim_amount, old_proof_not_matching_new_root.span());
 // // check fail : to do
 // }

@@ -1,5 +1,5 @@
 [package]
-name = "contract_scripts"
+name = "deploy_konoha"
 version = "0.1.0"
 edition = "2023_11"
 
@@ -7,8 +7,11 @@ edition = "2023_11"
 
 [dependencies]
 sncast_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.27.0" }
-starknet = "2.7.0"
+starknet = ">=2.7.0"
 contracts = { path = "../" }
+
+[dev-dependencies]
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.27.0" }
 
 [lib]
 sierra = true
@@ -18,5 +21,5 @@ casm = true
 sierra = true
 casm = true
 build-external-contracts = [
-    "contracts::proposals"
+    "contracts::contract::Governance"
 ]

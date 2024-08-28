@@ -1,6 +1,7 @@
 use starknet::ContractAddress;
 
-// This component should not be used along with delegation, as when the tokens are unstaked, they are not automatically undelegated.
+// This component should not be used along with delegation, as when the tokens are unstaked, they
+// are not automatically undelegated.
 
 #[starknet::interface]
 trait IStaking<TContractState> {
@@ -183,8 +184,8 @@ mod staking {
                 contract_address: self.floating_token_address.read()
             };
             // user gets back the same amount of tokens they put in.
-            // the payoff is in holding voting tokens, which make the user eligible for distributions of protocol revenue
-            // works for tokens with fixed max float
+            // the payoff is in holding voting tokens, which make the user eligible for
+            // distributions of protocol revenue works for tokens with fixed max float
             floating_token.transfer(caller, res.amount_staked.into());
             self
                 .stake

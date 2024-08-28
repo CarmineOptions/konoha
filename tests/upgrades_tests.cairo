@@ -103,17 +103,17 @@ fn test_apply_a_non_existent_proposal() {
 // fn test_successfull_contract_upgrade() {
 //     assert_eq!(1, 0, "TODO");
 // }
-// 
+//
 // #[test]
 // fn test_upgrade_with_custom_proposal_execution() {
 //     assert_eq!(1, 0, "TODO");
 // }
-// 
+//
 // #[test]
 // fn test_multiple_contract_upgrades() {
 //     assert_eq!(1, 0, "TODO");
 // }
-// 
+//
 // #[test]
 // fn test_event_with_failed_upgrade_attempts() {
 //     assert_eq!(1, 0, "TODO");

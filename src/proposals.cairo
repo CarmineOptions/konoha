@@ -161,12 +161,14 @@ mod proposals {
                 total_eligible_votes_from_tokenholders_u256
                 .low;
 
-            // Not only tokenholders are eligible, but investors as well, they hold 1/4th of the voting power
-            // However, their votes are currently stored in storage_var, not tokens
-            // So we must calculate 4/3 of the total supply (additional supply will be 1/4th of new total)
+            // Not only tokenholders are eligible, but investors as well, they hold 1/4th of the
+            // voting power However, their votes are currently stored in storage_var, not tokens
+            // So we must calculate 4/3 of the total supply (additional supply will be 1/4th of new
+            // total)
             // and from that 1/2, because that's 50%, So (4/3) * (1/2) = 2/3 of the total supply
             // Multiply total votes by 2 and divide by 3
-            // Currently, there are not investors because they haven't yet set up their wallets. For this reason, the minimum is now simply half.
+            // Currently, there are not investors because they haven't yet set up their wallets. For
+            // this reason, the minimum is now simply half.
             let minimum_for_express: u128 = total_eligible_votes_from_tokenholders / 2;
 
             // Check if yay_tally >= minimum_for_express

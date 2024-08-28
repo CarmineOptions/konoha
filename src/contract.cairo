@@ -1,5 +1,6 @@
 use konoha::types::{ContractType, PropDetails, VoteStatus};
-// This file if possible calls out to Proposals or Upgrades or other files where actual logic resides.
+// This file if possible calls out to Proposals or Upgrades or other files where actual logic
+// resides.
 
 use starknet::ContractAddress;
 
@@ -12,18 +13,18 @@ trait IGovernance<TContractState> {
     // UPGRADES
 
     fn get_governance_token_address(self: @TContractState) -> ContractAddress;
-// rest in component
+    // rest in component
 // AIRDROPS
 
-// in component
+    // in component
 
-// VESTING
+    // VESTING
 
-// in component
+    // in component
 
-// STAKING
+    // STAKING
 
-// in component
+    // in component
 }
 
 
@@ -137,7 +138,8 @@ mod Governance {
         treasury_classhash: ClassHash,
         recipient: ContractAddress
     ) {
-        // This is not used in production on mainnet, because the governance token is already deployed (and distributed).
+        // This is not used in production on mainnet, because the governance token is already
+        // deployed (and distributed).
 
         let governance_address = get_contract_address();
         assert(governance_address.into() != 0, 'gov addr zero??');

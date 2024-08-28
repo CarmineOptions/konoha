@@ -45,7 +45,7 @@ mod discussion {
         fn add_comment(
             ref self: ComponentState<TContractState>, prop_id: u32, ipfs_hash: ByteArray
         ) {
-            //Check if proposal is live 
+            //Check if proposal is live
             let is_live = self.is_proposal_live(prop_id);
             assert(is_live, 'Proposal is not live!');
 
@@ -56,7 +56,7 @@ mod discussion {
                 .balance_of(user_address);
             assert(caller_balance.high != 0 || caller_balance.low != 0, 'Govtoken balance is zero');
 
-            //get current comment count 
+            //get current comment count
             let count: u64 = self.comment_count.read(prop_id);
 
             //store new comment/ipfs_hash at next index
@@ -68,7 +68,7 @@ mod discussion {
         }
 
         fn get_comments(self: @ComponentState<TContractState>, prop_id: u32) -> Array<Comment> {
-            //Get comment counts 
+            //Get comment counts
             let count: u64 = self.comment_count.read(prop_id);
 
             //Initialize an array of comments

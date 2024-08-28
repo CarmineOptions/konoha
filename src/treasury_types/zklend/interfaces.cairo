@@ -71,7 +71,8 @@ trait IMarket<TContractState> {
 
     fn disable_collateral(ref self: TContractState, token: ContractAddress);
 
-    /// With the current design, liquidators are responsible for calculating the maximum amount allowed.
+    /// With the current design, liquidators are responsible for calculating the maximum amount
+    /// allowed.
     /// We simply check collteralization factor is below one after liquidation.
     /// TODO: calculate max amount on-chain because compute is cheap on StarkNet.
     fn liquidate(
