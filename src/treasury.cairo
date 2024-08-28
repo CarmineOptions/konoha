@@ -1,6 +1,8 @@
 use konoha::treasury_types::carmine::OptionType;
 use starknet::ContractAddress;
 
+const GUARDIAN_ROLE: felt252 = selector!("GUARDIAN_ROLE");
+
 #[starknet::interface]
 trait ITreasury<TContractState> {
     fn add_transfer(
@@ -66,16 +68,36 @@ mod Treasury {
     use openzeppelin::access::ownable::interface::IOwnableTwoStep;
     use openzeppelin::upgrades::interface::IUpgradeable;
     use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
+    use openzeppelin::access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
+    use openzeppelin::introspection::src5::SRC5Component;
+    use openzeppelin::token::erc20::ERC20Component;
     use starknet::{ContractAddress, get_caller_address, get_contract_address, get_block_timestamp, ClassHash};
-    use super::{OptionType};
+
+    use super::{OptionType, GUARDIAN_ROLE};
+
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+    
+    component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
+    component!(path: SRC5Component, storage: src5, event: SRC5Event);
+    
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
-
-
+    
+    // Ownable
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
     impl InternalImpl = OwnableComponent::InternalImpl<ContractState>;
+
+    // Upgradeable
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
+
+    // AccessControl
+    #[abi(embed_v0)]
+    impl AccessControlImpl = AccessControlComponent::AccessControlImpl<ContractState>;
+    impl AccessControlInternalImpl = AccessControlComponent::InternalImpl<ContractState>;
+
+    // SRC5
+    #[abi(embed_v0)]
+    impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
 
     #[storage]
     struct Storage {
@@ -84,8 +106,13 @@ mod Treasury {
         transfers_on_cooldown: LegacyMap<u64, Transfer>,
         current_transfer_pointer: u64,
         last_transfer_id: u64,
+
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
+        #[substorage(v0)]
+        accesscontrol: AccessControlComponent::Storage,
+        #[substorage(v0)]
+        src5: SRC5Component::Storage,
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage
     }
@@ -184,6 +211,10 @@ mod Treasury {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         #[flat]
+        AccessControlEvent: AccessControlComponent::Event,
+        #[flat]
+        SRC5Event: SRC5Component::Event,
+        #[flat]
         UpgradeableEvent: UpgradeableComponent::Event
     }
 
@@ -203,6 +234,7 @@ mod Treasury {
         gov_contract_address: ContractAddress,
         AMM_contract_address: ContractAddress,
         zklend_market_contract_address: ContractAddress
+        // first_guardian: ContractAddress // Integrate parameter for the first guardian
     ) {
         assert(gov_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_GOVERNANCE);
         assert(AMM_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_AMM);
@@ -212,6 +244,10 @@ mod Treasury {
         );
         self.amm_address.write(AMM_contract_address);
         self.zklend_market_contract_address.write(zklend_market_contract_address);
+
+        self.accesscontrol.initializer();
+        self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, gov_contract_address);
+
         self.ownable.initializer(gov_contract_address);
     }
 
@@ -240,6 +276,7 @@ mod Treasury {
             amount: u256,
             token_addr: ContractAddress
         ) {
+            self.ownable.assert_only_owner();
             let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token_addr };
             assert(token.balanceOf(get_contract_address()) >= amount, Errors::INSUFFICIENT_FUNDS);
             let new_transfer_id = self.last_transfer_id.read() + 1;
@@ -252,6 +289,7 @@ mod Treasury {
 
         fn cancel_transaction(ref self: ContractState, transfer_id: u64) {
             // assert if guardian
+            self.accesscontrol.assert_only_role(GUARDIAN_ROLE);
             let initial_transfer = self.transfers_on_cooldown.read(transfer_id);
             let cancelation_event = TransferCancelled { 
                 initial_amount: initial_transfer.amount,
