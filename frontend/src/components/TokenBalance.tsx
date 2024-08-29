@@ -1,40 +1,18 @@
-import React, { useMemo } from "react";
-import { useContractRead } from "@starknet-react/core";
-import { abi, formatBalance } from "../lib/erc20";
+import React from "react";
+import { formatBalance } from "../lib/erc20";
 
-interface Token {
+interface TokenBalanceItem {
     name: string;
-    address: string;
+    balance: bigint;
 }
 
 interface TokenBalanceProps {
-    tokens: Token[];
-    accountAddress: string;
+    balances: TokenBalanceItem[];
     title: string;
+    isLoading: boolean;
 }
 
-export default function TokenBalance({ tokens, accountAddress, title }: TokenBalanceProps) {
-    const balanceReads = tokens.map(token =>
-        useContractRead({
-            functionName: "balanceOf",
-            args: [accountAddress],
-            abi,
-            address: token.address,
-            watch: true,
-        })
-    );
-
-    const balances = useMemo(() =>
-        tokens.map((token, index) => ({
-            name: token.name,
-            balance: balanceReads[index].data,
-            isLoading: balanceReads[index].isLoading,
-        })),
-        [tokens, balanceReads]
-    );
-
-    const isLoading = balances.some(b => b.isLoading);
-
+export default function TokenBalance({ balances, title, isLoading }: TokenBalanceProps) {
     return (
         <div>
             <div className="flex w-full flex-grow pb-4 text-2xl font-bold">{title}</div>
@@ -49,7 +27,7 @@ export default function TokenBalance({ tokens, accountAddress, title }: TokenBal
                             </div>
                             <div className="flex justify-between items-center gap-20">
                                 <div className="flex-grow font-bold">
-                                    {formatBalance(BigInt(token.balance.toString()))}
+                                    {formatBalance(token.balance)}
                                 </div>
                             </div>
                         </div>
