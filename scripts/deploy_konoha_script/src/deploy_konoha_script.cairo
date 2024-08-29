@@ -14,32 +14,36 @@ fn main() {
         "VotingToken",
         FeeSettings::Eth(EthFeeSettings { max_fee: Option::Some(max_fee) }),
         Option::Some(nonce)
-    ).unwrap()
+    )
+        .expect('declare failed');
 
     let floating_token_class_hash = declare(
         "FloatingToken",
         FeeSettings::Eth(EthFeeSettings { max_fee: Option::Some(max_fee) }),
         Option::Some(nonce)
-    ).unwrap()
+    )
+        .expect('declare failed');
 
     let treasury_class_hash = declare(
-        "FloatingToken",
+        "Treasury",
         FeeSettings::Eth(EthFeeSettings { max_fee: Option::Some(max_fee) }),
         Option::Some(nonce)
-    ).unwrap()
+    )
+        .expect('declare failed');
 
-    
     let declare_result = declare(
         "Governance",
         FeeSettings::Eth(EthFeeSettings { max_fee: Option::Some(max_fee) }),
         Option::Some(nonce)
     )
-    .expect('contract already declared');
+        .expect('declare failed');
 
-    let mut calldata: Array<felt252> = array![voting_token_class_hash];
-    floating_token_class_hash.serialize(ref calldata);
-    treasury_class_hash.serialize(ref calldata);
-    USER.serialize(ref calldata);
+    let mut calldata: Array<felt252> = array![
+        voting_token_class_hash.class_hash.try_into().unwrap(),
+        floating_token_class_hash.class_hash.try_into().unwrap(),
+        treasury_class_hash.class_hash.try_into().unwrap(),
+        USER
+    ];
 
     let class_hash = declare_result.class_hash;
 
@@ -47,7 +51,7 @@ fn main() {
 
     let deploy_result = deploy(
         class_hash,
-        @calldata,
+        calldata,
         Option::Some(salt),
         true,
         FeeSettings::Eth(EthFeeSettings { max_fee: Option::Some(max_fee) }),

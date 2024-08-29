@@ -6,7 +6,6 @@ name = "konoha"
 version = "1.0.0"
 dependencies = [
  "openzeppelin",
- "sncast_std",
  "snforge_std",
 ]
 
@@ -16,11 +15,6 @@ version = "0.10.0"
 source = "git+https://github.com/OpenZeppelin/cairo-contracts.git?tag=v0.10.0#d77082732daab2690ba50742ea41080eb23299d3"
 
 [[package]]
-name = "sncast_std"
+name = "snforge_std"
 version = "0.22.0"
 source = "git+https://github.com/foundry-rs/starknet-foundry.git?tag=v0.22.0#9b215944c6c5871c738381b4ded61bbf06e7ba35"
-
-[[package]]
-name = "snforge_std"
-version = "0.23.0"
-source = "git+https://github.com/foundry-rs/starknet-foundry.git?tag=v0.23.0#f2bff8f796763ada77fe6033ec1b034ceee22abd"

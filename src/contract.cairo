@@ -13,18 +13,18 @@ trait IGovernance<TContractState> {
     // UPGRADES
 
     fn get_governance_token_address(self: @TContractState) -> ContractAddress;
-    // rest in component
+// rest in component
 // AIRDROPS
 
-    // in component
+// in component
 
-    // VESTING
+// VESTING
 
-    // in component
+// in component
 
-    // STAKING
+// STAKING
 
-    // in component
+// in component
 }
 
 

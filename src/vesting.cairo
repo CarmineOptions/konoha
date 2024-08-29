@@ -21,7 +21,7 @@ trait IVesting<TContractState> {
         total_amount: u128,
         grantee: ContractAddress
     );
-    // MAYBE – streaming?
+// MAYBE – streaming?
 // MAYBE – options on the govtoken?
 }
 
