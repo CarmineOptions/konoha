@@ -588,7 +588,7 @@ mod proposals {
             assert(get_caller_address() == get_contract_address(), 'can only be called by self');
             assert(quorum < 30, 'quorum must be <30');
             assert(quorum >= 1, 'quorum < 1?');
-            assert(proposal_voting_seconds > 3600, 'propvoting secs too short');
+            assert(proposal_voting_seconds > 86400, 'propvoting secs < 1day');
             assert(proposal_voting_seconds < 3000000, 'propvoting secs > 1mo?');
             self.quorum.write(quorum);
             self.proposal_voting_seconds.write(proposal_voting_seconds);
