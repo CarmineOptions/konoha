@@ -16,6 +16,10 @@ trait ITreasury<TContractState> {
 
     fn execute_current_pending(ref self: TContractState) -> bool;
 
+    fn add_pending_guardian(ref self: TContractState, guardian_address: ContractAddress);
+
+    fn approve_guardian(ref self: TContractState, guardian_address: ContractAddress);
+
     fn send_tokens_to_address(
         ref self: TContractState,
         receiver: ContractAddress,
@@ -52,6 +56,8 @@ trait ITreasury<TContractState> {
 
 #[starknet::contract]
 mod Treasury {
+    use openzeppelin::access::accesscontrol::interface::IAccessControl;
+    use core::option::OptionTrait;
     use core::num::traits::zero::Zero;
     use core::starknet::event::EventEmitter;
     use core::traits::TryInto;
@@ -85,7 +91,7 @@ mod Treasury {
     // Ownable
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
-    impl InternalImpl = OwnableComponent::InternalImpl<ContractState>;
+    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     // Upgradeable
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
@@ -106,6 +112,8 @@ mod Treasury {
         transfers_on_cooldown: LegacyMap<u64, Transfer>,
         current_transfer_pointer: u64,
         last_transfer_id: u64,
+        guardians: LegacyMap<u32, Guardian>,
+        last_guardian_id: u32,
 
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
@@ -125,6 +133,12 @@ mod Treasury {
         cooldown_end: u64,
         is_finished: bool,
         is_cancelled: bool
+    }
+
+    #[derive(Drop, Serde, starknet::Store)]
+    struct Guardian {
+        address: ContractAddress,
+        is_active: bool
     }
 
     #[derive(starknet::Event, Drop)]
@@ -251,6 +265,22 @@ mod Treasury {
         self.ownable.initializer(gov_contract_address);
     }
 
+    #[generate_trait]
+    impl InternalFunctions of InternalFunctionsTrait {
+        fn get_guardian(self: @ContractState, guardian_address: ContractAddress) -> Option<(u32, Guardian)> {
+            let i = 0;
+            let current_id = self.last_guardian_id.read();
+            loop {
+                if i >= current_id {
+                    break Option::None;
+                }
+                if self.guardians.read(i).address == guardian_address {
+                    break Option::Some((i, self.guardians.read(i)));
+                }
+            }
+        }
+    }
+
     #[abi(embed_v0)]
     impl Treasury of super::ITreasury<ContractState> {
         // TODO: Remove
@@ -320,7 +350,28 @@ mod Treasury {
             return status;
         }
 
-        // TODO: Implement guardians functionality
+        // TODO: Add events
+        fn add_pending_guardian(ref self: ContractState, guardian_address: ContractAddress) {
+            self.ownable.assert_only_owner();
+            let current_id = self.last_guardian_id.read();
+
+            assert(self.get_guardian(guardian_address).is_some(), 'guardian exists');
+            
+            let new_guardian = Guardian { address: guardian_address, is_active: false };
+            self.guardians.write(current_id + 1, new_guardian);
+            self.last_guardian_id.write(current_id + 1);
+        }
+
+        fn approve_guardian(ref self: ContractState, guardian_address: ContractAddress) {
+            self.accesscontrol.assert_only_role(GUARDIAN_ROLE);
+            let (id, mut guardian) = self.get_guardian(guardian_address).expect('guardian not exists');
+            guardian.is_active = true;
+
+            // TODO: Grant guardians the admin role
+            // self.accesscontrol.grant_role();
+
+            self.guardians.write(id, guardian);
+        }
 
         fn update_AMM_address(ref self: ContractState, new_amm_address: ContractAddress) {
             self.ownable.assert_only_owner();
