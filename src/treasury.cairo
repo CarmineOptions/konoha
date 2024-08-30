@@ -2,6 +2,7 @@ use konoha::treasury_types::carmine::OptionType;
 use starknet::ContractAddress;
 
 const GUARDIAN_ROLE: felt252 = selector!("GUARDIAN_ROLE");
+const OWNER_ROLE: felt252 = selector!("OWNER_ROLE");
 
 #[starknet::interface]
 trait ITreasury<TContractState> {
@@ -19,6 +20,8 @@ trait ITreasury<TContractState> {
     fn add_pending_guardian(ref self: TContractState, guardian_address: ContractAddress);
 
     fn approve_guardian(ref self: TContractState, guardian_address: ContractAddress);
+
+    fn deactivate_guardian(ref self: TContractState, guardian_address: ContractAddress);
 
     fn send_tokens_to_address(
         ref self: TContractState,
@@ -56,9 +59,8 @@ trait ITreasury<TContractState> {
 
 #[starknet::contract]
 mod Treasury {
-    use openzeppelin::access::accesscontrol::interface::IAccessControl;
-    use core::option::OptionTrait;
     use core::num::traits::zero::Zero;
+    use core::option::OptionTrait;
     use core::starknet::event::EventEmitter;
     use core::traits::TryInto;
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
@@ -70,24 +72,28 @@ mod Treasury {
     use konoha::treasury_types::zklend::interfaces::{
         IMarket, IMarketDispatcher, IMarketDispatcherTrait
     };
+    use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait;
+    use openzeppelin::access::accesscontrol::interface::IAccessControl;
+    use openzeppelin::access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::interface::IOwnableTwoStep;
-    use openzeppelin::upgrades::interface::IUpgradeable;
-    use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
-    use openzeppelin::access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::ERC20Component;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address, get_block_timestamp, ClassHash};
+    use openzeppelin::upgrades::interface::IUpgradeable;
+    use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
+    use starknet::{
+        ContractAddress, get_caller_address, get_contract_address, get_block_timestamp, ClassHash
+    };
 
-    use super::{OptionType, GUARDIAN_ROLE};
+    use super::{OptionType, GUARDIAN_ROLE, OWNER_ROLE};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
-    
+
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
-    
+
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
-    
+
     // Ownable
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
@@ -98,7 +104,8 @@ mod Treasury {
 
     // AccessControl
     #[abi(embed_v0)]
-    impl AccessControlImpl = AccessControlComponent::AccessControlImpl<ContractState>;
+    impl AccessControlImpl =
+        AccessControlComponent::AccessControlImpl<ContractState>;
     impl AccessControlInternalImpl = AccessControlComponent::InternalImpl<ContractState>;
 
     // SRC5
@@ -114,7 +121,7 @@ mod Treasury {
         last_transfer_id: u64,
         guardians: LegacyMap<u32, Guardian>,
         last_guardian_id: u32,
-
+        active_guardians_count: u32,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
@@ -248,7 +255,7 @@ mod Treasury {
         gov_contract_address: ContractAddress,
         AMM_contract_address: ContractAddress,
         zklend_market_contract_address: ContractAddress
-        // first_guardian: ContractAddress // Integrate parameter for the first guardian
+    // first_guardian: ContractAddress // TODO: Integrate parameter for the first guardian
     ) {
         assert(gov_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_GOVERNANCE);
         assert(AMM_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_AMM);
@@ -260,14 +267,19 @@ mod Treasury {
         self.zklend_market_contract_address.write(zklend_market_contract_address);
 
         self.accesscontrol.initializer();
-        self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, gov_contract_address);
+        self.accesscontrol._set_role_admin(DEFAULT_ADMIN_ROLE, GUARDIAN_ROLE);
+        self.accesscontrol._grant_role(OWNER_ROLE, gov_contract_address);
+        // self.accesscontrol._grant_role(GUARDIAN_ROLE, first_guardian);
+        self.active_guardians_count.write(1);
 
         self.ownable.initializer(gov_contract_address);
     }
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
-        fn get_guardian(self: @ContractState, guardian_address: ContractAddress) -> Option<(u32, Guardian)> {
+        fn get_guardian(
+            self: @ContractState, guardian_address: ContractAddress
+        ) -> Option<(u32, Guardian)> {
             let i = 0;
             let current_id = self.last_guardian_id.read();
             loop {
@@ -299,7 +311,7 @@ mod Treasury {
         }
 
         // TODO: Add transfers querying methods for frontend
-        
+
         fn add_transfer(
             ref self: ContractState,
             receiver: ContractAddress,
@@ -312,21 +324,29 @@ mod Treasury {
             let new_transfer_id = self.last_transfer_id.read() + 1;
             self.last_transfer_id.write(new_transfer_id);
             let COOLDOWN_TIME = 3600 * 48; // TODO: Move to constants
-            let transfer = Transfer {receiver, token_addr, amount, cooldown_end: get_block_timestamp() + COOLDOWN_TIME, is_finished: false, is_cancelled: false};
+            let transfer = Transfer {
+                receiver,
+                token_addr,
+                amount,
+                cooldown_end: get_block_timestamp() + COOLDOWN_TIME,
+                is_finished: false,
+                is_cancelled: false
+            };
             self.transfers_on_cooldown.write(new_transfer_id, transfer);
             self.emit(TransferPending { receiver, token_addr, amount });
         }
 
         fn cancel_transaction(ref self: ContractState, transfer_id: u64) {
-            // assert if guardian
             self.accesscontrol.assert_only_role(GUARDIAN_ROLE);
             let initial_transfer = self.transfers_on_cooldown.read(transfer_id);
-            let cancelation_event = TransferCancelled { 
+            let cancelation_event = TransferCancelled {
                 initial_amount: initial_transfer.amount,
                 token_addr: initial_transfer.token_addr,
-                receiver: initial_transfer.receiver 
+                receiver: initial_transfer.receiver
             };
-            self.transfers_on_cooldown.write(transfer_id, Transfer {amount: 0, is_cancelled: true, ..initial_transfer});
+            self
+                .transfers_on_cooldown
+                .write(transfer_id, Transfer { amount: 0, is_cancelled: true, ..initial_transfer });
             self.emit(cancelation_event);
         }
 
@@ -337,15 +357,20 @@ mod Treasury {
             if transfer_pending.is_cancelled {
                 return false;
             }
-            let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: transfer_pending.token_addr };
+            let token: IERC20Dispatcher = IERC20Dispatcher {
+                contract_address: transfer_pending.token_addr
+            };
             let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
             let sent_event = TokenSent {
                 amount: transfer_pending.amount,
                 token_addr: transfer_pending.token_addr,
-                receiver: transfer_pending.receiver 
+                receiver: transfer_pending.receiver
             };
-            
-            self.transfers_on_cooldown.write(current_id, Transfer { is_finished: true, ..transfer_pending });
+
+            self
+                .transfers_on_cooldown
+                .write(current_id, Transfer { is_finished: true, ..transfer_pending });
+
             self.emit(sent_event);
             return status;
         }
@@ -356,19 +381,36 @@ mod Treasury {
             let current_id = self.last_guardian_id.read();
 
             assert(self.get_guardian(guardian_address).is_some(), 'guardian exists');
-            
+
             let new_guardian = Guardian { address: guardian_address, is_active: false };
             self.guardians.write(current_id + 1, new_guardian);
             self.last_guardian_id.write(current_id + 1);
         }
 
+        fn deactivate_guardian(ref self: ContractState, guardian_address: ContractAddress) {
+            self.ownable.assert_only_owner();
+            let active_guardians_count = self.active_guardians_count.read();
+            assert(active_guardians_count > 1, 'guards count can\'t be zero');
+
+            let (id, mut guardian) = self
+                .get_guardian(guardian_address)
+                .expect('guardian not exists'); // TODO: Add errors to enum
+
+            self.accesscontrol._revoke_role(GUARDIAN_ROLE, guardian_address);
+            
+            guardian.is_active = false;
+            self.guardians.write(id, guardian);
+            self.active_guardians_count.write(active_guardians_count - 1);
+        }
+
         fn approve_guardian(ref self: ContractState, guardian_address: ContractAddress) {
             self.accesscontrol.assert_only_role(GUARDIAN_ROLE);
-            let (id, mut guardian) = self.get_guardian(guardian_address).expect('guardian not exists');
+            let (id, mut guardian) = self
+                .get_guardian(guardian_address)
+                .expect('guardian not exists');
             guardian.is_active = true;
 
-            // TODO: Grant guardians the admin role
-            // self.accesscontrol.grant_role();
+            self.accesscontrol.grant_role(GUARDIAN_ROLE, guardian_address);
 
             self.guardians.write(id, guardian);
         }
