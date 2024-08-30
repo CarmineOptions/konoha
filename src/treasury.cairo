@@ -247,6 +247,9 @@ mod Treasury {
         const ADDRESS_ZERO_AMM: felt252 = 'AMM addr is zero address';
         const ADDRESS_ZERO_ZKLEND_MARKET: felt252 = 'zklnd markt addr is zero addrr';
         const ADDRESS_ALREADY_CHANGED: felt252 = 'New Address same as Previous';
+        const GUARDIAN_EXISTS: felt252 = 'Guardian exists';
+        const GUARDIAN_NOT_EXISTS: felt252 = 'Guardian not exists';
+        const MINIMAL_GUARDS_COUNT: felt252 = 'Guards count cannot be zero';
     }
 
     #[constructor]
@@ -380,7 +383,7 @@ mod Treasury {
             self.ownable.assert_only_owner();
             let current_id = self.last_guardian_id.read();
 
-            assert(self.get_guardian(guardian_address).is_some(), 'guardian exists');
+            assert(self.get_guardian(guardian_address).is_some(), Errors::GUARDIAN_EXISTS);
 
             let new_guardian = Guardian { address: guardian_address, is_active: false };
             self.guardians.write(current_id + 1, new_guardian);
@@ -390,14 +393,14 @@ mod Treasury {
         fn deactivate_guardian(ref self: ContractState, guardian_address: ContractAddress) {
             self.ownable.assert_only_owner();
             let active_guardians_count = self.active_guardians_count.read();
-            assert(active_guardians_count > 1, 'guards count can\'t be zero');
+            assert(active_guardians_count > 1, Errors::MINIMAL_GUARDS_COUNT);
 
             let (id, mut guardian) = self
                 .get_guardian(guardian_address)
-                .expect('guardian not exists'); // TODO: Add errors to enum
+                .expect(Errors::GUARDIAN_NOT_EXISTS);
 
             self.accesscontrol._revoke_role(GUARDIAN_ROLE, guardian_address);
-            
+
             guardian.is_active = false;
             self.guardians.write(id, guardian);
             self.active_guardians_count.write(active_guardians_count - 1);
@@ -407,7 +410,7 @@ mod Treasury {
             self.accesscontrol.assert_only_role(GUARDIAN_ROLE);
             let (id, mut guardian) = self
                 .get_guardian(guardian_address)
-                .expect('guardian not exists');
+                .expect(Errors::GUARDIAN_NOT_EXISTS);
             guardian.is_active = true;
 
             self.accesscontrol.grant_role(GUARDIAN_ROLE, guardian_address);
