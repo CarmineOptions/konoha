@@ -1,4 +1,5 @@
 use konoha::treasury_types::carmine::OptionType;
+use konoha::types::Transfer;
 use starknet::ContractAddress;
 
 const GUARDIAN_ROLE: felt252 = selector!("GUARDIAN_ROLE");
@@ -13,7 +14,13 @@ trait ITreasury<TContractState> {
         token_addr: ContractAddress
     );
 
-    fn cancel_transaction(ref self: TContractState, transfer_id: u64);
+    fn get_finished_transfers(ref self: TContractState) -> Array<Transfer>;
+
+    fn get_live_transfers(ref self: TContractState) -> Array<Transfer>;
+
+    fn get_cancelled_transfers(ref self: TContractState) -> Array<Transfer>;
+
+    fn cancel_transfer(ref self: TContractState, transfer_id: u64);
 
     fn execute_current_pending(ref self: TContractState) -> bool;
 
@@ -59,6 +66,7 @@ trait ITreasury<TContractState> {
 
 #[starknet::contract]
 mod Treasury {
+    use core::array::ArrayTrait;
     use core::num::traits::zero::Zero;
     use core::option::OptionTrait;
     use core::starknet::event::EventEmitter;
@@ -72,6 +80,7 @@ mod Treasury {
     use konoha::treasury_types::zklend::interfaces::{
         IMarket, IMarketDispatcher, IMarketDispatcherTrait
     };
+    use konoha::types::{Transfer, TransferStatus, Guardian};
     use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait;
     use openzeppelin::access::accesscontrol::interface::IAccessControl;
     use openzeppelin::access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
@@ -130,22 +139,6 @@ mod Treasury {
         src5: SRC5Component::Storage,
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage
-    }
-
-    #[derive(Drop, Serde, starknet::Store)]
-    struct Transfer {
-        token_addr: ContractAddress,
-        receiver: ContractAddress,
-        amount: u256,
-        cooldown_end: u64,
-        is_finished: bool,
-        is_cancelled: bool
-    }
-
-    #[derive(Drop, Serde, starknet::Store)]
-    struct Guardian {
-        address: ContractAddress,
-        is_active: bool
     }
 
     #[derive(starknet::Event, Drop)]
@@ -283,7 +276,7 @@ mod Treasury {
         fn get_guardian(
             self: @ContractState, guardian_address: ContractAddress
         ) -> Option<(u32, Guardian)> {
-            let i = 0;
+            let mut i = 0;
             let current_id = self.last_guardian_id.read();
             loop {
                 if i >= current_id {
@@ -292,7 +285,36 @@ mod Treasury {
                 if self.guardians.read(i).address == guardian_address {
                     break Option::Some((i, self.guardians.read(i)));
                 }
+
+                i += 1;
             }
+        }
+
+        fn get_transfers_by_status(
+            self: @ContractState, status: TransferStatus
+        ) -> Array<Transfer> {
+            let mut transfers = ArrayTrait::<Transfer>::new();
+            let current_timestamp = get_block_timestamp();
+            let transfers_count = self.last_transfer_id.read();
+            let mut i: u64 = 0;
+            let mut last_cooldown_end: u64 = 0;
+
+            loop {
+                if i == transfers_count
+                    || (status == TransferStatus::FINISHED
+                        && last_cooldown_end > current_timestamp) {
+                    break;
+                }
+
+                let current_transfer = self.transfers_on_cooldown.read(i);
+                if status == current_transfer.status {
+                    transfers.append(current_transfer);
+                }
+                last_cooldown_end = current_transfer.cooldown_end;
+
+                i += 1;
+            };
+            transfers
         }
     }
 
@@ -313,7 +335,33 @@ mod Treasury {
             return status;
         }
 
-        // TODO: Add transfers querying methods for frontend
+        // TODO: Add transfers querying methods for frontend (guardians)
+
+        fn get_live_transfers(ref self: ContractState) -> Array<Transfer> {
+            let mut transfers = ArrayTrait::<Transfer>::new();
+            let last_transfer_id = self.last_transfer_id.read();
+            let mut i = self.current_transfer_pointer.read();
+            loop {
+                if i == last_transfer_id {
+                    break;
+                }
+                let current_transfer = self.transfers_on_cooldown.read(i);
+                i += 1;
+                if current_transfer.status == TransferStatus::CANCELLED {
+                    continue;
+                }
+                transfers.append(current_transfer);
+            };
+            transfers
+        }
+
+        fn get_cancelled_transfers(ref self: ContractState) -> Array<Transfer> {
+            self.get_transfers_by_status(TransferStatus::CANCELLED)
+        }
+
+        fn get_finished_transfers(ref self: ContractState) -> Array<Transfer> {
+            self.get_transfers_by_status(TransferStatus::FINISHED)
+        }
 
         fn add_transfer(
             ref self: ContractState,
@@ -332,14 +380,15 @@ mod Treasury {
                 token_addr,
                 amount,
                 cooldown_end: get_block_timestamp() + COOLDOWN_TIME,
-                is_finished: false,
-                is_cancelled: false
+                status: TransferStatus::PENDING
+            // is_finished: false,
+            // is_cancelled: false
             };
             self.transfers_on_cooldown.write(new_transfer_id, transfer);
             self.emit(TransferPending { receiver, token_addr, amount });
         }
 
-        fn cancel_transaction(ref self: ContractState, transfer_id: u64) {
+        fn cancel_transfer(ref self: ContractState, transfer_id: u64) {
             self.accesscontrol.assert_only_role(GUARDIAN_ROLE);
             let initial_transfer = self.transfers_on_cooldown.read(transfer_id);
             let cancelation_event = TransferCancelled {
@@ -349,7 +398,10 @@ mod Treasury {
             };
             self
                 .transfers_on_cooldown
-                .write(transfer_id, Transfer { amount: 0, is_cancelled: true, ..initial_transfer });
+                .write(
+                    transfer_id,
+                    Transfer { amount: 0, status: TransferStatus::CANCELLED, ..initial_transfer }
+                );
             self.emit(cancelation_event);
         }
 
@@ -357,7 +409,7 @@ mod Treasury {
             let current_id = self.current_transfer_pointer.read();
             let transfer_pending = self.transfers_on_cooldown.read(current_id);
             self.current_transfer_pointer.write(current_id + 1);
-            if transfer_pending.is_cancelled {
+            if transfer_pending.status == TransferStatus::CANCELLED {
                 return false;
             }
             let token: IERC20Dispatcher = IERC20Dispatcher {
@@ -372,7 +424,9 @@ mod Treasury {
 
             self
                 .transfers_on_cooldown
-                .write(current_id, Transfer { is_finished: true, ..transfer_pending });
+                .write(
+                    current_id, Transfer { status: TransferStatus::FINISHED, ..transfer_pending }
+                );
 
             self.emit(sent_event);
             return status;
