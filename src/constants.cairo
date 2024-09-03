@@ -4,6 +4,7 @@ const QUORUM: u128 = 10; // 1/10 of totalSupply required to participate to pass
 const MINUS_ONE: felt252 = 0x800000000000011000000000000000000000000000000000000000000000000;
 const TEAM_TOKEN_BALANCE: u128 = 1000000000000000000;
 const PROPOSAL_VOTING_SECONDS: u64 = consteval_int!(60 * 60 * 24 * 7);
+const TREASURY_COOLDOWN_TIME: u64 = consteval_int!(60 * 60 * 24 * 2);
 
 
 // ADDRESSES

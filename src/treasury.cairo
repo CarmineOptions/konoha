@@ -1,5 +1,5 @@
 use konoha::treasury_types::carmine::OptionType;
-use konoha::types::Transfer;
+use konoha::types::{Transfer, Guardian, GuardiansInfo};
 use starknet::ContractAddress;
 
 const GUARDIAN_ROLE: felt252 = selector!("GUARDIAN_ROLE");
@@ -19,6 +19,10 @@ trait ITreasury<TContractState> {
     fn get_live_transfers(ref self: TContractState) -> Array<Transfer>;
 
     fn get_cancelled_transfers(ref self: TContractState) -> Array<Transfer>;
+
+    fn get_active_guardians(ref self: TContractState) -> GuardiansInfo;
+
+    fn get_inactive_guardians(ref self: TContractState) -> GuardiansInfo;
 
     fn cancel_transfer(ref self: TContractState, transfer_id: u64);
 
@@ -71,6 +75,7 @@ mod Treasury {
     use core::option::OptionTrait;
     use core::starknet::event::EventEmitter;
     use core::traits::TryInto;
+    use konoha::constants::TREASURY_COOLDOWN_TIME;
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
     use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
@@ -80,7 +85,7 @@ mod Treasury {
     use konoha::treasury_types::zklend::interfaces::{
         IMarket, IMarketDispatcher, IMarketDispatcherTrait
     };
-    use konoha::types::{Transfer, TransferStatus, Guardian};
+    use konoha::types::{Transfer, TransferStatus, Guardian, GuardiansInfo};
     use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait;
     use openzeppelin::access::accesscontrol::interface::IAccessControl;
     use openzeppelin::access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
@@ -209,6 +214,22 @@ mod Treasury {
         amount: u256
     }
 
+    #[derive(starknet::Event, Drop)]
+    struct GuardianAdded {
+        guardian_address: ContractAddress
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct GuardianActivated {
+        guardian_address: ContractAddress,
+        issuer_address: ContractAddress
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct GuardianDeactivated {
+        guardian_address: ContractAddress
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -316,6 +337,27 @@ mod Treasury {
             };
             transfers
         }
+
+        fn get_guardians_filtered(self: @ContractState, is_active_filter: bool) -> GuardiansInfo {
+            let mut guardians = ArrayTrait::<Guardian>::new();
+            let mut i = 0;
+            let total_guardians_count = self.last_guardian_id.read();
+            loop {
+                if i == total_guardians_count {
+                    break;
+                }
+                let current_guardian = self.guardians.read(i);
+                if current_guardian.is_active == is_active_filter {
+                    guardians.append(current_guardian);
+                }
+                i += 1;
+            };
+            GuardiansInfo {
+                guardians,
+                total_guardians_count,
+                active_guardians_count: self.active_guardians_count.read()
+            }
+        }
     }
 
     #[abi(embed_v0)]
@@ -334,8 +376,6 @@ mod Treasury {
             self.emit(TokenSent { receiver, token_addr, amount });
             return status;
         }
-
-        // TODO: Add transfers querying methods for frontend (guardians)
 
         fn get_live_transfers(ref self: ContractState) -> Array<Transfer> {
             let mut transfers = ArrayTrait::<Transfer>::new();
@@ -363,6 +403,14 @@ mod Treasury {
             self.get_transfers_by_status(TransferStatus::FINISHED)
         }
 
+        fn get_active_guardians(ref self: ContractState) -> GuardiansInfo {
+            self.get_guardians_filtered(true)
+        }
+
+        fn get_inactive_guardians(ref self: ContractState) -> GuardiansInfo {
+            self.get_guardians_filtered(false)
+        }
+
         fn add_transfer(
             ref self: ContractState,
             receiver: ContractAddress,
@@ -374,15 +422,12 @@ mod Treasury {
             assert(token.balanceOf(get_contract_address()) >= amount, Errors::INSUFFICIENT_FUNDS);
             let new_transfer_id = self.last_transfer_id.read() + 1;
             self.last_transfer_id.write(new_transfer_id);
-            let COOLDOWN_TIME = 3600 * 48; // TODO: Move to constants
             let transfer = Transfer {
                 receiver,
                 token_addr,
                 amount,
-                cooldown_end: get_block_timestamp() + COOLDOWN_TIME,
+                cooldown_end: get_block_timestamp() + TREASURY_COOLDOWN_TIME,
                 status: TransferStatus::PENDING
-            // is_finished: false,
-            // is_cancelled: false
             };
             self.transfers_on_cooldown.write(new_transfer_id, transfer);
             self.emit(TransferPending { receiver, token_addr, amount });
@@ -415,6 +460,7 @@ mod Treasury {
             let token: IERC20Dispatcher = IERC20Dispatcher {
                 contract_address: transfer_pending.token_addr
             };
+            assert(token.balanceOf(get_contract_address()) >= transfer_pending.amount, Errors::INSUFFICIENT_FUNDS);
             let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
             let sent_event = TokenSent {
                 amount: transfer_pending.amount,

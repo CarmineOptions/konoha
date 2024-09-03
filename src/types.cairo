@@ -15,6 +15,13 @@ struct VoteCounts {
     nay: felt252
 }
 
+#[derive(Drop, Serde)]
+struct GuardiansInfo {
+    guardians: Array<Guardian>,
+    active_guardians_count: u32,
+    total_guardians_count: u32
+}
+
 type BlockNumber = felt252;
 type VoteStatus = felt252; // 0 = not voted, 1 = yay, 2 = nay
 type ContractType =
