@@ -75,8 +75,8 @@ mod Treasury {
     use core::option::OptionTrait;
     use core::starknet::event::EventEmitter;
     use core::traits::TryInto;
-    use konoha::constants::TREASURY_COOLDOWN_TIME;
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
+    use konoha::constants::TREASURY_COOLDOWN_TIME;
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
     use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
     use konoha::treasury_types::nostra::interface::{
@@ -236,6 +236,9 @@ mod Treasury {
         TokenSent: TokenSent,
         TransferCancelled: TransferCancelled,
         TransferPending: TransferPending,
+        GuardianAdded: GuardianAdded,
+        GuardianActivated: GuardianActivated,
+        GuardianDeactivated: GuardianDeactivated,
         AMMAddressUpdated: AMMAddressUpdated,
         LiquidityProvided: LiquidityProvided,
         LiquidityWithdrawn: LiquidityWithdrawn,
@@ -453,6 +456,7 @@ mod Treasury {
         fn execute_current_pending(ref self: ContractState) -> bool {
             let current_id = self.current_transfer_pointer.read();
             let transfer_pending = self.transfers_on_cooldown.read(current_id);
+
             self.current_transfer_pointer.write(current_id + 1);
             if transfer_pending.status == TransferStatus::CANCELLED {
                 return false;
@@ -460,7 +464,11 @@ mod Treasury {
             let token: IERC20Dispatcher = IERC20Dispatcher {
                 contract_address: transfer_pending.token_addr
             };
-            assert(token.balanceOf(get_contract_address()) >= transfer_pending.amount, Errors::INSUFFICIENT_FUNDS);
+            assert(
+                token.balanceOf(get_contract_address()) >= transfer_pending.amount,
+                Errors::INSUFFICIENT_FUNDS
+            );
+
             let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
             let sent_event = TokenSent {
                 amount: transfer_pending.amount,
@@ -478,7 +486,6 @@ mod Treasury {
             return status;
         }
 
-        // TODO: Add events
         fn add_pending_guardian(ref self: ContractState, guardian_address: ContractAddress) {
             self.ownable.assert_only_owner();
             let current_id = self.last_guardian_id.read();
@@ -488,6 +495,8 @@ mod Treasury {
             let new_guardian = Guardian { address: guardian_address, is_active: false };
             self.guardians.write(current_id + 1, new_guardian);
             self.last_guardian_id.write(current_id + 1);
+
+            self.emit(GuardianAdded { guardian_address });
         }
 
         fn deactivate_guardian(ref self: ContractState, guardian_address: ContractAddress) {
@@ -504,6 +513,8 @@ mod Treasury {
             guardian.is_active = false;
             self.guardians.write(id, guardian);
             self.active_guardians_count.write(active_guardians_count - 1);
+
+            self.emit(GuardianDeactivated { guardian_address });
         }
 
         fn approve_guardian(ref self: ContractState, guardian_address: ContractAddress) {
@@ -516,6 +527,8 @@ mod Treasury {
             self.accesscontrol.grant_role(GUARDIAN_ROLE, guardian_address);
 
             self.guardians.write(id, guardian);
+
+            self.emit(GuardianActivated { guardian_address, issuer_address: get_caller_address() });
         }
 
         fn update_AMM_address(ref self: ContractState, new_amm_address: ContractAddress) {
