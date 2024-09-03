@@ -9,16 +9,11 @@ starknet = ">=2.0.0"
 openzeppelin = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", tag = "v0.10.0" }
 
 [dev-dependencies]
-snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.22.0" }
+snforge_std = { git = "https://github.com/foundry-rs/starknet-foundry.git", tag = "v0.23.0" }
 
 [lib]
-sierra = false
 
 [[target.starknet-contract]]
-
-[tool.snforge]
-exit_first = false
-
 
 [scripts]
 test = "snforge test"

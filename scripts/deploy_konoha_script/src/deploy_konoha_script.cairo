@@ -12,28 +12,28 @@ fn main() {
 
     let voting_token_class_hash = declare(
         "VotingToken",
-        FeeSettings::Eth(EthFeeSettings { max_fee: Option::Some(max_fee) }),
-        Option::Some(nonce)
+        FeeSettings::Eth(EthFeeSettings { max_fee: Option::None }),
+        Option::None
     )
-        .expect('declare failed');
+        .expect('VotingToken declare failed');
 
     let floating_token_class_hash = declare(
         "FloatingToken",
-        FeeSettings::Eth(EthFeeSettings { max_fee: Option::Some(max_fee) }),
+        FeeSettings::Eth(EthFeeSettings { max_fee: Option::None }),
         Option::Some(nonce)
     )
         .expect('declare failed');
 
     let treasury_class_hash = declare(
         "Treasury",
-        FeeSettings::Eth(EthFeeSettings { max_fee: Option::Some(max_fee) }),
+        FeeSettings::Eth(EthFeeSettings { max_fee: Option::None }),
         Option::Some(nonce)
     )
         .expect('declare failed');
 
     let declare_result = declare(
         "Governance",
-        FeeSettings::Eth(EthFeeSettings { max_fee: Option::Some(max_fee) }),
+        FeeSettings::Eth(EthFeeSettings { max_fee: Option::None }),
         Option::Some(nonce)
     )
         .expect('declare failed');
@@ -54,7 +54,7 @@ fn main() {
         calldata,
         Option::Some(salt),
         true,
-        FeeSettings::Eth(EthFeeSettings { max_fee: Option::Some(max_fee) }),
+        FeeSettings::Eth(EthFeeSettings { max_fee: Option::None }),
         Option::Some(nonce)
     )
         .expect('deploy failed');

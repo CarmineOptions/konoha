@@ -1,3 +1,4 @@
+
 [package]
 name = "deploy_konoha_script"
 version = "0.1.0"
@@ -6,9 +7,9 @@ edition = "2023_11"
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
 
 [dependencies]
-starknet = ">=2.6.3"
-sncast_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.23.0" }
-konoha = { path = "../../" }
+starknet = ">=2.0.0"
+sncast_std = { git = "https://github.com/foundry-rs/starknet-foundry", tag = "v0.27.0" }
+konoha = { path = "../.." }
 
 
 [lib]
@@ -17,5 +18,5 @@ casm = true
 
 [[target.starknet-contract]]
 build-external-contracts = [
-    "konoha::Governance", "konoha::VotingToken", "konoha::FloatingToken", "konoha::Treasury"
+    "konoha::voting_token::VotingToken", "konoha::contract::Governance", "konoha::FloatingToken", "konoha::Treasury"
 ]
