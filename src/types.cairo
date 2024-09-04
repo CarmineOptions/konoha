@@ -31,7 +31,8 @@ type ContractType =
 struct CustomProposalConfig {
     target: felt252, //class hash if library call, contract address if regular call
     selector: felt252,
-    library_call: bool
+    library_call: bool,
+    proposal_voting_time: u32
 }
 
 #[derive(Drop, Serde, starknet::Store)]

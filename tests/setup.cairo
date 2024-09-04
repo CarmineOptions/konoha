@@ -50,6 +50,7 @@ fn deploy_governance_and_both_tokens() -> (
     let mut args: Array<felt252> = ArrayTrait::new();
     args.append(voting_token_class.class_hash.into());
     args.append(floating_token_class.class_hash.into());
+    args.append(0); // treasury – no treasury
     args.append(admin_addr);
     gov_contract
         .deploy_at(@args, governance_address.try_into().unwrap())
