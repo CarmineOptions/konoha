@@ -12,7 +12,7 @@ trait ITreasury<TContractState> {
         receiver: ContractAddress,
         amount: u256,
         token_addr: ContractAddress
-    );
+    ) -> Transfer;
 
     fn get_finished_transfers(ref self: TContractState) -> Array<Transfer>;
 
@@ -419,7 +419,7 @@ mod Treasury {
             receiver: ContractAddress,
             amount: u256,
             token_addr: ContractAddress
-        ) {
+        ) -> Transfer {
             self.ownable.assert_only_owner();
             let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token_addr };
             assert(token.balanceOf(get_contract_address()) >= amount, Errors::INSUFFICIENT_FUNDS);
@@ -434,6 +434,7 @@ mod Treasury {
             };
             self.transfers_on_cooldown.write(new_transfer_id, transfer);
             self.emit(TransferPending { receiver, token_addr, amount });
+            self.transfers_on_cooldown.read(new_transfer_id)
         }
 
         fn cancel_transfer(ref self: ContractState, transfer_id: u64) {
