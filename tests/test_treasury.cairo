@@ -1,4 +1,3 @@
-use konoha::treasury::ITreasury;
 use array::ArrayTrait;
 use core::byte_array::ByteArray;
 use core::option::OptionTrait;
@@ -8,14 +7,18 @@ use core::serde::Serde;
 use core::traits::{TryInto, Into};
 use debug::PrintTrait;
 use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
+use konoha::treasury::ITreasury;
 use konoha::treasury::{
     ITreasuryDispatcher, ITreasuryDispatcherTrait,
-    Treasury::{transfers_on_cooldownContractMemberStateTrait, transfers_countContractMemberStateTrait, ContractState},
+    Treasury::{
+        transfers_on_cooldownContractMemberStateTrait, transfers_countContractMemberStateTrait,
+        ContractState
+    },
     Treasury
 };
-use konoha::types::{Transfer, Guardian, TransferStatus};
 use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
 use konoha::treasury_types::zklend::interfaces::{IMarketDispatcher, IMarketDispatcherTrait};
+use konoha::types::{Transfer, Guardian, TransferStatus};
 use openzeppelin::access::ownable::interface::{
     IOwnableTwoStep, IOwnableTwoStepDispatcherTrait, IOwnableTwoStepDispatcher
 };
@@ -67,7 +70,7 @@ fn get_important_addresses() -> (
         gov_contract_address,
         AMM_contract_address,
         deployed_contract,
-        zklend_market_contract_address, 
+        zklend_market_contract_address,
         guardian_address
     );
 }
@@ -76,7 +79,13 @@ fn get_important_addresses() -> (
 #[test]
 #[fork("SEPOLIA")]
 fn test_add_transfer() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _zklend_market_contract_address, _) =
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _
+    ) =
         get_important_addresses();
 
     let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
@@ -89,13 +98,13 @@ fn test_add_transfer() {
     let decimal: u256 = 1_000000000000000000;
     prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
     IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
-    
-    let treasury_dispatcher = ITreasuryDispatcher {contract_address: treasury_contract_address};
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
     prank(
         CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
     );
-    
+
     let new_transfer = treasury_dispatcher.add_transfer(user2, 3500000, token);
     treasury_dispatcher.add_transfer(user1, 34543566, token);
 
@@ -108,7 +117,9 @@ fn test_add_transfer() {
 #[test]
 #[fork("SEPOLIA")]
 fn test_cancel_transfer() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _, guardian_address) =
+    let (
+        gov_contract_address, _AMM_contract_address, treasury_contract_address, _, guardian_address
+    ) =
         get_important_addresses();
     let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
         .try_into()
@@ -120,9 +131,9 @@ fn test_cancel_transfer() {
     let decimal: u256 = 1_000000000000000000;
     prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
     IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
-    
-    let treasury_dispatcher = ITreasuryDispatcher {contract_address: treasury_contract_address};
-    
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
     prank(
         CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(3)
     );
@@ -130,9 +141,7 @@ fn test_cancel_transfer() {
     let added_transfer_id = treasury_dispatcher.add_transfer(user2, 300000, token).id;
     treasury_dispatcher.add_transfer(user1, 3400000, token);
 
-    prank(
-        CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(1)
-    );
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(1));
     treasury_dispatcher.cancel_transfer(added_transfer_id);
 
     let canceled_transfer = treasury_dispatcher.get_transfer_by_id(added_transfer_id);
