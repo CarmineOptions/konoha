@@ -14,15 +14,17 @@ trait ITreasury<TContractState> {
         token_addr: ContractAddress
     ) -> Transfer;
 
-    fn get_finished_transfers(ref self: TContractState) -> Array<Transfer>;
+    fn get_finished_transfers(self: @TContractState) -> Array<Transfer>;
 
-    fn get_live_transfers(ref self: TContractState) -> Array<Transfer>;
+    fn get_live_transfers(self: @TContractState) -> Array<Transfer>;
 
-    fn get_cancelled_transfers(ref self: TContractState) -> Array<Transfer>;
+    fn get_cancelled_transfers(self: @TContractState) -> Array<Transfer>;
 
-    fn get_active_guardians(ref self: TContractState) -> GuardiansInfo;
+    fn get_active_guardians(self: @TContractState) -> GuardiansInfo;
 
-    fn get_inactive_guardians(ref self: TContractState) -> GuardiansInfo;
+    fn get_inactive_guardians(self: @TContractState) -> GuardiansInfo;
+
+    fn get_transfer_by_id(self: @TContractState, transfer_id: u64) -> Transfer;
 
     fn cancel_transfer(ref self: TContractState, transfer_id: u64);
 
@@ -132,7 +134,7 @@ mod Treasury {
         zklend_market_contract_address: ContractAddress,
         transfers_on_cooldown: LegacyMap<u64, Transfer>,
         current_transfer_pointer: u64,
-        last_transfer_id: u64,
+        transfers_count: u64,
         guardians: LegacyMap<u32, Guardian>,
         last_guardian_id: u32,
         active_guardians_count: u32,
@@ -274,8 +276,8 @@ mod Treasury {
         ref self: ContractState,
         gov_contract_address: ContractAddress,
         AMM_contract_address: ContractAddress,
-        zklend_market_contract_address: ContractAddress
-    // first_guardian: ContractAddress // TODO: Integrate parameter for the first guardian
+        zklend_market_contract_address: ContractAddress,
+        first_guardian: ContractAddress
     ) {
         assert(gov_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_GOVERNANCE);
         assert(AMM_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_AMM);
@@ -289,7 +291,7 @@ mod Treasury {
         self.accesscontrol.initializer();
         self.accesscontrol._set_role_admin(DEFAULT_ADMIN_ROLE, GUARDIAN_ROLE);
         self.accesscontrol._grant_role(OWNER_ROLE, gov_contract_address);
-        // self.accesscontrol._grant_role(GUARDIAN_ROLE, first_guardian);
+        self.accesscontrol._grant_role(GUARDIAN_ROLE, first_guardian);
         self.active_guardians_count.write(1);
 
         self.ownable.initializer(gov_contract_address);
@@ -319,7 +321,7 @@ mod Treasury {
         ) -> Array<Transfer> {
             let mut transfers = ArrayTrait::<Transfer>::new();
             let current_timestamp = get_block_timestamp();
-            let transfers_count = self.last_transfer_id.read();
+            let transfers_count = self.transfers_count.read();
             let mut i: u64 = 0;
             let mut last_cooldown_end: u64 = 0;
 
@@ -380,12 +382,12 @@ mod Treasury {
             return status;
         }
 
-        fn get_live_transfers(ref self: ContractState) -> Array<Transfer> {
+        fn get_live_transfers(self: @ContractState) -> Array<Transfer> {
             let mut transfers = ArrayTrait::<Transfer>::new();
-            let last_transfer_id = self.last_transfer_id.read();
+            let transfers_count = self.transfers_count.read();
             let mut i = self.current_transfer_pointer.read();
             loop {
-                if i == last_transfer_id {
+                if i == transfers_count {
                     break;
                 }
                 let current_transfer = self.transfers_on_cooldown.read(i);
@@ -398,20 +400,25 @@ mod Treasury {
             transfers
         }
 
-        fn get_cancelled_transfers(ref self: ContractState) -> Array<Transfer> {
+        fn get_cancelled_transfers(self: @ContractState) -> Array<Transfer> {
             self.get_transfers_by_status(TransferStatus::CANCELLED)
         }
 
-        fn get_finished_transfers(ref self: ContractState) -> Array<Transfer> {
+        fn get_finished_transfers(self: @ContractState) -> Array<Transfer> {
             self.get_transfers_by_status(TransferStatus::FINISHED)
         }
 
-        fn get_active_guardians(ref self: ContractState) -> GuardiansInfo {
+        fn get_active_guardians(self: @ContractState) -> GuardiansInfo {
             self.get_guardians_filtered(true)
         }
 
-        fn get_inactive_guardians(ref self: ContractState) -> GuardiansInfo {
+        fn get_inactive_guardians(self: @ContractState) -> GuardiansInfo {
             self.get_guardians_filtered(false)
+        }
+
+        fn get_transfer_by_id(self: @ContractState, transfer_id: u64) -> Transfer {
+            assert(transfer_id < self.transfers_count.read(), 'invalid transfer id');
+            self.transfers_on_cooldown.read(transfer_id)
         }
 
         fn add_transfer(
@@ -423,9 +430,14 @@ mod Treasury {
             self.ownable.assert_only_owner();
             let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token_addr };
             assert(token.balanceOf(get_contract_address()) >= amount, Errors::INSUFFICIENT_FUNDS);
-            let new_transfer_id = self.last_transfer_id.read() + 1;
-            self.last_transfer_id.write(new_transfer_id);
+            let transfers_count = self.transfers_count.read();
+            let mut new_transfer_id = 0;
+            if transfers_count != 0 {
+                new_transfer_id = transfers_count;
+            }
+            self.transfers_count.write(new_transfer_id + 1);
             let transfer = Transfer {
+                id: new_transfer_id,
                 receiver,
                 token_addr,
                 amount,
