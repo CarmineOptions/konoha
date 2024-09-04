@@ -47,8 +47,9 @@ enum TransferStatus {
     FINISHED
 }
 
-#[derive(Drop, Serde, starknet::Store)]
+#[derive(Drop, Serde, starknet::Store, fmt::Debug)]
 struct Transfer {
+    id: u64,
     token_addr: ContractAddress,
     receiver: ContractAddress,
     amount: u256,
