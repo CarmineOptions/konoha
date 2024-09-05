@@ -4,6 +4,7 @@ import { useAccount } from "@starknet-react/core";
 import TokenBalance from '../TokenBalance';
 import { useTokenBalances } from "../../lib/useTokenBalances";
 import NewStake from './NewStake';
+import { useStakes } from "../../lib/staking/useStakes";
 
 export default function VotingPower() {
     const { address } = useAccount();
@@ -12,6 +13,8 @@ export default function VotingPower() {
         { name: "FLOATING", address: FLOATING_TOKEN_CONTRACT },
     ];
     const { balances, isLoading } = useTokenBalances(tokens, address);
+
+    const { stake, isLoading: stakeIsLoading } = useStakes(address);
 
     const floatingBalance = balances.find(b => b.name === "FLOATING")?.balance || "0";
 
@@ -23,6 +26,10 @@ export default function VotingPower() {
                 title="Voting Power"
             />
             <NewStake floatingBalance={floatingBalance.toString()} />
+
+            {!stakeIsLoading && (
+                <div>Raw stake data: {stake.amount_staked.toString()}</div>
+            )}
         </div>
     );
 }
