@@ -1,9 +1,9 @@
 /* eslint-disable */
+import { useState, useCallback, useEffect } from 'react';
+import { useContract, useContractRead } from '@starknet-react/core';
 import { abi } from "../abi";
 import { CONTRACT_ADDR } from "../config";
-import { useContractRead } from "@starknet-react/core";
 
-// Assuming CarmineStake interface based on provided information
 interface CarmineStake {
     amount_staked: bigint;
     amount_voting_token: bigint;
@@ -13,22 +13,49 @@ interface CarmineStake {
     id: number;
 }
 
-export const useStakes = (address: string) => {
-    const stakeId = 0;
-    const result = useContractRead({
-        functionName: "get_stake",
-        args: [address, stakeId.toString()],
-        abi,
+const isEmptyStake = (stake: CarmineStake) => stake.amount_staked === BigInt(0);
+
+export const useStakes = (address: string | undefined) => {
+    const [stakes, setStakes] = useState<CarmineStake[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<Error | null>(null);
+
+    const { contract } = useContract({
         address: CONTRACT_ADDR,
-        watch: false,
+        abi,
     });
 
-    console.log('Raw stake data:', result.data);
-    console.log(result.error);
+    const fetchStakes = useCallback(async () => {
+        if (!contract || !address) return;
 
-    return {
-        stake: result.data as unknown as CarmineStake,
-        isLoading: result.isLoading,
-        error: result.error
-    };
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const fetchedStakes: CarmineStake[] = [];
+            let stakeId = 0;
+
+            while (true) {
+                const result = await contract.call('get_stake', [address, stakeId.toString()]);
+                const stake = result as unknown as CarmineStake;
+
+                if (isEmptyStake(stake)) break;
+
+                fetchedStakes.push({ ...stake, id: stakeId });
+                stakeId++;
+            }
+
+            setStakes(fetchedStakes);
+        } catch (err) {
+            setError(err instanceof Error ? err : new Error('An error occurred while fetching stakes'));
+        } finally {
+            setIsLoading(false);
+        }
+    }, [contract, address]);
+
+    useEffect(() => {
+        fetchStakes();
+    }, [fetchStakes]);
+
+    return { stakes, isLoading, error, refetch: fetchStakes };
 };
