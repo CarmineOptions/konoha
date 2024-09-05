@@ -24,7 +24,7 @@ use openzeppelin::access::ownable::interface::{
 };
 use openzeppelin::upgrades::interface::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, roll, store
+    BlockId, declare, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, roll, warp
 };
 use starknet::{ContractAddress, get_block_number, get_block_timestamp, ClassHash};
 mod testStorage {
@@ -125,6 +125,31 @@ fn test_add_transfer() {
 }
 
 #[test]
+#[should_panic(expected: 'Insufficient token balance')]
+#[fork("SEPOLIA")]
+fn test_add_transfer_insufficient_funds() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _
+    ) = get_important_addresses();
+    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
+    );
+
+    treasury_dispatcher.add_transfer(user2, 3500000, token);
+}
+
+#[test]
 #[fork("SEPOLIA")]
 fn test_cancel_transfer() {
     let (
@@ -160,6 +185,128 @@ fn test_cancel_transfer() {
     assert(canceled_transfer.amount == 0, 'amount is not zero');
 }
 
+#[test]
+#[fork("SEPOLIA")]
+fn test_execute_current_pending_valid() {
+    let (
+        gov_contract_address, _AMM_contract_address, treasury_contract_address, _zklend_market_contract_address, _
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    let decimal: u256 = 1_000000000000000000;
+    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
+    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(3)
+    );
+    let mut cooldowns = ArrayTrait::<u64>::new();
+    cooldowns.append(treasury_dispatcher.add_transfer(user2, 200000, token).cooldown_end);
+    cooldowns.append(treasury_dispatcher.add_transfer(user2, 300000, token).cooldown_end);
+    cooldowns.append(treasury_dispatcher.add_transfer(user1, 3400000, token).cooldown_end);
+
+    let mut i = 0;
+    
+    loop {
+        if i == cooldowns.len() {
+            break;
+        }
+        warp(CheatTarget::One(treasury_contract_address), *cooldowns.at(i), CheatSpan::TargetCalls(1));
+        assert(treasury_dispatcher.execute_current_pending(), 'Transfer was not executed');
+        i += 1;
+    }
+}
+
+#[test]
+#[should_panic(expected: ('No pending transfers', ))]
+#[fork("SEPOLIA")]
+fn test_execute_current_pending_no_transfers() {
+    let (
+        _gov_contract_address, _AMM_contract_address, treasury_contract_address, _zklend_market_contract_address, _
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    let decimal: u256 = 1_000000000000000000;
+    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
+    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    treasury_dispatcher.execute_current_pending();
+}
+
+#[test]
+#[should_panic(expected: ('Cooldown time has not passed', ))]
+#[fork("SEPOLIA")]
+fn test_execute_current_pending_too_early() {
+    let (
+        gov_contract_address, _AMM_contract_address, treasury_contract_address, _zklend_market_contract_address, _
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    let decimal: u256 = 1_000000000000000000;
+    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
+    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    warp(CheatTarget::One(treasury_contract_address), 1500000, CheatSpan::TargetCalls(1));
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    let cooldown_end = treasury_dispatcher.add_transfer(user1, 200000, token).cooldown_end;
+
+    warp(CheatTarget::One(treasury_contract_address), cooldown_end - 1000, CheatSpan::TargetCalls(1));
+    treasury_dispatcher.execute_current_pending();
+}
+
+#[test]
+#[should_panic(expected: 'Insufficient token balance')]
+#[fork("SEPOLIA")]
+fn test_execute_current_pending_insufficient_funds() {
+    let (
+        gov_contract_address, _AMM_contract_address, treasury_contract_address, _zklend_market_contract_address, _
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    let decimal: u256 = 10000;
+    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
+    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+    
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+    prank(CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1));
+    let cooldown_end = treasury_dispatcher.add_transfer(user2, 5000, token).cooldown_end;
+
+    prank(CheatTarget::One(token), treasury_contract_address, CheatSpan::TargetCalls(1));
+    IERC20Dispatcher { contract_address: token }.transfer(user2, 6000);
+
+    warp(CheatTarget::One(treasury_contract_address), cooldown_end, CheatSpan::TargetCalls(1));
+    treasury_dispatcher.execute_current_pending();
+}
 
 #[test]
 #[fork("SEPOLIA")]

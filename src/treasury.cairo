@@ -468,8 +468,10 @@ mod Treasury {
 
         fn execute_current_pending(ref self: ContractState) -> bool {
             let current_id = self.current_transfer_pointer.read();
+            assert(current_id != self.transfers_count.read(), 'No pending transfers');
             let transfer_pending = self.transfers_on_cooldown.read(current_id);
-
+            assert(get_block_timestamp() >= transfer_pending.cooldown_end, 'Cooldown time has not passed');
+            
             self.current_transfer_pointer.write(current_id + 1);
             if transfer_pending.status == TransferStatus::CANCELLED {
                 return false;
