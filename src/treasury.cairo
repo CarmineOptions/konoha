@@ -14,6 +14,8 @@ trait ITreasury<TContractState> {
         token_addr: ContractAddress
     ) -> Transfer;
 
+    fn get_failed_transfers(self: @TContractState) -> Array<Transfer>;
+
     fn get_finished_transfers(self: @TContractState) -> Array<Transfer>;
 
     fn get_live_transfers(self: @TContractState) -> Array<Transfer>;
@@ -29,6 +31,8 @@ trait ITreasury<TContractState> {
     fn cancel_transfer(ref self: TContractState, transfer_id: u64);
 
     fn execute_current_pending(ref self: TContractState) -> bool;
+
+    fn execute_pending_by_id(ref self: TContractState, transfer_id: u64) -> bool;
 
     fn add_pending_guardian(ref self: TContractState, guardian_address: ContractAddress);
 
@@ -269,6 +273,10 @@ mod Treasury {
         const GUARDIAN_EXISTS: felt252 = 'Guardian exists';
         const GUARDIAN_NOT_EXISTS: felt252 = 'Guardian not exists';
         const MINIMAL_GUARDS_COUNT: felt252 = 'Guards count cannot be zero';
+        const INVALID_ID: felt252 = 'Invalid id provided';
+        const TRANSFER_ALREADY_CANCELLED: felt252 = 'Transfer already cancelled';
+        const NO_TRANSFERS: felt252 = 'No transfers available';
+        const COOLDOWN_NOT_PASSED: felt252 = 'Cooldown time has not passed';
     }
 
     #[constructor]
@@ -363,6 +371,36 @@ mod Treasury {
                 active_guardians_count: self.active_guardians_count.read()
             }
         }
+
+        fn _process_transfer(ref self: ContractState, transfer_pending: Transfer) -> bool {
+            if transfer_pending.status == TransferStatus::CANCELLED {
+                return false;
+            }
+
+            let token: IERC20Dispatcher = IERC20Dispatcher {
+                contract_address: transfer_pending.token_addr
+            };
+            assert(
+                token.balanceOf(get_contract_address()) >= transfer_pending.amount,
+                Errors::INSUFFICIENT_FUNDS
+            );
+            let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
+            let sent_event = TokenSent {
+                amount: transfer_pending.amount,
+                token_addr: transfer_pending.token_addr,
+                receiver: transfer_pending.receiver
+            };
+
+            self
+                .transfers_on_cooldown
+                .write(
+                    transfer_pending.id,
+                    Transfer { status: TransferStatus::FINISHED, ..transfer_pending }
+                );
+
+            self.emit(sent_event);
+            status
+        }
     }
 
     #[abi(embed_v0)]
@@ -380,6 +418,23 @@ mod Treasury {
             let status: bool = token.transfer(receiver, amount);
             self.emit(TokenSent { receiver, token_addr, amount });
             return status;
+        }
+
+        fn get_failed_transfers(self: @ContractState) -> Array<Transfer> {
+            let mut transfers = ArrayTrait::<Transfer>::new();
+            let mut i = 0;
+            let current_transfer_id = self.current_transfer_pointer.read();
+            loop {
+                if i == current_transfer_id {
+                    break;
+                }
+                let transfer = self.transfers_on_cooldown.read(i);
+                if transfer.status == TransferStatus::PENDING {
+                    transfers.append(transfer);
+                }
+                i += 1;
+            };
+            transfers
         }
 
         fn get_live_transfers(self: @ContractState) -> Array<Transfer> {
@@ -417,7 +472,7 @@ mod Treasury {
         }
 
         fn get_transfer_by_id(self: @ContractState, transfer_id: u64) -> Transfer {
-            assert(transfer_id < self.transfers_count.read(), 'invalid transfer id');
+            assert(transfer_id < self.transfers_count.read(), Errors::INVALID_ID);
             self.transfers_on_cooldown.read(transfer_id)
         }
 
@@ -451,7 +506,13 @@ mod Treasury {
 
         fn cancel_transfer(ref self: ContractState, transfer_id: u64) {
             self.accesscontrol.assert_only_role(GUARDIAN_ROLE);
+            assert(transfer_id < self.transfers_count.read(), Errors::INVALID_ID);
             let initial_transfer = self.transfers_on_cooldown.read(transfer_id);
+            assert(
+                initial_transfer.status != TransferStatus::CANCELLED,
+                Errors::TRANSFER_ALREADY_CANCELLED
+            );
+
             let cancelation_event = TransferCancelled {
                 initial_amount: initial_transfer.amount,
                 token_addr: initial_transfer.token_addr,
@@ -468,37 +529,25 @@ mod Treasury {
 
         fn execute_current_pending(ref self: ContractState) -> bool {
             let current_id = self.current_transfer_pointer.read();
-            assert(current_id != self.transfers_count.read(), 'No pending transfers');
+            assert(current_id != self.transfers_count.read(), Errors::NO_TRANSFERS);
             let transfer_pending = self.transfers_on_cooldown.read(current_id);
-            assert(get_block_timestamp() >= transfer_pending.cooldown_end, 'Cooldown time has not passed');
-            
-            self.current_transfer_pointer.write(current_id + 1);
-            if transfer_pending.status == TransferStatus::CANCELLED {
-                return false;
-            }
-            let token: IERC20Dispatcher = IERC20Dispatcher {
-                contract_address: transfer_pending.token_addr
-            };
             assert(
-                token.balanceOf(get_contract_address()) >= transfer_pending.amount,
-                Errors::INSUFFICIENT_FUNDS
+                get_block_timestamp() >= transfer_pending.cooldown_end, Errors::COOLDOWN_NOT_PASSED
             );
 
-            let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
-            let sent_event = TokenSent {
-                amount: transfer_pending.amount,
-                token_addr: transfer_pending.token_addr,
-                receiver: transfer_pending.receiver
-            };
+            self.current_transfer_pointer.write(current_id + 1);
 
-            self
-                .transfers_on_cooldown
-                .write(
-                    current_id, Transfer { status: TransferStatus::FINISHED, ..transfer_pending }
-                );
+            self._process_transfer(transfer_pending)
+        }
 
-            self.emit(sent_event);
-            return status;
+        fn execute_pending_by_id(ref self: ContractState, transfer_id: u64) -> bool {
+            assert(transfer_id < self.transfers_count.read(), Errors::INVALID_ID);
+            let transfer_pending = self.transfers_on_cooldown.read(transfer_id);
+            assert(
+                get_block_timestamp() >= transfer_pending.cooldown_end, Errors::COOLDOWN_NOT_PASSED
+            );
+
+            self._process_transfer(transfer_pending)
         }
 
         fn add_pending_guardian(ref self: ContractState, guardian_address: ContractAddress) {
