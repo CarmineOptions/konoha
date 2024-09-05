@@ -325,16 +325,16 @@ mod Treasury {
         }
 
         fn get_transfers_by_status(
-            self: @ContractState, status: TransferStatus
-        ) -> Array<Transfer> {
+            self: @ContractState, status: TransferStatus, start_id: u64, break_id: u64
+        ) -> Array<Transfer> { // TODO: Important internal logic. Write good tests.
             let mut transfers = ArrayTrait::<Transfer>::new();
             let current_timestamp = get_block_timestamp();
-            let transfers_count = self.transfers_count.read();
-            let mut i: u64 = 0;
+            // let transfers_count = self.transfers_count.read();
+            let mut i: u64 = start_id;
             let mut last_cooldown_end: u64 = 0;
 
             loop {
-                if i == transfers_count
+                if i == break_id
                     || (status == TransferStatus::FINISHED
                         && last_cooldown_end > current_timestamp) {
                     break;
@@ -421,46 +421,27 @@ mod Treasury {
         }
 
         fn get_failed_transfers(self: @ContractState) -> Array<Transfer> {
-            let mut transfers = ArrayTrait::<Transfer>::new();
-            let mut i = 0;
-            let current_transfer_id = self.current_transfer_pointer.read();
-            loop {
-                if i == current_transfer_id {
-                    break;
-                }
-                let transfer = self.transfers_on_cooldown.read(i);
-                if transfer.status == TransferStatus::PENDING {
-                    transfers.append(transfer);
-                }
-                i += 1;
-            };
-            transfers
+            self
+                .get_transfers_by_status(
+                    TransferStatus::PENDING, 0, self.current_transfer_pointer.read()
+                )
         }
 
         fn get_live_transfers(self: @ContractState) -> Array<Transfer> {
-            let mut transfers = ArrayTrait::<Transfer>::new();
-            let transfers_count = self.transfers_count.read();
-            let mut i = self.current_transfer_pointer.read();
-            loop {
-                if i == transfers_count {
-                    break;
-                }
-                let current_transfer = self.transfers_on_cooldown.read(i);
-                i += 1;
-                if current_transfer.status == TransferStatus::CANCELLED {
-                    continue;
-                }
-                transfers.append(current_transfer);
-            };
-            transfers
+            self
+                .get_transfers_by_status(
+                    TransferStatus::PENDING,
+                    self.current_transfer_pointer.read(),
+                    self.transfers_count.read()
+                )
         }
 
         fn get_cancelled_transfers(self: @ContractState) -> Array<Transfer> {
-            self.get_transfers_by_status(TransferStatus::CANCELLED)
+            self.get_transfers_by_status(TransferStatus::CANCELLED, 0, self.transfers_count.read())
         }
 
         fn get_finished_transfers(self: @ContractState) -> Array<Transfer> {
-            self.get_transfers_by_status(TransferStatus::FINISHED)
+            self.get_transfers_by_status(TransferStatus::FINISHED, 0, self.transfers_count.read())
         }
 
         fn get_active_guardians(self: @ContractState) -> GuardiansInfo {
