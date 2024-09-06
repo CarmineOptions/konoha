@@ -327,9 +327,9 @@ mod Treasury {
         fn get_transfers_by_status(
             self: @ContractState, status: TransferStatus, start_id: u64, break_id: u64
         ) -> Array<Transfer> { // TODO: Important internal logic. Write good tests.
+            assert(break_id >= start_id, 'Invalid range');
             let mut transfers = ArrayTrait::<Transfer>::new();
             let current_timestamp = get_block_timestamp();
-            // let transfers_count = self.transfers_count.read();
             let mut i: u64 = start_id;
             let mut last_cooldown_end: u64 = 0;
 

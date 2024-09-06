@@ -78,6 +78,11 @@ fn get_important_addresses() -> (
     );
 }
 
+fn fund_treasury(treasury_address: ContractAddress, user: ContractAddress, token: ContractAddress) {
+    let decimal: u256 = 1_000000000000000000;
+    prank(CheatTarget::One(token), user, CheatSpan::TargetCalls(1));
+    IERC20Dispatcher { contract_address: token }.transfer(treasury_address, 1 * decimal);
+}
 
 #[test]
 #[fork("SEPOLIA")]
@@ -94,13 +99,10 @@ fn test_add_transfer() {
     let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
         .try_into()
         .unwrap();
-    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
     let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         .try_into()
         .unwrap();
-    let decimal: u256 = 1_000000000000000000;
-    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
-    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+    fund_treasury(treasury_contract_address, user1, token);
 
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
@@ -108,7 +110,7 @@ fn test_add_transfer() {
         CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
     );
 
-    let new_transfer = treasury_dispatcher.add_transfer(user2, 3500000, token);
+    let new_transfer = treasury_dispatcher.add_transfer(user1, 3500000, token);
     treasury_dispatcher.add_transfer(user1, 34543566, token);
 
     let live_transfers = treasury_dispatcher.get_live_transfers();
@@ -163,9 +165,7 @@ fn test_add_transfer_by_unauthorized_caller() {
     let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         .try_into()
         .unwrap();
-    let decimal: u256 = 1_000000000000000000;
-    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
-    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+    fund_treasury(treasury_contract_address, user1, token);
 
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
@@ -186,9 +186,7 @@ fn test_cancel_transfer() {
     let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         .try_into()
         .unwrap();
-    let decimal: u256 = 1_000000000000000000;
-    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
-    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+    fund_treasury(treasury_contract_address, user1, token);
 
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
@@ -222,10 +220,7 @@ fn test_cancel_transfer_by_unauthorized_caller() {
     let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         .try_into()
         .unwrap();
-    let decimal: u256 = 1_000000000000000000;
-    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
-    IERC20Dispatcher { contract_address: token }
-        .transfer(treasury_contract_address, 1 * decimal); // TODO: Move treasaury fund to function
+    fund_treasury(treasury_contract_address, user1, token);
 
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
@@ -251,10 +246,7 @@ fn test_cancel_transfer_invalid_id() {
     let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         .try_into()
         .unwrap();
-    let decimal: u256 = 1_000000000000000000;
-    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
-    IERC20Dispatcher { contract_address: token }
-        .transfer(treasury_contract_address, 1 * decimal); // TODO: Move treasaury fund to function
+    fund_treasury(treasury_contract_address, user1, token);
 
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
@@ -281,9 +273,7 @@ fn test_cancel_transfer_already_cancelled() {
     let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         .try_into()
         .unwrap();
-    let decimal: u256 = 1_000000000000000000;
-    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
-    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+    fund_treasury(treasury_contract_address, user1, token);
 
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
@@ -316,9 +306,7 @@ fn test_execute_current_pending_valid() {
     let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         .try_into()
         .unwrap();
-    let decimal: u256 = 1_000000000000000000;
-    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
-    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+    fund_treasury(treasury_contract_address, user1, token);
 
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
@@ -362,9 +350,7 @@ fn test_execute_current_pending_no_transfers() {
     let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         .try_into()
         .unwrap();
-    let decimal: u256 = 1_000000000000000000;
-    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
-    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+    fund_treasury(treasury_contract_address, user1, token);
 
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
@@ -389,9 +375,7 @@ fn test_execute_current_pending_too_early() {
     let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         .try_into()
         .unwrap();
-    let decimal: u256 = 1_000000000000000000;
-    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
-    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+    fund_treasury(treasury_contract_address, user1, token);
 
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
@@ -426,15 +410,14 @@ fn test_execute_current_pending_insufficient_funds() {
     let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
         .try_into()
         .unwrap();
-    let decimal: u256 = 10000;
-    prank(CheatTarget::One(token), user1, CheatSpan::TargetCalls(1));
-    IERC20Dispatcher { contract_address: token }.transfer(treasury_contract_address, 1 * decimal);
+    fund_treasury(treasury_contract_address, user1, token);
+    let balance = 1_000000000000000000;
 
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
     prank(
         CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
     );
-    let cooldown_end = treasury_dispatcher.add_transfer(user2, 5000, token).cooldown_end;
+    let cooldown_end = treasury_dispatcher.add_transfer(user2, balance, token).cooldown_end;
 
     prank(CheatTarget::One(token), treasury_contract_address, CheatSpan::TargetCalls(1));
     IERC20Dispatcher { contract_address: token }.transfer(user2, 6000);
