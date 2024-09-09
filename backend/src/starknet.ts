@@ -48,10 +48,12 @@ export const getVestingEvents = async (address: string) => {
         if (timestamp < now && amount) {
           acc.push({
             amount: amount,
+            timestamp: timestamp,
             is_claimable: true
           });
         } else {
           acc.push({
+            timestamp: timestamp,
             amount: amount,
             is_claimable: false
           });
