@@ -45,23 +45,15 @@ export const getVestingEvents = async (address: string) => {
         const amount = parseInt(event.data[2]);     // Amount (index 2)
 
         // Processing based on the timestamp
-        if (timestamp > now) {
+        if (timestamp < now && amount) {
           acc.push({
-            grantee: grantee,
             amount: amount,
-            is_claimable: false
-          });
-        } else if (timestamp < now && amount) {
-          acc.push({
-            grantee: grantee,
-            amount: 0,
-            is_claimable: false
+            is_claimable: true
           });
         } else {
           acc.push({
-            grantee: grantee,
             amount: amount,
-            is_claimable: true
+            is_claimable: false
           });
         }
       } catch (error) {
