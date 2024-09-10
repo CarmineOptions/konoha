@@ -274,7 +274,7 @@ mod Treasury {
         const GUARDIAN_NOT_EXISTS: felt252 = 'Guardian not exists';
         const MINIMAL_GUARDS_COUNT: felt252 = 'Guards count cannot be zero';
         const INVALID_ID: felt252 = 'Invalid id provided';
-        const TRANSFER_ALREADY_CANCELLED: felt252 = 'Transfer already cancelled';
+        const TRANSFER_NOT_PENDING: felt252 = 'Transfer need to be pending';
         const NO_TRANSFERS: felt252 = 'No transfers available';
         const COOLDOWN_NOT_PASSED: felt252 = 'Cooldown time has not passed';
     }
@@ -487,8 +487,8 @@ mod Treasury {
             assert(transfer_id < self.transfers_count.read(), Errors::INVALID_ID);
             let initial_transfer = self.transfers_on_cooldown.read(transfer_id);
             assert(
-                initial_transfer.status != TransferStatus::CANCELLED,
-                Errors::TRANSFER_ALREADY_CANCELLED
+                initial_transfer.status == TransferStatus::PENDING,
+                Errors::TRANSFER_NOT_PENDING
             );
 
             let cancelation_event = TransferCancelled {

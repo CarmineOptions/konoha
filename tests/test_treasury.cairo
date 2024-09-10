@@ -263,6 +263,34 @@ fn test_cancel_transfer_invalid_id() {
 }
 
 #[test]
+#[should_panic(expected: 'Transfer need to be pending')]
+#[fork("SEPOLIA")]
+fn test_cancel_transfer_not_pending() {
+    let (
+        gov_contract_address, _AMM_contract_address, treasury_contract_address, _, guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    fund_treasury(treasury_contract_address, user1, token);
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.add_transfer(user1, 200000, token);
+
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(2));
+    treasury_dispatcher.cancel_transfer(0);
+    treasury_dispatcher.cancel_transfer(0);
+}
+
+#[test]
 #[fork("SEPOLIA")]
 fn test_get_next_pending_valid() {
     let (
