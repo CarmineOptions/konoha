@@ -1,4 +1,5 @@
 use array::ArrayTrait;
+use core::array::SpanTrait;
 use core::byte_array::ByteArray;
 use core::option::OptionTrait;
 
@@ -7,7 +8,9 @@ use core::serde::Serde;
 use core::traits::{TryInto, Into};
 use debug::PrintTrait;
 use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
-use konoha::treasury::ITreasury;
+use konoha::treasury::Treasury::InternalFunctionsTrait;
+use konoha::treasury::Treasury::InternalTrait;
+use konoha::treasury::{ITreasury, Treasury};
 use konoha::treasury::{ITreasuryDispatcher, ITreasuryDispatcherTrait};
 use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
 use konoha::treasury_types::zklend::interfaces::{IMarketDispatcher, IMarketDispatcherTrait};
@@ -478,6 +481,328 @@ fn test_execute_pending_by_id_insufficient_funds() {
         CheatSpan::TargetCalls(1)
     );
     treasury_dispatcher.execute_pending_by_id(added_transfer.id);
+}
+
+#[test]
+#[should_panic(expected: 'Invalid range')]
+fn test_get_transfers_by_status_outside_range() {
+    let state = Treasury::contract_state_for_testing();
+    state.get_transfers_by_status(TransferStatus::PENDING, 0, 1);
+}
+
+#[test]
+#[should_panic(expected: 'Invalid range')]
+fn test_get_transfers_by_status_invalid_range() {
+    let state = Treasury::contract_state_for_testing();
+    state.get_transfers_by_status(TransferStatus::PENDING, 2, 0);
+}
+
+#[test]
+#[fork("SEPOLIA")]
+fn test_get_failed_transfers_pending_present() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    fund_treasury(treasury_contract_address, user1, token);
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(3)
+    );
+
+    treasury_dispatcher.add_transfer(user2, 200000, token);
+    let last_added = treasury_dispatcher.add_transfer(user2, 300000, token);
+
+    warp(
+        CheatTarget::One(treasury_contract_address),
+        last_added.cooldown_end,
+        CheatSpan::TargetCalls(2)
+    );
+    treasury_dispatcher.add_transfer(user2, 100000, token);
+
+    let failed_transfers = treasury_dispatcher.get_failed_transfers();
+
+    let failed_transfers_count = failed_transfers.len();
+    assert(failed_transfers_count == 2, 'invalid transfers number');
+    let mut i = 0;
+    while i < failed_transfers_count {
+        assert(*failed_transfers.at(i).status == TransferStatus::PENDING, 'invalid status');
+        i += 1;
+    }
+}
+
+#[test]
+#[fork("SEPOLIA")]
+fn test_get_failed_transfers_no_pending() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    fund_treasury(treasury_contract_address, user1, token);
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(3)
+    );
+
+    treasury_dispatcher.add_transfer(user2, 200000, token);
+    let last_added = treasury_dispatcher.add_transfer(user2, 300000, token);
+
+    warp(
+        CheatTarget::One(treasury_contract_address),
+        last_added.cooldown_end,
+        CheatSpan::TargetCalls(1)
+    );
+
+    let failed_transfers = treasury_dispatcher.get_failed_transfers();
+
+    let failed_transfers_count = failed_transfers.len();
+    assert(failed_transfers_count == 2, 'invalid transfers number');
+    let mut i = 0;
+    while i < failed_transfers_count {
+        assert(*failed_transfers.at(i).status == TransferStatus::PENDING, 'invalid status');
+        i += 1;
+    }
+}
+
+#[test]
+#[fork("SEPOLIA")]
+fn test_get_live_transfers_pending_present() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    fund_treasury(treasury_contract_address, user1, token);
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
+    );
+
+    treasury_dispatcher.add_transfer(user2, 200000, token);
+    treasury_dispatcher.add_transfer(user2, 300000, token);
+
+    let live_transfers = treasury_dispatcher.get_live_transfers();
+    let live_transfers_count = live_transfers.len();
+    assert(live_transfers_count == 2, 'invalid transfers number');
+
+    let mut i = 0;
+    while i < live_transfers_count {
+        assert(*live_transfers.at(i).status == TransferStatus::PENDING, 'invalid status');
+        i += 1;
+    }
+}
+
+#[test]
+#[should_panic(expected: 'No transfers available')]
+#[fork("SEPOLIA")]
+fn test_get_live_transfers_no_pending() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    fund_treasury(treasury_contract_address, user1, token);
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
+    );
+
+    let cooldown_end = treasury_dispatcher.add_transfer(user2, 200000, token).cooldown_end;
+    warp(CheatTarget::One(treasury_contract_address), cooldown_end, CheatSpan::TargetCalls(1));
+    treasury_dispatcher.get_live_transfers();
+}
+
+#[test]
+#[fork("SEPOLIA")]
+fn test_get_cancelled_transfers() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    fund_treasury(treasury_contract_address, user1, token);
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(3)
+    );
+
+    treasury_dispatcher.add_transfer(user2, 200000, token);
+    let to_cancel_id = treasury_dispatcher.add_transfer(user2, 300000, token).id;
+    treasury_dispatcher.add_transfer(user2, 300000, token);
+
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(1));
+    treasury_dispatcher.cancel_transfer(to_cancel_id);
+
+    let cancelled_transfers = treasury_dispatcher.get_cancelled_transfers();
+    assert(cancelled_transfers.len() == 1, 'invalid transfers number');
+
+    assert(*cancelled_transfers.at(0).status == TransferStatus::CANCELLED, 'invalid status');
+}
+
+#[test]
+#[fork("SEPOLIA")]
+fn test_get_finished_transfers_pending_present() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    fund_treasury(treasury_contract_address, user1, token);
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(3)
+    );
+
+    treasury_dispatcher.add_transfer(user2, 200000, token);
+    let second_transfer_cooldown = treasury_dispatcher
+        .add_transfer(user2, 300000, token)
+        .cooldown_end;
+
+    treasury_dispatcher.add_transfer(user2, 300000, token);
+
+    warp(
+        CheatTarget::One(treasury_contract_address),
+        second_transfer_cooldown,
+        CheatSpan::TargetCalls(2)
+    );
+
+    treasury_dispatcher.execute_pending_by_id(0);
+    treasury_dispatcher.execute_pending_by_id(1);
+
+    let finished_transfers = treasury_dispatcher.get_finished_transfers();
+    let finished_transfers_count = finished_transfers.len();
+    assert(finished_transfers_count == 2, 'invalid transfers number');
+
+    let mut i = 0;
+    while i < finished_transfers_count {
+        assert(*finished_transfers.at(i).status == TransferStatus::FINISHED, 'invalid status');
+        i += 1;
+    }
+}
+
+#[test]
+#[fork("SEPOLIA")]
+fn test_get_finished_transfers_no_present() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let user2: ContractAddress = '0xUser2'.try_into().unwrap();
+    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    fund_treasury(treasury_contract_address, user1, token);
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(3)
+    );
+
+    treasury_dispatcher.add_transfer(user2, 200000, token);
+    let second_transfer_cooldown = treasury_dispatcher
+        .add_transfer(user2, 300000, token)
+        .cooldown_end;
+
+    warp(
+        CheatTarget::One(treasury_contract_address),
+        second_transfer_cooldown,
+        CheatSpan::TargetCalls(2)
+    );
+
+    treasury_dispatcher.execute_pending_by_id(0);
+    treasury_dispatcher.execute_pending_by_id(1);
+
+    let finished_transfers = treasury_dispatcher.get_finished_transfers();
+    let finished_transfers_count = finished_transfers.len();
+    assert(finished_transfers_count == 2, 'invalid transfers number');
+
+    let mut i = 0;
+    while i < finished_transfers_count {
+        assert(*finished_transfers.at(i).status == TransferStatus::FINISHED, 'invalid status');
+        i += 1;
+    }
 }
 
 #[test]
