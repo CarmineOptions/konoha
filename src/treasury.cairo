@@ -14,13 +14,15 @@ trait ITreasury<TContractState> {
         token_addr: ContractAddress
     ) -> Transfer;
 
-    fn get_failed_transfers(self: @TContractState) -> Array<Transfer>;
+    fn get_next_pending(self: @TContractState) -> Option<Transfer>;
 
-    fn get_finished_transfers(self: @TContractState) -> Array<Transfer>;
+    fn get_failed_transfers(self: @TContractState) -> Span<Transfer>;
 
-    fn get_live_transfers(self: @TContractState) -> Array<Transfer>;
+    fn get_finished_transfers(self: @TContractState) -> Span<Transfer>;
 
-    fn get_cancelled_transfers(self: @TContractState) -> Array<Transfer>;
+    fn get_live_transfers(self: @TContractState) -> Span<Transfer>;
+
+    fn get_cancelled_transfers(self: @TContractState) -> Span<Transfer>;
 
     fn get_active_guardians(self: @TContractState) -> GuardiansInfo;
 
@@ -30,7 +32,7 @@ trait ITreasury<TContractState> {
 
     fn cancel_transfer(ref self: TContractState, transfer_id: u64);
 
-    fn execute_current_pending(ref self: TContractState) -> bool;
+    // fn execute_current_pending(ref self: TContractState) -> bool;
 
     fn execute_pending_by_id(ref self: TContractState, transfer_id: u64) -> bool;
 
@@ -84,6 +86,7 @@ mod Treasury {
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
     use konoha::constants::TREASURY_COOLDOWN_TIME;
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use konoha::treasury::ITreasury;
     use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
     use konoha::treasury_types::nostra::interface::{
         INostraInterestToken, INostraInterestTokenDispatcher, INostraInterestTokenDispatcherTrait
@@ -137,7 +140,6 @@ mod Treasury {
         amm_address: ContractAddress,
         zklend_market_contract_address: ContractAddress,
         transfers_on_cooldown: LegacyMap<u64, Transfer>,
-        current_transfer_pointer: u64,
         transfers_count: u64,
         guardians: LegacyMap<u32, Guardian>,
         last_guardian_id: u32,
@@ -297,9 +299,11 @@ mod Treasury {
         self.zklend_market_contract_address.write(zklend_market_contract_address);
 
         self.accesscontrol.initializer();
+
         self.accesscontrol._set_role_admin(DEFAULT_ADMIN_ROLE, GUARDIAN_ROLE);
         self.accesscontrol._grant_role(OWNER_ROLE, gov_contract_address);
         self.accesscontrol._grant_role(GUARDIAN_ROLE, first_guardian);
+        self.guardians.write(0, Guardian { address: first_guardian, is_active: true });
         self.active_guardians_count.write(1);
 
         self.ownable.initializer(gov_contract_address);
@@ -326,7 +330,7 @@ mod Treasury {
 
         fn get_transfers_by_status(
             self: @ContractState, status: TransferStatus, start_id: u64, break_id: u64
-        ) -> Array<Transfer> { // TODO: Important internal logic. Write good tests.
+        ) -> Span<Transfer> { // TODO: Important internal logic. Write good tests.
             assert(break_id >= start_id, 'Invalid range');
             let mut transfers = ArrayTrait::<Transfer>::new();
             let current_timestamp = get_block_timestamp();
@@ -348,7 +352,7 @@ mod Treasury {
 
                 i += 1;
             };
-            transfers
+            transfers.span()
         }
 
         fn get_guardians_filtered(self: @ContractState, is_active_filter: bool) -> GuardiansInfo {
@@ -371,36 +375,6 @@ mod Treasury {
                 active_guardians_count: self.active_guardians_count.read()
             }
         }
-
-        fn _process_transfer(ref self: ContractState, transfer_pending: Transfer) -> bool {
-            if transfer_pending.status == TransferStatus::CANCELLED {
-                return false;
-            }
-
-            let token: IERC20Dispatcher = IERC20Dispatcher {
-                contract_address: transfer_pending.token_addr
-            };
-            assert(
-                token.balanceOf(get_contract_address()) >= transfer_pending.amount,
-                Errors::INSUFFICIENT_FUNDS
-            );
-            let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
-            let sent_event = TokenSent {
-                amount: transfer_pending.amount,
-                token_addr: transfer_pending.token_addr,
-                receiver: transfer_pending.receiver
-            };
-
-            self
-                .transfers_on_cooldown
-                .write(
-                    transfer_pending.id,
-                    Transfer { status: TransferStatus::FINISHED, ..transfer_pending }
-                );
-
-            self.emit(sent_event);
-            status
-        }
     }
 
     #[abi(embed_v0)]
@@ -420,27 +394,44 @@ mod Treasury {
             return status;
         }
 
-        fn get_failed_transfers(self: @ContractState) -> Array<Transfer> {
+        fn get_next_pending(self: @ContractState) -> Option<Transfer> {
+            if self.transfers_count.read() == 0 {
+                return Option::None;
+            }
+            let current_timestamp = get_block_timestamp();
+            let transfers_count = self.transfers_count.read();
+            let mut i = 0;
+            let mut next_pending_transfer = Option::None;
+            while i < transfers_count {
+                let current_transfer = self.transfers_on_cooldown.read(i);
+                if current_transfer.cooldown_end > current_timestamp
+                    && current_transfer.status == TransferStatus::PENDING {
+                    next_pending_transfer = Option::Some(current_transfer);
+                    break;
+                }
+                i += 1;
+            };
+            next_pending_transfer
+        }
+
+        fn get_failed_transfers(self: @ContractState) -> Span<Transfer> {
+            let next_pending = self.get_next_pending().expect(Errors::NO_TRANSFERS);
+            self.get_transfers_by_status(TransferStatus::PENDING, 0, next_pending.id)
+        }
+
+        fn get_live_transfers(self: @ContractState) -> Span<Transfer> {
+            let next_pending = self.get_next_pending().expect(Errors::NO_TRANSFERS);
             self
                 .get_transfers_by_status(
-                    TransferStatus::PENDING, 0, self.current_transfer_pointer.read()
+                    TransferStatus::PENDING, next_pending.id, self.transfers_count.read()
                 )
         }
 
-        fn get_live_transfers(self: @ContractState) -> Array<Transfer> {
-            self
-                .get_transfers_by_status(
-                    TransferStatus::PENDING,
-                    self.current_transfer_pointer.read(),
-                    self.transfers_count.read()
-                )
-        }
-
-        fn get_cancelled_transfers(self: @ContractState) -> Array<Transfer> {
+        fn get_cancelled_transfers(self: @ContractState) -> Span<Transfer> {
             self.get_transfers_by_status(TransferStatus::CANCELLED, 0, self.transfers_count.read())
         }
 
-        fn get_finished_transfers(self: @ContractState) -> Array<Transfer> {
+        fn get_finished_transfers(self: @ContractState) -> Span<Transfer> {
             self.get_transfers_by_status(TransferStatus::FINISHED, 0, self.transfers_count.read())
         }
 
@@ -508,19 +499,6 @@ mod Treasury {
             self.emit(cancelation_event);
         }
 
-        fn execute_current_pending(ref self: ContractState) -> bool {
-            let current_id = self.current_transfer_pointer.read();
-            assert(current_id != self.transfers_count.read(), Errors::NO_TRANSFERS);
-            let transfer_pending = self.transfers_on_cooldown.read(current_id);
-            assert(
-                get_block_timestamp() >= transfer_pending.cooldown_end, Errors::COOLDOWN_NOT_PASSED
-            );
-
-            self.current_transfer_pointer.write(current_id + 1);
-
-            self._process_transfer(transfer_pending)
-        }
-
         fn execute_pending_by_id(ref self: ContractState, transfer_id: u64) -> bool {
             assert(transfer_id < self.transfers_count.read(), Errors::INVALID_ID);
             let transfer_pending = self.transfers_on_cooldown.read(transfer_id);
@@ -528,7 +506,33 @@ mod Treasury {
                 get_block_timestamp() >= transfer_pending.cooldown_end, Errors::COOLDOWN_NOT_PASSED
             );
 
-            self._process_transfer(transfer_pending)
+            if transfer_pending.status == TransferStatus::CANCELLED {
+                return false;
+            }
+
+            let token: IERC20Dispatcher = IERC20Dispatcher {
+                contract_address: transfer_pending.token_addr
+            };
+            assert(
+                token.balanceOf(get_contract_address()) >= transfer_pending.amount,
+                Errors::INSUFFICIENT_FUNDS
+            );
+            let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
+            let sent_event = TokenSent {
+                amount: transfer_pending.amount,
+                token_addr: transfer_pending.token_addr,
+                receiver: transfer_pending.receiver
+            };
+
+            self
+                .transfers_on_cooldown
+                .write(
+                    transfer_pending.id,
+                    Transfer { status: TransferStatus::FINISHED, ..transfer_pending }
+                );
+
+            self.emit(sent_event);
+            status
         }
 
         fn add_pending_guardian(ref self: ContractState, guardian_address: ContractAddress) {
