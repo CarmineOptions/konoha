@@ -487,8 +487,7 @@ mod Treasury {
             assert(transfer_id < self.transfers_count.read(), Errors::INVALID_ID);
             let initial_transfer = self.transfers_on_cooldown.read(transfer_id);
             assert(
-                initial_transfer.status == TransferStatus::PENDING,
-                Errors::TRANSFER_NOT_PENDING
+                initial_transfer.status == TransferStatus::PENDING, Errors::TRANSFER_NOT_PENDING
             );
 
             let cancelation_event = TransferCancelled {
