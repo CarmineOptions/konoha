@@ -32,8 +32,6 @@ trait ITreasury<TContractState> {
 
     fn cancel_transfer(ref self: TContractState, transfer_id: u64);
 
-    // fn execute_current_pending(ref self: TContractState) -> bool;
-
     fn execute_pending_by_id(ref self: TContractState, transfer_id: u64) -> bool;
 
     fn add_pending_guardian(ref self: TContractState, guardian_address: ContractAddress);
@@ -330,20 +328,15 @@ mod Treasury {
 
         fn get_transfers_by_status(
             self: @ContractState, status: TransferStatus, start_id: u64, break_id: u64
-        ) -> Span<Transfer> { // TODO: Important internal logic. Write good tests.
-            assert(break_id >= start_id, 'Invalid range');
+        ) -> Span<Transfer> {
+            assert(
+                break_id >= start_id && break_id <= self.transfers_count.read(), 'Invalid range'
+            );
             let mut transfers = ArrayTrait::<Transfer>::new();
-            let current_timestamp = get_block_timestamp();
             let mut i: u64 = start_id;
             let mut last_cooldown_end: u64 = 0;
 
-            loop {
-                if i == break_id
-                    || (status == TransferStatus::FINISHED
-                        && last_cooldown_end > current_timestamp) {
-                    break;
-                }
-
+            while i < break_id {
                 let current_transfer = self.transfers_on_cooldown.read(i);
                 if status == current_transfer.status {
                     transfers.append(current_transfer);
@@ -415,8 +408,14 @@ mod Treasury {
         }
 
         fn get_failed_transfers(self: @ContractState) -> Span<Transfer> {
-            let next_pending = self.get_next_pending().expect(Errors::NO_TRANSFERS);
-            self.get_transfers_by_status(TransferStatus::PENDING, 0, next_pending.id)
+            match self.get_next_pending() {
+                Option::None => self
+                    .get_transfers_by_status(
+                        TransferStatus::PENDING, 0, self.transfers_count.read()
+                    ),
+                Option::Some(next_pending) => self
+                    .get_transfers_by_status(TransferStatus::PENDING, 0, next_pending.id)
+            }
         }
 
         fn get_live_transfers(self: @ContractState) -> Span<Transfer> {
@@ -432,7 +431,14 @@ mod Treasury {
         }
 
         fn get_finished_transfers(self: @ContractState) -> Span<Transfer> {
-            self.get_transfers_by_status(TransferStatus::FINISHED, 0, self.transfers_count.read())
+            match self.get_next_pending() {
+                Option::None => self
+                    .get_transfers_by_status(
+                        TransferStatus::FINISHED, 0, self.transfers_count.read()
+                    ),
+                Option::Some(next_pending) => self
+                    .get_transfers_by_status(TransferStatus::FINISHED, 0, next_pending.id)
+            }
         }
 
         fn get_active_guardians(self: @ContractState) -> GuardiansInfo {
