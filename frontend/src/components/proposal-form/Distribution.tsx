@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ETH_ADDRESS, STRK_ADDRESS } from '../../constants/config.json';
+import { ETH_ADDRESS, STRK_ADDRESS } from '../../lib/config';
 import { toast } from 'react-hot-toast';
 
 interface DistributionProps {
@@ -14,13 +14,13 @@ export const Distribution: React.FC<DistributionProps> = ({ onSubmit }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     let tok: string;
-    if(token == "ETH") {
+    if (token == "ETH") {
       tok = ETH_ADDRESS;
     } else if (token == "STRK") {
       tok = STRK_ADDRESS;
     }
 
-    if(!recipient.startsWith("0x")) {
+    if (!recipient.startsWith("0x")) {
       toast.error('Address must start with 0x');
       return;
     }
