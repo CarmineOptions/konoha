@@ -335,16 +335,17 @@ mod Treasury {
             let mut transfers = ArrayTrait::<Transfer>::new();
             let mut i: u64 = start_id;
             let mut last_cooldown_end: u64 = 0;
+            let current_timestamp = get_block_timestamp();
 
-            while i < break_id {
-                let current_transfer = self.transfers_on_cooldown.read(i);
-                if status == current_transfer.status {
-                    transfers.append(current_transfer);
-                }
-                last_cooldown_end = current_transfer.cooldown_end;
-
-                i += 1;
-            };
+            while i < break_id
+                && (status != TransferStatus::FINISHED || current_timestamp > last_cooldown_end) {
+                    let current_transfer = self.transfers_on_cooldown.read(i);
+                    if status == current_transfer.status {
+                        transfers.append(current_transfer);
+                    }
+                    last_cooldown_end = current_transfer.cooldown_end;
+                    i += 1;
+                };
             transfers.span()
         }
 
@@ -431,14 +432,7 @@ mod Treasury {
         }
 
         fn get_finished_transfers(self: @ContractState) -> Span<Transfer> {
-            match self.get_next_pending() {
-                Option::None => self
-                    .get_transfers_by_status(
-                        TransferStatus::FINISHED, 0, self.transfers_count.read()
-                    ),
-                Option::Some(next_pending) => self
-                    .get_transfers_by_status(TransferStatus::FINISHED, 0, next_pending.id)
-            }
+            self.get_transfers_by_status(TransferStatus::FINISHED, 0, self.transfers_count.read())
         }
 
         fn get_active_guardians(self: @ContractState) -> GuardiansInfo {
@@ -464,22 +458,18 @@ mod Treasury {
             let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token_addr };
             assert(token.balanceOf(get_contract_address()) >= amount, Errors::INSUFFICIENT_FUNDS);
             let transfers_count = self.transfers_count.read();
-            let mut new_transfer_id = 0;
-            if transfers_count != 0 {
-                new_transfer_id = transfers_count;
-            }
-            self.transfers_count.write(new_transfer_id + 1);
+            self.transfers_count.write(transfers_count + 1);
             let transfer = Transfer {
-                id: new_transfer_id,
+                id: transfers_count,
                 receiver,
                 token_addr,
                 amount,
                 cooldown_end: get_block_timestamp() + TREASURY_COOLDOWN_TIME,
                 status: TransferStatus::PENDING
             };
-            self.transfers_on_cooldown.write(new_transfer_id, transfer);
+            self.transfers_on_cooldown.write(transfers_count, transfer);
             self.emit(TransferPending { receiver, token_addr, amount });
-            self.transfers_on_cooldown.read(new_transfer_id)
+            self.transfers_on_cooldown.read(transfers_count)
         }
 
         fn cancel_transfer(ref self: ContractState, transfer_id: u64) {
