@@ -88,7 +88,7 @@ fn fund_treasury(treasury_address: ContractAddress, user: ContractAddress, token
 }
 
 #[test]
-#[fork("SEPOLIA")]
+// #[fork("SEPOLIA")]
 fn test_add_transfer() {
     let (
         gov_contract_address,
@@ -102,10 +102,11 @@ fn test_add_transfer() {
     let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
         .try_into()
         .unwrap();
-    let token: ContractAddress = 0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
-        .try_into()
-        .unwrap();
-    fund_treasury(treasury_contract_address, user1, token);
+    let erc20_class = declare("VotingToken").unwrap();
+    let (erc20_address, _) = erc20_class.deploy(@array![user1.try_into().unwrap()]).unwrap();
+    let token = IERC20Dispatcher { contract_address: erc20_address };
+    prank(CheatTarget::One(erc20_address), user1, CheatSpan::TargetCalls(1));
+    token.mint(treasury_contract_address, 10000000000);
 
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
@@ -113,8 +114,8 @@ fn test_add_transfer() {
         CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
     );
 
-    let new_transfer = treasury_dispatcher.add_transfer(user1, 3500000, token);
-    treasury_dispatcher.add_transfer(user1, 34543566, token);
+    let new_transfer = treasury_dispatcher.add_transfer(user1, 3500000, erc20_address);
+    treasury_dispatcher.add_transfer(user1, 34543566, erc20_address);
 
     let live_transfers = treasury_dispatcher.get_live_transfers();
 
@@ -764,8 +765,8 @@ fn test_get_finished_transfers_pending_present() {
 
     warp(
         CheatTarget::One(treasury_contract_address),
-        second_transfer_cooldown,
-        CheatSpan::TargetCalls(2)
+        second_transfer_cooldown + 10,
+        CheatSpan::TargetCalls(3)
     );
 
     treasury_dispatcher.execute_pending_by_id(0);
@@ -805,7 +806,7 @@ fn test_get_finished_transfers_no_present() {
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
     prank(
-        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(3)
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
     );
 
     treasury_dispatcher.add_transfer(user2, 200000, token);
@@ -815,8 +816,8 @@ fn test_get_finished_transfers_no_present() {
 
     warp(
         CheatTarget::One(treasury_contract_address),
-        second_transfer_cooldown,
-        CheatSpan::TargetCalls(2)
+        second_transfer_cooldown + 10,
+        CheatSpan::TargetCalls(3)
     );
 
     treasury_dispatcher.execute_pending_by_id(0);
