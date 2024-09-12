@@ -23,6 +23,8 @@ const starknetIdNavigator = new StarknetIdNavigator(
 const cache = new Map<string, any>();
 
 export const getVestingEvents = async (address: string) => {
+  const vesting_milestone_add_selector = hash.getSelectorFromName('VestingMilestoneAdded')
+  const vested_selector = hash.getSelectorFromName('Vested')
 
   // Check if the result is already cached
   if (cache.has(address)) {
@@ -34,7 +36,7 @@ export const getVestingEvents = async (address: string) => {
       from_block: { block_number: START_BLOCK },
       chunk_size: 100,
       address: address,
-      keys: [[hash.getSelectorFromName('Vesting')]],
+      keys: [[hash.getSelectorFromName('VestingEvent')]],
     };
 
     const events = await provider.getEvents(eventFilter);
@@ -50,17 +52,23 @@ export const getVestingEvents = async (address: string) => {
         const timestamp = parseInt(event.data[1]);  // Timestamp (index 1)
         const amount = parseInt(event.data[2]);     // Amount (index 2)
 
-        if (timestamp < now && amount) {
+        if (timestamp < now && event.keys.includes(vesting_milestone_add_selector)) {
           acc.push({
             amount: amount,
-            timestamp: timestamp,
             is_claimable: true,
+            is_claimed: false,
+          });
+        } else if (event.keys.includes(vested_selector)) {
+          acc.push({
+            amount: amount,
+            is_claimable: false,
+            is_claimed: true,
           });
         } else {
           acc.push({
-            timestamp: timestamp,
             amount: amount,
             is_claimable: false,
+            is_claimed: false,
           });
         }
       } catch (error) {
