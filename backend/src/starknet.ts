@@ -20,7 +20,7 @@ const starknetIdNavigator = new StarknetIdNavigator(
     CHAIN_ID,
 );
 
-const cache = new Map<string, any>();
+const cache = new Map<string, { amount: number; is_claimable: boolean, is_claimed: boolean }[]>();
 
 export const getVestingEvents = async (address: string) => {
   const vesting_milestone_add_selector = hash.getSelectorFromName('VestingMilestoneAdded')
