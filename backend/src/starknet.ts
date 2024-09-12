@@ -1,11 +1,12 @@
 import { StarknetIdNavigator } from "starknetid.js";
-import {RpcProvider, constants, starknetId} from "starknet";
+import {RpcProvider, constants, hash} from "starknet";
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
 const NODE_URL: string = process.env.NODE_URL || "";
-const CHAIN_ID: string = process.env.NETWORK === 'mainnet'
+const START_BLOCK: number = process.env.NETWORK === 'mainnet' ? 720000 : 177000; // Started block number before vesting added
+const CHAIN_ID: constants.StarknetChainId = process.env.NETWORK === 'mainnet'
     ? constants.StarknetChainId.SN_MAIN
     : constants.StarknetChainId.SN_SEPOLIA;
 
@@ -19,18 +20,25 @@ const starknetIdNavigator = new StarknetIdNavigator(
     CHAIN_ID,
 );
 
+const cache = new Map<string, any>();
+
 export const getVestingEvents = async (address: string) => {
+
+  // Check if the result is already cached
+  if (cache.has(address)) {
+    return cache.get(address);
+  }
+
   try {
     const eventFilter = {
-      from_block: { block_number: 0 },
-      chunk_size: 1000,
+      from_block: { block_number: START_BLOCK },
+      chunk_size: 100,
       address: address,
-      key: ['Vesting'],
+      keys: [[hash.getSelectorFromName('Vesting')]],
     };
 
     const events = await provider.getEvents(eventFilter);
 
-    // Check if events are empty and return an empty array
     if (!events.events || events.events.length === 0) {
       return [];
     }
@@ -39,31 +47,30 @@ export const getVestingEvents = async (address: string) => {
 
     const results = events.events.reduce((acc: any[], event: any) => {
       try {
-        // VEST: {grantee, timestamp, amount}
-        const grantee = event.data[0];         // Grantee (index 0)
         const timestamp = parseInt(event.data[1]);  // Timestamp (index 1)
         const amount = parseInt(event.data[2]);     // Amount (index 2)
 
-        // Processing based on the timestamp
         if (timestamp < now && amount) {
           acc.push({
             amount: amount,
             timestamp: timestamp,
-            is_claimable: true
+            is_claimable: true,
           });
         } else {
           acc.push({
             timestamp: timestamp,
             amount: amount,
-            is_claimable: false
+            is_claimable: false,
           });
         }
       } catch (error) {
-        // Log the error and continue with the next event
         console.error('Error processing event, skipping this event:', error);
       }
       return acc;
     }, []);
+
+    // Store the result in the cache
+    cache.set(address, results);
 
     return results;
   } catch (error) {
