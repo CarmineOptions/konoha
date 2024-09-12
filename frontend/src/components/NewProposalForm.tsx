@@ -8,6 +8,12 @@ import Config from "./proposal-form/ConfigProposal";
 
 const proposalTypes = ["airdrop", "signal vote", "AMM", "governance", "treasury", "config"];
 
+const proposalIds = {
+  "governance": 1,
+  "airdrop": 3,
+  "signal vote": 4
+};
+
 export default function NewProposalForm({
   setIsModalOpen,
 }: {
@@ -19,7 +25,7 @@ export default function NewProposalForm({
 
   const calls = useMemo(() => {
     if (!selectedType) return [];
-    const typeIndex = proposalTypes.indexOf(selectedType);
+    const typeIndex = proposalIds[selectedType];
     return [{
       contractAddress: CONTRACT_ADDR,
       entrypoint: "submit_proposal",
