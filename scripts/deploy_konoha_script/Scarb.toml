@@ -18,5 +18,5 @@ casm = true
 
 [[target.starknet-contract]]
 build-external-contracts = [
-    "konoha::voting_token::VotingToken", "konoha::contract::Governance", "konoha::token::FloatingToken", "konoha::treasury::Treasury"
+    "konoha::voting_token::VotingToken", "konoha::contract::Governance", "konoha::token::FloatingToken", "konoha::treasury::Treasury",
 ]

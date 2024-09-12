@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "transactions": {
+    "transactions": {
+      "3cf6f44d86cf710977ab28d2b806db35329f2e2b1f0fb80db9e5897b6b352fce": {
+        "name": "declare",
+        "output": {
+          "type": "DeclareResponse",
+          "class_hash": "0x32ef9defc538f60af5da3056f411440888f423e44fd54e9b40a88dfcf9bad47",
+          "transaction_hash": "0x6a49f4bcf11a44de42a2fb4574404a1dd90baca203a3fcf1595f6568d125747"
+        },
+        "status": "Success",
+        "timestamp": 1725446090,
+        "misc": null
+      },
+      "98f1ffdedd94eb7ca018e5735c8cfb4fe647c34a2f4dc53c2232a366500f215c": {
+        "name": "deploy",
+        "output": {
+          "type": "ErrorResponse",
+          "message": "Contract failed the validation = Invalid transaction nonce of contract at address 0x0779563ba08f673480e3e56c133120c5202c871f2a844ec397dbceba71e890ff. Account nonce: 0x0000000000000000000000000000000000000000000000000000000000000002; got: 0x0000000000000000000000000000000000000000000000000000000000000001."
+        },
+        "status": "Error",
+        "timestamp": 1725446090,
+        "misc": null
+      }
+    }
+  }
+}
