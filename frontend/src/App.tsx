@@ -1,7 +1,7 @@
 import React from "react";
 // import { useBlock } from "@starknet-react/core";
 import Header from "./components/Header";
-import { useContractRead } from "@starknet-react/core";
+import { useContractRead, useAccount } from "@starknet-react/core";
 //import Tokens from "./helpers/tokens";
 import { abi } from "./lib/abi";
 import Proposal from "./components/Proposal";
@@ -9,12 +9,14 @@ import { CONTRACT_ADDR } from "./lib/config";
 // import { useAccount } from "@starknet-react/core";
 import SubmitProposalModal from "./components/SubmitProposalModal";
 import TreasuryStatus from "./components/TreasuryStatus";
+import VotingPower from "./components/staking/VotingPower";
 
 function App() {
-    const [isModalOpen, setIsModalOpen] = React.useState(false);   
+    const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const { address } = useAccount();
 
     // Call the contract function get_live_proposals to get the live proposals
-    const { data, isError, isLoading,error } = useContractRead({
+    const { data, isError, isLoading, error } = useContractRead({
         functionName: "get_live_proposals",
         args: [],
         abi,
@@ -68,6 +70,8 @@ function App() {
             </div>
 
             <TreasuryStatus />
+
+            {address && <VotingPower />}
         </main>
     );
 }
