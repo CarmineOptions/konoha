@@ -2,9 +2,6 @@ use konoha::treasury_types::carmine::OptionType;
 use konoha::types::{Transfer, Guardian, GuardiansInfo};
 use starknet::ContractAddress;
 
-const GUARDIAN_ROLE: felt252 = selector!("GUARDIAN_ROLE");
-const OWNER_ROLE: felt252 = selector!("OWNER_ROLE");
-
 #[starknet::interface]
 trait ITreasury<TContractState> {
     fn add_transfer(
@@ -110,9 +107,6 @@ mod Treasury {
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
-    component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
-    component!(path: SRC5Component, storage: src5, event: SRC5Event);
-
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
     // Ownable
@@ -123,16 +117,6 @@ mod Treasury {
     // Upgradeable
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
-    // AccessControl
-    #[abi(embed_v0)]
-    impl AccessControlImpl =
-        AccessControlComponent::AccessControlImpl<ContractState>;
-    impl AccessControlInternalImpl = AccessControlComponent::InternalImpl<ContractState>;
-
-    // SRC5
-    #[abi(embed_v0)]
-    impl SRC5Impl = SRC5Component::SRC5Impl<ContractState>;
-
     #[storage]
     struct Storage {
         amm_address: ContractAddress,
@@ -140,14 +124,10 @@ mod Treasury {
         transfers_on_cooldown: LegacyMap<u64, Transfer>,
         transfers_count: u64,
         guardians: LegacyMap<u32, Guardian>,
-        last_guardian_id: u32,
+        total_guardians_count: u32,
         active_guardians_count: u32,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
-        #[substorage(v0)]
-        accesscontrol: AccessControlComponent::Storage,
-        #[substorage(v0)]
-        src5: SRC5Component::Storage,
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage
     }
@@ -272,6 +252,8 @@ mod Treasury {
         const ADDRESS_ALREADY_CHANGED: felt252 = 'New Address same as Previous';
         const GUARDIAN_EXISTS: felt252 = 'Guardian exists';
         const GUARDIAN_NOT_EXISTS: felt252 = 'Guardian not exists';
+        const NOT_GUARDIAN: felt252 = 'You are not a guardian';
+        const INACTIVE_GUARDIAN: felt252 = 'You are an inactive guardian';
         const MINIMAL_GUARDS_COUNT: felt252 = 'Guards count cannot be zero';
         const INVALID_ID: felt252 = 'Invalid id provided';
         const TRANSFER_NOT_PENDING: felt252 = 'Transfer need to be pending';
@@ -296,26 +278,29 @@ mod Treasury {
         self.amm_address.write(AMM_contract_address);
         self.zklend_market_contract_address.write(zklend_market_contract_address);
 
-        self.accesscontrol.initializer();
-
-        self.accesscontrol._set_role_admin(DEFAULT_ADMIN_ROLE, GUARDIAN_ROLE);
-        self.accesscontrol._grant_role(OWNER_ROLE, gov_contract_address);
-        self.accesscontrol._grant_role(GUARDIAN_ROLE, first_guardian);
         self.guardians.write(0, Guardian { address: first_guardian, is_active: true });
         self.active_guardians_count.write(1);
+        self.total_guardians_count.write(1);
 
         self.ownable.initializer(gov_contract_address);
     }
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
+        fn assert_is_active_guardian(self: @ContractState) {
+            let (_, guardian) = self
+                .get_guardian(get_caller_address())
+                .expect(Errors::NOT_GUARDIAN);
+            assert(guardian.is_active, Errors::INACTIVE_GUARDIAN);
+        }
+
         fn get_guardian(
             self: @ContractState, guardian_address: ContractAddress
         ) -> Option<(u32, Guardian)> {
             let mut i = 0;
-            let current_id = self.last_guardian_id.read();
+            let guardians_count = self.total_guardians_count.read();
             loop {
-                if i >= current_id {
+                if i == guardians_count {
                     break Option::None;
                 }
                 if self.guardians.read(i).address == guardian_address {
@@ -352,7 +337,7 @@ mod Treasury {
         fn get_guardians_filtered(self: @ContractState, is_active_filter: bool) -> GuardiansInfo {
             let mut guardians = ArrayTrait::<Guardian>::new();
             let mut i = 0;
-            let total_guardians_count = self.last_guardian_id.read();
+            let total_guardians_count = self.total_guardians_count.read();
             loop {
                 if i == total_guardians_count {
                     break;
@@ -473,7 +458,7 @@ mod Treasury {
         }
 
         fn cancel_transfer(ref self: ContractState, transfer_id: u64) {
-            self.accesscontrol.assert_only_role(GUARDIAN_ROLE);
+            self.assert_is_active_guardian();
             assert(transfer_id < self.transfers_count.read(), Errors::INVALID_ID);
             let initial_transfer = self.transfers_on_cooldown.read(transfer_id);
             assert(
@@ -532,13 +517,13 @@ mod Treasury {
 
         fn add_pending_guardian(ref self: ContractState, guardian_address: ContractAddress) {
             self.ownable.assert_only_owner();
-            let current_id = self.last_guardian_id.read();
+            let guardians_count = self.total_guardians_count.read();
 
-            assert(self.get_guardian(guardian_address).is_some(), Errors::GUARDIAN_EXISTS);
+            assert(self.get_guardian(guardian_address).is_none(), Errors::GUARDIAN_EXISTS);
 
             let new_guardian = Guardian { address: guardian_address, is_active: false };
-            self.guardians.write(current_id + 1, new_guardian);
-            self.last_guardian_id.write(current_id + 1);
+            self.guardians.write(guardians_count, new_guardian);
+            self.total_guardians_count.write(guardians_count + 1);
 
             self.emit(GuardianAdded { guardian_address });
         }
@@ -552,8 +537,6 @@ mod Treasury {
                 .get_guardian(guardian_address)
                 .expect(Errors::GUARDIAN_NOT_EXISTS);
 
-            self.accesscontrol._revoke_role(GUARDIAN_ROLE, guardian_address);
-
             guardian.is_active = false;
             self.guardians.write(id, guardian);
             self.active_guardians_count.write(active_guardians_count - 1);
@@ -562,16 +545,14 @@ mod Treasury {
         }
 
         fn approve_guardian(ref self: ContractState, guardian_address: ContractAddress) {
-            self.accesscontrol.assert_only_role(GUARDIAN_ROLE);
+            self.assert_is_active_guardian();
             let (id, mut guardian) = self
                 .get_guardian(guardian_address)
                 .expect(Errors::GUARDIAN_NOT_EXISTS);
             guardian.is_active = true;
 
-            self.accesscontrol.grant_role(GUARDIAN_ROLE, guardian_address);
-
             self.guardians.write(id, guardian);
-
+            self.active_guardians_count.write(self.active_guardians_count.read() + 1);
             self.emit(GuardianActivated { guardian_address, issuer_address: get_caller_address() });
         }
 
