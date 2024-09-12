@@ -103,7 +103,7 @@ mod Treasury {
         ContractAddress, get_caller_address, get_contract_address, get_block_timestamp, ClassHash
     };
 
-    use super::{OptionType, GUARDIAN_ROLE, OWNER_ROLE};
+    use super::{OptionType};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 

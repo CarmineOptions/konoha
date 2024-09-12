@@ -198,7 +198,7 @@ fn test_cancel_transfer() {
 }
 
 #[test]
-#[should_panic(expected: 'Caller is missing role')]
+#[should_panic(expected: 'You are not a guardian')]
 fn test_cancel_transfer_by_unauthorized_caller() {
     let (
         gov_contract_address, _AMM_contract_address, treasury_contract_address, _, _guardian_address
@@ -217,6 +217,31 @@ fn test_cancel_transfer_by_unauthorized_caller() {
     );
     let new_transfer_id = treasury_dispatcher.add_transfer(user1, 200000, token_address).id;
 
+    treasury_dispatcher.cancel_transfer(new_transfer_id);
+}
+
+#[test]
+#[should_panic(expected: 'You are an inactive guardian')]
+fn test_cancel_transfer_by_inactive_guardian() {
+    let (
+        gov_contract_address, _AMM_contract_address, treasury_contract_address, _, _guardian_address
+    ) =
+        get_important_addresses();
+    let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
+    let token_address = get_and_mint_token(
+        user1, treasury_contract_address.try_into().unwrap(), 1000000
+    );
+    let user1: ContractAddress = user1.try_into().unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
+    );
+    let new_transfer_id = treasury_dispatcher.add_transfer(user1, 200000, token_address).id;
+    treasury_dispatcher.add_pending_guardian(user1);
+
+    prank(CheatTarget::One(treasury_contract_address), user1, CheatSpan::TargetCalls(1));
     treasury_dispatcher.cancel_transfer(new_transfer_id);
 }
 
@@ -757,6 +782,331 @@ fn test_get_finished_transfers_no_pending() {
         assert(*finished_transfers.at(i).status == TransferStatus::FINISHED, 'invalid status');
         i += 1;
     }
+}
+
+#[test]
+fn test_add_pending_guardian_valid() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.add_pending_guardian(user1);
+
+    let guards_info = treasury_dispatcher.get_inactive_guardians();
+
+    assert(guards_info.total_guardians_count == 2, 'Wrong number of guards');
+    assert(guards_info.active_guardians_count == 1, 'Wrong number of active guards');
+    assert(!*guards_info.guardians.at(0).is_active, 'Added guard should be inactive');
+}
+
+#[test]
+#[should_panic(expected: 'Caller is not the owner')]
+fn test_add_pending_guardian_by_unathorized_caller() {
+    let (
+        _gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    treasury_dispatcher.add_pending_guardian(user1);
+}
+
+#[test]
+#[should_panic(expected: 'Guardian exists')]
+fn test_add_pending_guardian_exists() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        guardian_address
+    ) =
+        get_important_addresses();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.add_pending_guardian(guardian_address);
+}
+
+#[test]
+fn test_deactivate_guardian_valid() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.add_pending_guardian(user1);
+
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(1));
+    treasury_dispatcher.approve_guardian(user1);
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.deactivate_guardian(user1);
+
+    let guards_info = treasury_dispatcher.get_inactive_guardians();
+    assert(guards_info.total_guardians_count == 2, 'Wrong number of guards');
+    assert(guards_info.active_guardians_count == 1, 'Wrong number of active guards');
+    assert(!*guards_info.guardians.at(0).is_active, 'Guard should be inactive');
+}
+
+#[test]
+#[should_panic(expected: 'Caller is not the owner')]
+fn test_deactivate_guardian_by_unathorized_caller() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.add_pending_guardian(user1);
+
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(1));
+    treasury_dispatcher.approve_guardian(user1);
+
+    treasury_dispatcher.deactivate_guardian(user1);
+}
+
+#[test]
+#[should_panic(expected: 'Guards count cannot be zero')]
+fn test_deactivate_guardian_minimal_count() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        guardian_address
+    ) =
+        get_important_addresses();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.deactivate_guardian(guardian_address);
+}
+
+#[test]
+#[should_panic(expected: 'Guardian not exists')]
+fn test_deactivate_guardian_not_exists() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        guardian_address
+    ) =
+        get_important_addresses();
+
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+    let user2: ContractAddress = 0x0345f2.try_into().unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.add_pending_guardian(user1);
+
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(1));
+    treasury_dispatcher.approve_guardian(user1);
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.deactivate_guardian(user2);
+}
+
+#[test]
+fn test_approve_guardian_valid() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.add_pending_guardian(user1);
+
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(1));
+    treasury_dispatcher.approve_guardian(user1);
+
+    let guards_info = treasury_dispatcher.get_active_guardians();
+    assert(guards_info.total_guardians_count == 2, 'Wrong number of guards');
+    assert(guards_info.active_guardians_count == 2, 'Wrong number of active guards');
+    assert(*guards_info.guardians.at(1).is_active, 'Guard should be active');
+}
+
+#[test]
+#[should_panic(expected: 'You are not a guardian')]
+fn test_approve_guardian_by_unathorized_caller() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.add_pending_guardian(user1);
+
+    treasury_dispatcher.approve_guardian(user1);
+}
+
+#[test]
+#[should_panic(expected: 'Guardian not exists')]
+fn test_approve_guardian_not_exists() {
+    let (
+        _gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(1));
+    treasury_dispatcher.approve_guardian(user1);
+}
+
+#[test]
+fn test_get_active_guardians() {
+    let (
+        _gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _guardian_address
+    ) =
+        get_important_addresses();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    let guards_info = treasury_dispatcher.get_active_guardians();
+    assert(guards_info.total_guardians_count == 1, 'Wrong number of guards');
+    assert(guards_info.active_guardians_count == 1, 'Wrong number of active guards');
+    assert(*guards_info.guardians.at(0).is_active, 'Guard should be active');
+}
+
+#[test]
+fn test_get_inactive_guardians() {
+    let (
+        gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _guardian_address
+    ) =
+        get_important_addresses();
+    let user1: ContractAddress = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86
+        .try_into()
+        .unwrap();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.add_pending_guardian(user1);
+
+    let guards_info = treasury_dispatcher.get_inactive_guardians();
+    assert(guards_info.total_guardians_count == 2, 'Wrong number of guards');
+    assert(guards_info.active_guardians_count == 1, 'Wrong number of active guards');
+    assert(!*guards_info.guardians.at(0).is_active, 'Guard should be inactive');
+}
+
+#[test]
+fn test_get_inactive_guardians_no_inactive() {
+    let (
+        _gov_contract_address,
+        _AMM_contract_address,
+        treasury_contract_address,
+        _zklend_market_contract_address,
+        _guardian_address
+    ) =
+        get_important_addresses();
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    let guards_info = treasury_dispatcher.get_inactive_guardians();
+    assert(guards_info.total_guardians_count == 1, 'Wrong number of guards');
+    assert(guards_info.active_guardians_count == 1, 'Wrong number of active guards');
+    assert(guards_info.guardians.len() == 0, 'No inactive should be present');
 }
 
 #[test]
