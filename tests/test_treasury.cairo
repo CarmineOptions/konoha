@@ -14,7 +14,7 @@ use konoha::treasury::{ITreasury, Treasury};
 use konoha::treasury::{ITreasuryDispatcher, ITreasuryDispatcherTrait};
 use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
 use konoha::treasury_types::zklend::interfaces::{IMarketDispatcher, IMarketDispatcherTrait};
-use konoha::types::{Transfer, Guardian, TransferStatus};
+use konoha::types::{Transfer, TransferStatus};
 use openzeppelin::access::ownable::interface::{
     IOwnableTwoStep, IOwnableTwoStepDispatcherTrait, IOwnableTwoStepDispatcher
 };

@@ -1,5 +1,5 @@
 use konoha::treasury_types::carmine::OptionType;
-use konoha::types::{Transfer, Guardian, GuardiansInfo};
+use konoha::types::{Transfer};
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -77,7 +77,7 @@ mod Treasury {
     use konoha::treasury_types::zklend::interfaces::{
         IMarket, IMarketDispatcher, IMarketDispatcherTrait
     };
-    use konoha::types::{Transfer, TransferStatus, Guardian, GuardiansInfo};
+    use konoha::types::{Transfer, TransferStatus};
     use openzeppelin::access::accesscontrol::interface::IAccessControl;
     use openzeppelin::access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
     use openzeppelin::access::ownable::OwnableComponent;
