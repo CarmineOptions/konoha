@@ -415,8 +415,7 @@ mod Treasury {
                 );
             self.emit(sent_event);
 
-            let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
-            status
+            token.transfer(transfer_pending.receiver, transfer_pending.amount)
         }
 
         fn add_guardian(ref self: ContractState, address: ContractAddress) {
