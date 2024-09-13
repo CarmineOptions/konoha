@@ -13,7 +13,7 @@ trait ITreasury<TContractState> {
 
     fn get_next_pending(self: @TContractState) -> Option<Transfer>;
 
-    fn get_failed_transfers(self: @TContractState) -> Span<Transfer>;
+    fn get_unprocessed_transfers(self: @TContractState) -> Span<Transfer>;
 
     fn get_finished_transfers(self: @TContractState) -> Span<Transfer>;
 
@@ -21,28 +21,16 @@ trait ITreasury<TContractState> {
 
     fn get_cancelled_transfers(self: @TContractState) -> Span<Transfer>;
 
-    fn get_active_guardians(self: @TContractState) -> GuardiansInfo;
-
-    fn get_inactive_guardians(self: @TContractState) -> GuardiansInfo;
-
     fn get_transfer_by_id(self: @TContractState, transfer_id: u64) -> Transfer;
 
     fn cancel_transfer(ref self: TContractState, transfer_id: u64);
 
     fn execute_pending_by_id(ref self: TContractState, transfer_id: u64) -> bool;
 
-    fn add_pending_guardian(ref self: TContractState, guardian_address: ContractAddress);
+    fn add_guardian(ref self: TContractState, address: ContractAddress);
 
-    fn approve_guardian(ref self: TContractState, guardian_address: ContractAddress);
+    fn remove_guardian(ref self: TContractState, address: ContractAddress);
 
-    fn deactivate_guardian(ref self: TContractState, guardian_address: ContractAddress);
-
-    fn send_tokens_to_address(
-        ref self: TContractState,
-        receiver: ContractAddress,
-        amount: u256,
-        token_addr: ContractAddress
-    ) -> bool;
     fn update_AMM_address(ref self: TContractState, new_amm_address: ContractAddress);
     fn provide_liquidity_to_carm_AMM(
         ref self: TContractState,
@@ -90,11 +78,11 @@ mod Treasury {
         IMarket, IMarketDispatcher, IMarketDispatcherTrait
     };
     use konoha::types::{Transfer, TransferStatus, Guardian, GuardiansInfo};
-    use openzeppelin::access::accesscontrol::accesscontrol::AccessControlComponent::InternalTrait;
     use openzeppelin::access::accesscontrol::interface::IAccessControl;
     use openzeppelin::access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::interface::IOwnableTwoStep;
+    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::token::erc20::ERC20Component;
     use openzeppelin::upgrades::interface::IUpgradeable;
@@ -123,9 +111,7 @@ mod Treasury {
         zklend_market_contract_address: ContractAddress,
         transfers_on_cooldown: LegacyMap<u64, Transfer>,
         transfers_count: u64,
-        guardians: LegacyMap<u32, Guardian>,
-        total_guardians_count: u32,
-        active_guardians_count: u32,
+        guardians: LegacyMap<ContractAddress, bool>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
@@ -202,18 +188,12 @@ mod Treasury {
 
     #[derive(starknet::Event, Drop)]
     struct GuardianAdded {
-        guardian_address: ContractAddress
+        address: ContractAddress
     }
 
     #[derive(starknet::Event, Drop)]
-    struct GuardianActivated {
-        guardian_address: ContractAddress,
-        issuer_address: ContractAddress
-    }
-
-    #[derive(starknet::Event, Drop)]
-    struct GuardianDeactivated {
-        guardian_address: ContractAddress
+    struct GuardianRemoved {
+        address: ContractAddress
     }
 
     #[event]
@@ -223,8 +203,7 @@ mod Treasury {
         TransferCancelled: TransferCancelled,
         TransferPending: TransferPending,
         GuardianAdded: GuardianAdded,
-        GuardianActivated: GuardianActivated,
-        GuardianDeactivated: GuardianDeactivated,
+        GuardianRemoved: GuardianRemoved,
         AMMAddressUpdated: AMMAddressUpdated,
         LiquidityProvided: LiquidityProvided,
         LiquidityWithdrawn: LiquidityWithdrawn,
@@ -234,10 +213,6 @@ mod Treasury {
         LiquidityWithdrawnFromNostraLendingPool: LiquidityWithdrawnFromNostraLendingPool,
         #[flat]
         OwnableEvent: OwnableComponent::Event,
-        #[flat]
-        AccessControlEvent: AccessControlComponent::Event,
-        #[flat]
-        SRC5Event: SRC5Component::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event
     }
@@ -253,7 +228,6 @@ mod Treasury {
         const GUARDIAN_EXISTS: felt252 = 'Guardian exists';
         const GUARDIAN_NOT_EXISTS: felt252 = 'Guardian not exists';
         const NOT_GUARDIAN: felt252 = 'You are not a guardian';
-        const INACTIVE_GUARDIAN: felt252 = 'You are an inactive guardian';
         const MINIMAL_GUARDS_COUNT: felt252 = 'Guards count cannot be zero';
         const INVALID_ID: felt252 = 'Invalid id provided';
         const TRANSFER_NOT_PENDING: felt252 = 'Transfer need to be pending';
@@ -266,8 +240,7 @@ mod Treasury {
         ref self: ContractState,
         gov_contract_address: ContractAddress,
         AMM_contract_address: ContractAddress,
-        zklend_market_contract_address: ContractAddress,
-        first_guardian: ContractAddress
+        zklend_market_contract_address: ContractAddress
     ) {
         assert(gov_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_GOVERNANCE);
         assert(AMM_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_AMM);
@@ -278,39 +251,11 @@ mod Treasury {
         self.amm_address.write(AMM_contract_address);
         self.zklend_market_contract_address.write(zklend_market_contract_address);
 
-        self.guardians.write(0, Guardian { address: first_guardian, is_active: true });
-        self.active_guardians_count.write(1);
-        self.total_guardians_count.write(1);
-
         self.ownable.initializer(gov_contract_address);
     }
 
     #[generate_trait]
     impl InternalFunctions of InternalFunctionsTrait {
-        fn assert_is_active_guardian(self: @ContractState) {
-            let (_, guardian) = self
-                .get_guardian(get_caller_address())
-                .expect(Errors::NOT_GUARDIAN);
-            assert(guardian.is_active, Errors::INACTIVE_GUARDIAN);
-        }
-
-        fn get_guardian(
-            self: @ContractState, guardian_address: ContractAddress
-        ) -> Option<(u32, Guardian)> {
-            let mut i = 0;
-            let guardians_count = self.total_guardians_count.read();
-            loop {
-                if i == guardians_count {
-                    break Option::None;
-                }
-                if self.guardians.read(i).address == guardian_address {
-                    break Option::Some((i, self.guardians.read(i)));
-                }
-
-                i += 1;
-            }
-        }
-
         fn get_transfers_by_status(
             self: @ContractState, status: TransferStatus, start_id: u64, break_id: u64
         ) -> Span<Transfer> {
@@ -333,46 +278,10 @@ mod Treasury {
                 };
             transfers.span()
         }
-
-        fn get_guardians_filtered(self: @ContractState, is_active_filter: bool) -> GuardiansInfo {
-            let mut guardians = ArrayTrait::<Guardian>::new();
-            let mut i = 0;
-            let total_guardians_count = self.total_guardians_count.read();
-            loop {
-                if i == total_guardians_count {
-                    break;
-                }
-                let current_guardian = self.guardians.read(i);
-                if current_guardian.is_active == is_active_filter {
-                    guardians.append(current_guardian);
-                }
-                i += 1;
-            };
-            GuardiansInfo {
-                guardians,
-                total_guardians_count,
-                active_guardians_count: self.active_guardians_count.read()
-            }
-        }
     }
 
     #[abi(embed_v0)]
     impl Treasury of super::ITreasury<ContractState> {
-        // TODO: Remove
-        fn send_tokens_to_address(
-            ref self: ContractState,
-            receiver: ContractAddress,
-            amount: u256,
-            token_addr: ContractAddress
-        ) -> bool {
-            self.ownable.assert_only_owner();
-            let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token_addr };
-            assert(token.balanceOf(get_contract_address()) >= amount, Errors::INSUFFICIENT_FUNDS);
-            let status: bool = token.transfer(receiver, amount);
-            self.emit(TokenSent { receiver, token_addr, amount });
-            return status;
-        }
-
         fn get_next_pending(self: @ContractState) -> Option<Transfer> {
             if self.transfers_count.read() == 0 {
                 return Option::None;
@@ -393,7 +302,7 @@ mod Treasury {
             next_pending_transfer
         }
 
-        fn get_failed_transfers(self: @ContractState) -> Span<Transfer> {
+        fn get_unprocessed_transfers(self: @ContractState) -> Span<Transfer> {
             match self.get_next_pending() {
                 Option::None => self
                     .get_transfers_by_status(
@@ -418,14 +327,6 @@ mod Treasury {
 
         fn get_finished_transfers(self: @ContractState) -> Span<Transfer> {
             self.get_transfers_by_status(TransferStatus::FINISHED, 0, self.transfers_count.read())
-        }
-
-        fn get_active_guardians(self: @ContractState) -> GuardiansInfo {
-            self.get_guardians_filtered(true)
-        }
-
-        fn get_inactive_guardians(self: @ContractState) -> GuardiansInfo {
-            self.get_guardians_filtered(false)
         }
 
         fn get_transfer_by_id(self: @ContractState, transfer_id: u64) -> Transfer {
@@ -458,7 +359,7 @@ mod Treasury {
         }
 
         fn cancel_transfer(ref self: ContractState, transfer_id: u64) {
-            self.assert_is_active_guardian();
+            assert(self.guardians.read(get_caller_address()), Errors::NOT_GUARDIAN);
             assert(transfer_id < self.transfers_count.read(), Errors::INVALID_ID);
             let initial_transfer = self.transfers_on_cooldown.read(transfer_id);
             assert(
@@ -515,45 +416,16 @@ mod Treasury {
             status
         }
 
-        fn add_pending_guardian(ref self: ContractState, guardian_address: ContractAddress) {
+        fn add_guardian(ref self: ContractState, address: ContractAddress) {
             self.ownable.assert_only_owner();
-            let guardians_count = self.total_guardians_count.read();
-
-            assert(self.get_guardian(guardian_address).is_none(), Errors::GUARDIAN_EXISTS);
-
-            let new_guardian = Guardian { address: guardian_address, is_active: false };
-            self.guardians.write(guardians_count, new_guardian);
-            self.total_guardians_count.write(guardians_count + 1);
-
-            self.emit(GuardianAdded { guardian_address });
+            self.guardians.write(address, true);
+            self.emit(GuardianAdded { address });
         }
 
-        fn deactivate_guardian(ref self: ContractState, guardian_address: ContractAddress) {
+        fn remove_guardian(ref self: ContractState, address: ContractAddress) {
             self.ownable.assert_only_owner();
-            let active_guardians_count = self.active_guardians_count.read();
-            assert(active_guardians_count > 1, Errors::MINIMAL_GUARDS_COUNT);
-
-            let (id, mut guardian) = self
-                .get_guardian(guardian_address)
-                .expect(Errors::GUARDIAN_NOT_EXISTS);
-
-            guardian.is_active = false;
-            self.guardians.write(id, guardian);
-            self.active_guardians_count.write(active_guardians_count - 1);
-
-            self.emit(GuardianDeactivated { guardian_address });
-        }
-
-        fn approve_guardian(ref self: ContractState, guardian_address: ContractAddress) {
-            self.assert_is_active_guardian();
-            let (id, mut guardian) = self
-                .get_guardian(guardian_address)
-                .expect(Errors::GUARDIAN_NOT_EXISTS);
-            guardian.is_active = true;
-
-            self.guardians.write(id, guardian);
-            self.active_guardians_count.write(self.active_guardians_count.read() + 1);
-            self.emit(GuardianActivated { guardian_address, issuer_address: get_caller_address() });
+            self.guardians.write(address, false);
+            self.emit(GuardianRemoved { address });
         }
 
         fn update_AMM_address(ref self: ContractState, new_amm_address: ContractAddress) {
