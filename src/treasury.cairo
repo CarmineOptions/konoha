@@ -225,10 +225,7 @@ mod Treasury {
         const ADDRESS_ZERO_AMM: felt252 = 'AMM addr is zero address';
         const ADDRESS_ZERO_ZKLEND_MARKET: felt252 = 'zklnd markt addr is zero addrr';
         const ADDRESS_ALREADY_CHANGED: felt252 = 'New Address same as Previous';
-        const GUARDIAN_EXISTS: felt252 = 'Guardian exists';
-        const GUARDIAN_NOT_EXISTS: felt252 = 'Guardian not exists';
         const NOT_GUARDIAN: felt252 = 'You are not a guardian';
-        const MINIMAL_GUARDS_COUNT: felt252 = 'Guards count cannot be zero';
         const INVALID_ID: felt252 = 'Invalid id provided';
         const TRANSFER_NOT_PENDING: felt252 = 'Transfer need to be pending';
         const COOLDOWN_NOT_PASSED: felt252 = 'Cooldown time has not passed';
@@ -239,7 +236,8 @@ mod Treasury {
         ref self: ContractState,
         gov_contract_address: ContractAddress,
         AMM_contract_address: ContractAddress,
-        zklend_market_contract_address: ContractAddress
+        zklend_market_contract_address: ContractAddress,
+        first_guardian: ContractAddress
     ) {
         assert(gov_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_GOVERNANCE);
         assert(AMM_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_AMM);
@@ -251,6 +249,10 @@ mod Treasury {
         self.zklend_market_contract_address.write(zklend_market_contract_address);
 
         self.ownable.initializer(gov_contract_address);
+
+        if first_guardian != zeroable::Zeroable::zero() {
+            self.guardians.write(first_guardian, true)
+        };
     }
 
     #[generate_trait]
@@ -399,21 +401,21 @@ mod Treasury {
                 token.balanceOf(get_contract_address()) >= transfer_pending.amount,
                 Errors::INSUFFICIENT_FUNDS
             );
-            let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
+
             let sent_event = TokenSent {
                 amount: transfer_pending.amount,
                 token_addr: transfer_pending.token_addr,
                 receiver: transfer_pending.receiver
             };
-
             self
                 .transfers_on_cooldown
                 .write(
                     transfer_pending.id,
                     Transfer { status: TransferStatus::FINISHED, ..transfer_pending }
                 );
-
             self.emit(sent_event);
+
+            let status: bool = token.transfer(transfer_pending.receiver, transfer_pending.amount);
             status
         }
 

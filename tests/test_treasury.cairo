@@ -37,7 +37,7 @@ mod testStorage {
 }
 
 fn get_important_addresses() -> (
-    ContractAddress, ContractAddress, ContractAddress, ContractAddress
+    ContractAddress, ContractAddress, ContractAddress, ContractAddress, ContractAddress
 ) {
     let gov_contract_address: ContractAddress = testStorage::GOV_CONTRACT_ADDRESS
         .try_into()
@@ -49,10 +49,13 @@ fn get_important_addresses() -> (
         testStorage::ZKLEND_MARKET_C0NTRACT_ADDRESS
         .try_into()
         .unwrap();
+    let first_guardian_address: ContractAddress = testStorage::GUARDIAN_ADDRESS.try_into().unwrap();
+
     let mut calldata = ArrayTrait::new();
     gov_contract_address.serialize(ref calldata);
     AMM_contract_address.serialize(ref calldata);
     zklend_market_contract_address.serialize(ref calldata);
+    first_guardian_address.serialize(ref calldata);
 
     //let contract = declare("Treasury").expect('unable to declare');
     let treasury_address: ContractAddress = match declare("Treasury") {
@@ -71,7 +74,11 @@ fn get_important_addresses() -> (
     };
 
     return (
-        gov_contract_address, AMM_contract_address, treasury_address, zklend_market_contract_address
+        gov_contract_address,
+        AMM_contract_address,
+        treasury_address,
+        zklend_market_contract_address,
+        first_guardian_address
     );
 }
 
@@ -90,6 +97,7 @@ fn test_add_transfer() {
         _AMM_contract_address,
         treasury_contract_address,
         _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
 
@@ -121,6 +129,7 @@ fn test_add_transfer_insufficient_funds() {
         _AMM_contract_address,
         treasury_contract_address,
         _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
     let user2: felt252 = '0xUser2';
@@ -143,6 +152,7 @@ fn test_add_transfer_by_unauthorized_caller() {
         _AMM_contract_address,
         treasury_contract_address,
         _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
 
@@ -160,7 +170,9 @@ fn test_add_transfer_by_unauthorized_caller() {
 
 #[test]
 fn test_cancel_transfer() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (
+        gov_contract_address, _AMM_contract_address, treasury_contract_address, _, guardian_address
+    ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
     let token_address = get_and_mint_token(
@@ -171,14 +183,14 @@ fn test_cancel_transfer() {
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
     prank(
-        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(4)
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(3)
     );
     treasury_dispatcher.add_transfer(user1, 200000, token_address);
     let added_transfer_id = treasury_dispatcher.add_transfer(user1, 300000, token_address).id;
     treasury_dispatcher.add_transfer(user1, 3400000, token_address);
-    treasury_dispatcher.add_guardian(user1);
+    // treasury_dispatcher.add_guardian(user1);
 
-    prank(CheatTarget::One(treasury_contract_address), user1, CheatSpan::TargetCalls(1));
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(1));
     treasury_dispatcher.cancel_transfer(added_transfer_id);
 
     let canceled_transfer = treasury_dispatcher.get_transfer_by_id(added_transfer_id);
@@ -190,7 +202,7 @@ fn test_cancel_transfer() {
 #[test]
 #[should_panic(expected: 'You are not a guardian')]
 fn test_cancel_transfer_by_unauthorized_caller() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _, _) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
     let token_address = get_and_mint_token(
@@ -211,7 +223,9 @@ fn test_cancel_transfer_by_unauthorized_caller() {
 #[test]
 #[should_panic(expected: 'Invalid id provided')]
 fn test_cancel_transfer_invalid_id() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (
+        gov_contract_address, _AMM_contract_address, treasury_contract_address, _, guardian_address
+    ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
     let token_address = get_and_mint_token(
@@ -222,19 +236,21 @@ fn test_cancel_transfer_invalid_id() {
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
     prank(
-        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
     );
-    treasury_dispatcher.add_guardian(user1);
+    // treasury_dispatcher.add_guardian(user1);
     treasury_dispatcher.add_transfer(user1, 200000, token_address);
 
-    prank(CheatTarget::One(treasury_contract_address), user1, CheatSpan::TargetCalls(1));
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(1));
     treasury_dispatcher.cancel_transfer(999);
 }
 
 #[test]
 #[should_panic(expected: 'Transfer need to be pending')]
 fn test_cancel_transfer_not_pending() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (
+        gov_contract_address, _AMM_contract_address, treasury_contract_address, _, guardian_address
+    ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
     let token_address = get_and_mint_token(
@@ -245,12 +261,12 @@ fn test_cancel_transfer_not_pending() {
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
     prank(
-        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(2)
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
     );
-    treasury_dispatcher.add_guardian(user1);
+    // treasury_dispatcher.add_guardian(user1);
     treasury_dispatcher.add_transfer(user1, 200000, token_address);
 
-    prank(CheatTarget::One(treasury_contract_address), user1, CheatSpan::TargetCalls(2));
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(2));
     treasury_dispatcher.cancel_transfer(0);
     treasury_dispatcher.cancel_transfer(0);
 }
@@ -262,6 +278,7 @@ fn test_get_next_pending_valid() {
         _AMM_contract_address,
         treasury_contract_address,
         _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
@@ -301,7 +318,8 @@ fn test_get_next_pending_no_transfers() {
         gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
@@ -333,7 +351,8 @@ fn test_execute_pending_by_id_valid() {
         gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
 
@@ -375,7 +394,8 @@ fn test_execute_pending_by_id_invalid_id() {
         _gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
 
@@ -391,7 +411,8 @@ fn test_execute_pending_by_id_too_early() {
         gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
@@ -417,7 +438,8 @@ fn test_execute_pending_by_id_insufficient_funds() {
         gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
@@ -460,12 +482,13 @@ fn test_get_transfers_by_status_invalid_range() {
 }
 
 #[test]
-fn test_get_failed_transfers_pending_present() {
+fn test_get_unprocessed_transfers_pending_present() {
     let (
         gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
@@ -502,12 +525,13 @@ fn test_get_failed_transfers_pending_present() {
 }
 
 #[test]
-fn test_get_failed_transfers_no_pending() {
+fn test_get_unprocessed_transfers_no_pending() {
     let (
         gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
@@ -548,7 +572,8 @@ fn test_get_live_transfers_pending_present() {
         gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
@@ -583,7 +608,8 @@ fn test_get_live_transfers_no_pending() {
         gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
@@ -610,7 +636,8 @@ fn test_get_cancelled_transfers() {
         gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        guardian_address
     ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
@@ -622,15 +649,15 @@ fn test_get_cancelled_transfers() {
     let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
 
     prank(
-        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(4)
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(3)
     );
 
     treasury_dispatcher.add_transfer(user1, 200000, token_address);
     let to_cancel_id = treasury_dispatcher.add_transfer(user1, 300000, token_address).id;
     treasury_dispatcher.add_transfer(user1, 300000, token_address);
-    treasury_dispatcher.add_guardian(user1);
+    // treasury_dispatcher.add_guardian(user1);
 
-    prank(CheatTarget::One(treasury_contract_address), user1, CheatSpan::TargetCalls(1));
+    prank(CheatTarget::One(treasury_contract_address), guardian_address, CheatSpan::TargetCalls(1));
     treasury_dispatcher.cancel_transfer(to_cancel_id);
 
     let cancelled_transfers = treasury_dispatcher.get_cancelled_transfers();
@@ -645,7 +672,8 @@ fn test_get_finished_transfers_pending_present() {
         gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
@@ -693,7 +721,8 @@ fn test_get_finished_transfers_no_pending() {
         gov_contract_address,
         _AMM_contract_address,
         treasury_contract_address,
-        _zklend_market_contract_address
+        _zklend_market_contract_address,
+        _
     ) =
         get_important_addresses();
     let user1: felt252 = 0x06730c211d67bb7c463190f10baa95529c82de2e32d79dd4cb3b185b6d0ddf86;
@@ -735,7 +764,7 @@ fn test_get_finished_transfers_no_pending() {
 
 #[test]
 fn test_update_AMM_contract() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _, _) =
         get_important_addresses();
     let new_AMM_contract: ContractAddress = '0xnewAMMcontract'.try_into().unwrap();
 
@@ -753,7 +782,7 @@ fn test_update_AMM_contract() {
 #[test]
 #[should_panic(expected: ('Caller is not the owner',))]
 fn test_update_AMM_contract_by_unauthorized_caller() {
-    let (_gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (_gov_contract_address, _AMM_contract_address, treasury_contract_address, _, _) =
         get_important_addresses();
     let user2: ContractAddress = '0xUser2'.try_into().unwrap();
     let new_AMM_contract: ContractAddress = '0xnewAMMcontract'.try_into().unwrap();
@@ -765,7 +794,7 @@ fn test_update_AMM_contract_by_unauthorized_caller() {
 
 #[test]
 fn test_ownership_transfer() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _, _) =
         get_important_addresses();
     let user2: ContractAddress = '0xUser2'.try_into().unwrap();
 
@@ -791,7 +820,7 @@ fn test_ownership_transfer() {
 #[test]
 #[should_panic(expected: ('Caller is not the pending owner',))]
 fn test_revoked_ownership_transfer() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _, _) =
         get_important_addresses();
     let user2: ContractAddress = '0xUser2'.try_into().unwrap();
 
@@ -826,7 +855,7 @@ fn test_revoked_ownership_transfer() {
 #[test]
 #[fork("MAINNET")]
 fn test_deposit_withdraw_carmine() {
-    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _) =
+    let (gov_contract_address, _AMM_contract_address, treasury_contract_address, _, _) =
         get_important_addresses();
     let eth_addr: ContractAddress =
         0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
@@ -877,7 +906,7 @@ fn test_deposit_withdraw_carmine() {
 #[test]
 #[fork("MAINNET")]
 fn test_deposit_withdraw_zklend() {
-    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
+    let (gov_contract_address, _, treasury_contract_address, _, _) = get_important_addresses();
     let usdc_addr: ContractAddress =
         0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
         .try_into()
@@ -923,7 +952,7 @@ fn test_deposit_withdraw_zklend() {
 #[test]
 #[fork("MAINNET")]
 fn test_deposit_withdraw_nostra_lending_pool() {
-    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
+    let (gov_contract_address, _, treasury_contract_address, _, _) = get_important_addresses();
     let usdc_addr: ContractAddress =
         0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
         .try_into()
@@ -976,7 +1005,7 @@ fn test_deposit_withdraw_nostra_lending_pool() {
 #[should_panic(expected: ('Insufficient Pooled balance',))]
 #[fork("MAINNET")]
 fn test_deposit_nostra_lending_pool_with_insufficient_balance() {
-    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
+    let (gov_contract_address, _, treasury_contract_address, _, _) = get_important_addresses();
     let usdc_addr: ContractAddress =
         0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8
         .try_into()
