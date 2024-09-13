@@ -578,7 +578,6 @@ fn test_get_live_transfers_pending_present() {
 }
 
 #[test]
-#[should_panic(expected: 'No transfers available')]
 fn test_get_live_transfers_no_pending() {
     let (
         gov_contract_address,
@@ -601,7 +600,8 @@ fn test_get_live_transfers_no_pending() {
 
     let cooldown_end = treasury_dispatcher.add_transfer(user1, 200000, token_address).cooldown_end;
     warp(CheatTarget::One(treasury_contract_address), cooldown_end, CheatSpan::TargetCalls(1));
-    treasury_dispatcher.get_live_transfers();
+    let transfers = treasury_dispatcher.get_live_transfers();
+    assert(transfers.is_empty(), 'No pending should be present');
 }
 
 #[test]

@@ -231,7 +231,6 @@ mod Treasury {
         const MINIMAL_GUARDS_COUNT: felt252 = 'Guards count cannot be zero';
         const INVALID_ID: felt252 = 'Invalid id provided';
         const TRANSFER_NOT_PENDING: felt252 = 'Transfer need to be pending';
-        const NO_TRANSFERS: felt252 = 'No transfers available';
         const COOLDOWN_NOT_PASSED: felt252 = 'Cooldown time has not passed';
     }
 
@@ -314,11 +313,13 @@ mod Treasury {
         }
 
         fn get_live_transfers(self: @ContractState) -> Span<Transfer> {
-            let next_pending = self.get_next_pending().expect(Errors::NO_TRANSFERS);
-            self
-                .get_transfers_by_status(
-                    TransferStatus::PENDING, next_pending.id, self.transfers_count.read()
-                )
+            match self.get_next_pending() {
+                Option::Some(next_pending) => self
+                    .get_transfers_by_status(
+                        TransferStatus::PENDING, next_pending.id, self.transfers_count.read()
+                    ),
+                Option::None => ArrayTrait::<Transfer>::new().span()
+            }
         }
 
         fn get_cancelled_transfers(self: @ContractState) -> Span<Transfer> {
