@@ -33,3 +33,20 @@ struct Comment {
     user: ContractAddress,
     ipfs_hash: ByteArray,
 }
+
+#[derive(Drop, Copy, PartialEq, Serde, starknet::Store)]
+enum TransferStatus {
+    PENDING,
+    CANCELLED,
+    FINISHED
+}
+
+#[derive(Copy, Drop, Serde, starknet::Store)]
+struct Transfer {
+    id: u64,
+    token_addr: ContractAddress,
+    receiver: ContractAddress,
+    amount: u256,
+    cooldown_end: u64,
+    status: TransferStatus
+}
