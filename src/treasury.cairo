@@ -3,6 +3,7 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 trait ITreasury<TContractState> {
+    // Existing Treasury functions
     fn send_tokens_to_address(
         ref self: TContractState,
         receiver: ContractAddress,
@@ -35,6 +36,26 @@ trait ITreasury<TContractState> {
     fn withdraw_from_nostra_lending_pool(
         ref self: TContractState, nostraToken: ContractAddress, amount: u256
     );
+
+    // Streaming functions
+    fn add_new_stream(
+        ref self: TContractState,
+        recipient: ContractAddress,
+        start_time: u64,
+        end_time: u64,
+        total_amount: u128,
+        is_minting: bool,
+        token_address: ContractAddress
+    );
+    fn claim_stream(
+        ref self: TContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
+    );
+    fn cancel_stream(
+        ref self: TContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
+    );
+    fn get_stream_info(
+        self: @TContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
+    ) -> (u128, u128, bool, ContractAddress);
 }
 
 #[starknet::contract]
@@ -43,7 +64,11 @@ mod Treasury {
     use core::starknet::event::EventEmitter;
     use core::traits::TryInto;
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
+
+    use konoha::contract::Governance;
+    use konoha::contract::{IGovernanceDispatcher, IGovernanceDispatcherTrait};
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use konoha::traits::{IGovernanceTokenDispatcher, IGovernanceTokenDispatcherTrait};
     use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
     use konoha::treasury_types::nostra::interface::{
         INostraInterestToken, INostraInterestTokenDispatcher, INostraInterestTokenDispatcherTrait
@@ -55,7 +80,10 @@ mod Treasury {
     use openzeppelin::access::ownable::interface::IOwnableTwoStep;
     use openzeppelin::upgrades::interface::IUpgradeable;
     use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address, ClassHash};
+
+    use starknet::{
+        ContractAddress, get_caller_address, get_contract_address, ClassHash, get_block_timestamp
+    };
     use super::{OptionType};
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
@@ -73,8 +101,35 @@ mod Treasury {
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
-        upgradeable: UpgradeableComponent::Storage
+        upgradeable: UpgradeableComponent::Storage,
+        streams: LegacyMap<(ContractAddress, u64, u64), (u128, u128, bool, ContractAddress)>,
     }
+
+    #[derive(starknet::Event, Drop)]
+    struct StreamCreated {
+        recipient: ContractAddress,
+        start_time: u64,
+        end_time: u64,
+        total_amount: u128,
+        token_address: ContractAddress,
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct StreamClaimed {
+        recipient: ContractAddress,
+        start_time: u64,
+        end_time: u64,
+        amount_claimed: u128,
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct StreamCanceled {
+        recipient: ContractAddress,
+        start_time: u64,
+        end_time: u64,
+        reclaimed_amount: u128,
+    }
+
     #[derive(starknet::Event, Drop)]
     struct TokenSent {
         receiver: ContractAddress,
@@ -128,10 +183,12 @@ mod Treasury {
         amount: u256
     }
 
-
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
+        StreamCreated: StreamCreated,
+        StreamClaimed: StreamClaimed,
+        StreamCanceled: StreamCanceled,
         TokenSent: TokenSent,
         AMMAddressUpdated: AMMAddressUpdated,
         LiquidityProvided: LiquidityProvided,
@@ -350,8 +407,133 @@ mod Treasury {
                     LiquidityWithdrawnFromNostraLendingPool { nostra_token: nostraToken, amount }
                 );
         }
+
+        //starts a new stream through the treasury.
+        //mint = true to mint CRM, false to transfer treasury tokens to recipient
+        fn add_new_stream(
+            ref self: ContractState,
+            recipient: ContractAddress,
+            start_time: u64,
+            end_time: u64,
+            total_amount: u128,
+            is_minting: bool,
+            token_address: ContractAddress,
+        ) {
+            self.ownable.assert_only_owner();
+            let key = (recipient, start_time, end_time);
+            assert(start_time < end_time, 'starts first');
+
+            let claimable_amount = 0;
+            self.streams.write(key, (claimable_amount, total_amount, is_minting, token_address));
+
+            self
+                .emit(
+                    StreamCreated { recipient, start_time, end_time, total_amount, token_address }
+                );
+        }
+        //claim tokens from a time between the start and end of the stream
+        fn claim_stream(
+            ref self: ContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
+        ) {
+            let current_time = get_block_timestamp();
+            let key = (recipient, start_time, end_time);
+            let (already_claimed, total_amount, is_minting, token_address) = self.streams.read(key);
+
+            assert(current_time > start_time, 'stream has not started');
+
+            let elapsed_time = if current_time > end_time {
+                end_time - start_time
+            } else {
+                current_time - start_time
+            };
+            let stream_duration = end_time - start_time;
+
+            let currently_claimable = (total_amount * elapsed_time.into() / stream_duration.into());
+            let amount_to_claim = currently_claimable - already_claimed;
+
+            assert(amount_to_claim > 0, 'nothing to claim');
+
+            self.streams.write(key, (currently_claimable, total_amount, is_minting, token_address));
+
+            if is_minting {
+                let governance_dispatcher = IGovernanceDispatcher {
+                    contract_address: get_contract_address()
+                };
+                let governance_token_address = governance_dispatcher.get_governance_token_address();
+                let governance_token_dispatcher = IGovernanceTokenDispatcher {
+                    contract_address: governance_token_address,
+                };
+
+                // Mint the tokens directly to the recipient
+                governance_token_dispatcher.mint(recipient, amount_to_claim.into());
+            } else {
+                //transfer treasury tokens
+                self.internal_send_tokens(recipient, amount_to_claim.into(), token_address);
+            }
+
+            self
+                .emit(
+                    StreamClaimed {
+                        recipient, start_time, end_time, amount_claimed: amount_to_claim
+                    }
+                );
+        }
+        //end the stream and mint the rest of the CRM tokens to user
+        fn cancel_stream(
+            ref self: ContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
+        ) {
+            self.ownable.assert_only_owner();
+            let key = (recipient, start_time, end_time);
+            let (already_claimed, total_amount, is_minting, token_address) = self.streams.read(key);
+
+            let to_distribute = total_amount - already_claimed;
+
+            self.streams.write(key, (0, 0, is_minting, token_address));
+
+            if is_minting {
+                let governance_dispatcher = IGovernanceDispatcher {
+                    contract_address: get_contract_address()
+                };
+                let governance_token_address = governance_dispatcher.get_governance_token_address();
+                let governance_token_dispatcher = IGovernanceTokenDispatcher {
+                    contract_address: governance_token_address,
+                };
+                //mints the rest of the tokens to the recipient
+                governance_token_dispatcher.mint(recipient, to_distribute.into());
+            } else {
+                self.internal_send_tokens(recipient, to_distribute.into(), token_address);
+            }
+
+            self
+                .emit(
+                    StreamCanceled {
+                        recipient, start_time, end_time, reclaimed_amount: to_distribute
+                    }
+                );
+        }
+
+        fn get_stream_info(
+            self: @ContractState, recipient: ContractAddress, start_time: u64, end_time: u64,
+        ) -> (u128, u128, bool, ContractAddress) {
+            let key = (recipient, start_time, end_time);
+            self.streams.read(key)
+        }
     }
 
+    #[generate_trait]
+    impl InternalFunctions of InternalTrait {
+        fn internal_send_tokens(
+            ref self: ContractState,
+            receiver: ContractAddress,
+            amount: u256,
+            token_addr: ContractAddress
+        ) {
+            let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token_addr };
+            assert(token.balance_of(get_contract_address()) >= amount, Errors::INSUFFICIENT_FUNDS);
+            token.transfer(receiver, amount);
+            self.emit(TokenSent { receiver, token_addr, amount });
+        }
+    }
 
     #[abi(embed_v0)]
     impl UpgradeableImpl of IUpgradeable<ContractState> {

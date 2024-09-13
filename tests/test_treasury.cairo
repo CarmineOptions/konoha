@@ -6,7 +6,10 @@ use core::result::ResultTrait;
 use core::serde::Serde;
 use core::traits::{TryInto, Into};
 use debug::PrintTrait;
+use konoha::contract::Governance;
+use konoha::contract::{IGovernanceDispatcher, IGovernanceDispatcherTrait};
 use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
+use konoha::traits::{IGovernanceTokenDispatcher, IGovernanceTokenDispatcherTrait};
 use konoha::treasury::{ITreasuryDispatcher, ITreasuryDispatcherTrait};
 use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
 use konoha::treasury_types::zklend::interfaces::{IMarketDispatcher, IMarketDispatcherTrait};
@@ -15,9 +18,12 @@ use openzeppelin::access::ownable::interface::{
 };
 use openzeppelin::upgrades::interface::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 use snforge_std::{
-    BlockId, declare, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, roll
+    BlockId, declare, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, roll,
+    start_warp
 };
 use starknet::{ContractAddress, get_block_number, ClassHash};
+use super::setup::{deploy_governance_and_both_tokens};
+
 mod testStorage {
     use core::traits::TryInto;
     use starknet::ContractAddress;
@@ -69,6 +75,158 @@ fn get_important_addresses() -> (
     );
 }
 
+#[test]
+#[fork("MAINNET")]
+fn test_transfer_stream() {
+    let (gov_contract_address, _, treasury_contract_address, _) = get_important_addresses();
+    let eth_addr: ContractAddress =
+        0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+    let random_whale: ContractAddress =
+        0x4267ae838da77a52384283f3321a0746557023d24cb823115d2da5c8c4f1a42
+        .try_into()
+        .unwrap();
+    let eth_dispatcher = IERC20Dispatcher { contract_address: eth_addr };
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: treasury_contract_address };
+
+    // Transfer eth from random whale to Treasury contract
+    prank(CheatTarget::One(eth_addr), random_whale, CheatSpan::TargetCalls(1));
+    let deposit_amt = 200000;
+    eth_dispatcher.transfer(treasury_contract_address, deposit_amt);
+    let initial_treasury_bal = eth_dispatcher.balance_of(treasury_contract_address);
+    assert(initial_treasury_bal >= deposit_amt, 'eth bal too low');
+    println!("Initial Treasury Balance {}:", initial_treasury_bal);
+
+    let recipient: ContractAddress = 0x2.try_into().unwrap();
+    let start_time: u64 = 100;
+    let end_time: u64 = 200;
+    let total_amount: u128 = 2000;
+    let is_minting: bool = false;
+    let token_address: ContractAddress =
+        0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7
+        .try_into()
+        .unwrap();
+
+    // Add new stream
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher
+        .add_new_stream(recipient, start_time, end_time, total_amount, is_minting, token_address);
+
+    let (claimed, total, is_minting_stored, token_stored) = treasury_dispatcher
+        .get_stream_info(recipient, start_time, end_time);
+    assert(claimed == 0, 'Initial claim should be 0');
+    assert(total == total_amount, 'Total amount mismatch');
+    assert(is_minting_stored == is_minting, 'Is minting mismatch');
+    assert(token_stored == token_address, 'Token address mismatch');
+
+    start_warp(CheatTarget::One(treasury_contract_address), 150);
+    prank(CheatTarget::One(treasury_contract_address), recipient, CheatSpan::TargetCalls(1));
+    treasury_dispatcher.claim_stream(recipient, start_time, end_time);
+
+    // Verify claimed amount
+    let (claimed_midway, _, _, _) = treasury_dispatcher
+        .get_stream_info(recipient, start_time, end_time);
+    let recipient_balance_after = eth_dispatcher.balance_of(recipient);
+
+    assert(claimed_midway > 0 && claimed_midway < total_amount, 'Midway claim incorrect');
+    println!("recipient balance after {}:", recipient_balance_after); //is 1000 
+
+    let recipient_balance_before_cancel = eth_dispatcher.balance_of(recipient);
+    prank(
+        CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
+    );
+    treasury_dispatcher.cancel_stream(recipient, start_time, end_time);
+
+    // Verify stream is cancelled and remaining tokens transferred
+    let (claimed_final, total_final, _, _) = treasury_dispatcher
+        .get_stream_info(recipient, start_time, end_time);
+    let recipient_balance_after_cancel = eth_dispatcher.balance_of(recipient);
+    assert(claimed_final == 0 && total_final == 0, 'Stream not properly cancelled');
+    assert(recipient_balance_after_cancel > recipient_balance_before_cancel, 'Remaining tokens');
+}
+
+#[test]
+fn test_mint_stream() {
+    let (_, _, _, _) = get_important_addresses(); // Assuming treasury address is not used
+    let (gov, _, _) = deploy_governance_and_both_tokens();
+    let recipient = 0x2.try_into().unwrap();
+    let start_time: u64 = 100;
+    let end_time: u64 = 200;
+    let total_amount: u128 = 100000;
+    let expected_claimed_amount = (total_amount * 50 / 100); // 50% claimed since middle of stream
+    let is_minting = true;
+
+    let treasury_dispatcher = ITreasuryDispatcher { contract_address: gov.contract_address };
+    let erc20 = IERC20Dispatcher {
+        contract_address: IGovernanceDispatcher { contract_address: gov.contract_address }
+            .get_governance_token_address()
+    };
+    let governance_token_address = IGovernanceDispatcher { contract_address: gov.contract_address }
+        .get_governance_token_address();
+
+    // Test with minting
+    treasury_dispatcher
+        .add_new_stream(
+            recipient, start_time, end_time, total_amount, is_minting, governance_token_address
+        );
+
+    let (claimed_amount, stored_total_amount, is_minting, token_address) = treasury_dispatcher
+        .get_stream_info(recipient, start_time, end_time);
+    assert_eq!(claimed_amount, 0, "Incorrect claimed amount after stream creation (minting)");
+    assert_eq!(stored_total_amount, total_amount, "Incorrect total amount stored (minting)");
+    assert_eq!(is_minting, true, "Stream should be set to minting");
+    println!("Streaming: {:?} token", token_address);
+
+    // Test claim with minting
+    start_warp(CheatTarget::One(gov.contract_address), 150);
+    treasury_dispatcher.claim_stream(recipient, start_time, end_time);
+
+    let (claimed_amount, stored_total_amount, _, _) = treasury_dispatcher
+        .get_stream_info(recipient, start_time, end_time);
+    assert_eq!(
+        stored_total_amount,
+        total_amount,
+        "Incorrect total amount after claiming the stream (minting)"
+    );
+    assert_eq!(
+        claimed_amount,
+        expected_claimed_amount,
+        "Incorrect claimed amount after claiming the stream (minting)"
+    );
+
+    let recipient_balance = erc20.balance_of(recipient);
+    assert_eq!(
+        recipient_balance,
+        expected_claimed_amount.into(),
+        "Recipient balance should match the expected claimed amount (minting)"
+    ); //50000
+
+    println!("recipinet balance before cancel: {}", recipient_balance);
+    // Test cancel with minting
+    treasury_dispatcher.cancel_stream(recipient, start_time, end_time);
+
+    let (cancelled_claimed_amount, stored_total_amount, _, _) = treasury_dispatcher
+        .get_stream_info(recipient, start_time, end_time);
+    assert_eq!(
+        cancelled_claimed_amount,
+        0,
+        "Claimed amount should be 0 after canceling the stream (minting)"
+    );
+    assert_eq!(
+        stored_total_amount, 0, "Total amount should be 0 after canceling the stream (minting)"
+    );
+
+    // Verify recipient's balance after cancellation
+    let recipient_balance_after_cancel = erc20.balance_of(recipient);
+    assert_eq!(
+        recipient_balance_after_cancel,
+        total_amount.into(),
+        "Recipient balance should match the claimed amount after cancellation (minting)"
+    );
+}
 
 #[test]
 #[fork("SEPOLIA")]
