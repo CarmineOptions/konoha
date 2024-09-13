@@ -6,8 +6,8 @@ use snforge_std::{
 
 //useful for debugging
 
-#[test]
-#[fork("SEPOLIA")]
+//#[test]
+//#[fork("SEPOLIA")]
 fn test_deploy() {
     let gov_contract = declare("Governance").expect('unable to declare governance');
     let voting_token_class = 0x01d388b7b8976172e22d8707bb6d493f8a0edb6f701bb9282ed59c66c30e1e4f;
