@@ -34,6 +34,10 @@ trait IProposals<TContractState> {
         prop_id: felt252,
     );
     fn get_total_delegated_to(self: @TContractState, to_addr: ContractAddress) -> u128;
+    fn add_custom_proposal_config(ref self: TContractState, config: CustomProposalConfig) -> u32;
+    fn set_default_proposal_params(
+        ref self: TContractState, quorum: u32, proposal_voting_seconds: u32
+    );
 }
 
 #[starknet::component]
@@ -93,7 +97,9 @@ mod proposals {
         custom_proposal_type: LegacyMap::<u32, CustomProposalConfig>, // custom proposal type 
         custom_proposal_payload: LegacyMap::<
             (u32, u32), felt252
-        > // mapping from prop_id and index to calldata
+        >, // mapping from prop_id and index to calldata
+        quorum: u32,
+        proposal_voting_seconds: u32
     }
 
     #[derive(starknet::Event, Drop)]
@@ -270,14 +276,22 @@ mod proposals {
             i
         }
 
-        fn add_custom_proposal_config(
-            ref self: ComponentState<TContractState>, config: CustomProposalConfig
-        ) -> u32 {
-            let idx = self._find_free_custom_proposal_type();
-            assert(config.target.is_non_zero(), 'target must be nonzero');
-            assert(config.selector.is_non_zero(), 'selector must be nonzero');
-            self.custom_proposal_type.write(idx, config);
-            idx
+        fn get_quorum(self: @ComponentState<TContractState>) -> u32 {
+            let saved = self.quorum.read();
+            if (saved == 0) {
+                10
+            } else {
+                saved
+            }
+        }
+
+        fn get_proposal_voting_seconds(self: @ComponentState<TContractState>) -> u64 {
+            let saved = self.proposal_voting_seconds.read();
+            if (saved == 0) {
+                consteval_int!(60 * 60 * 24 * 7)
+            } else {
+                saved.into()
+            }
         }
     }
 
@@ -346,7 +360,7 @@ mod proposals {
             self.proposal_details.write(prop_id, prop_details);
 
             let current_timestamp: u64 = get_block_timestamp();
-            let end_timestamp: u64 = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
+            let end_timestamp: u64 = current_timestamp + self.get_proposal_voting_seconds();
             self.proposal_vote_end_timestamp.write(prop_id, end_timestamp);
 
             self.emit(Proposed { prop_id, payload, to_upgrade });
@@ -376,7 +390,11 @@ mod proposals {
             self.proposal_details.write(prop_id_felt, prop_details);
 
             let current_timestamp: u64 = get_block_timestamp();
-            let end_timestamp: u64 = current_timestamp + constants::PROPOSAL_VOTING_SECONDS;
+            let end_timestamp: u64 = if (config.proposal_voting_time == 0) {
+                current_timestamp + self.get_proposal_voting_seconds()
+            } else {
+                current_timestamp + config.proposal_voting_time.into()
+            };
             self.proposal_vote_end_timestamp.write(prop_id_felt, end_timestamp);
             self.emit(Proposed { prop_id: prop_id_felt, payload, to_upgrade: 5 });
 
@@ -531,7 +549,7 @@ mod proposals {
             assert(total_eligible_votes_u256.high == 0, 'unable to check quorum');
             let total_eligible_votes: u128 = total_eligible_votes_u256.low;
 
-            let quorum_threshold: u128 = total_eligible_votes * constants::QUORUM;
+            let quorum_threshold: u128 = total_eligible_votes * self.get_quorum().into();
             if total_tally_multiplied < quorum_threshold {
                 return constants::MINUS_ONE; // didn't meet quorum
             }
@@ -551,6 +569,29 @@ mod proposals {
             self: @ComponentState<TContractState>, i: u32
         ) -> CustomProposalConfig {
             self.custom_proposal_type.read(i)
+        }
+
+        fn add_custom_proposal_config(
+            ref self: ComponentState<TContractState>, config: CustomProposalConfig
+        ) -> u32 {
+            assert(get_caller_address() == get_contract_address(), 'can only be called by self');
+            let idx = self._find_free_custom_proposal_type();
+            assert(config.target.is_non_zero(), 'target must be nonzero');
+            assert(config.selector.is_non_zero(), 'selector must be nonzero');
+            self.custom_proposal_type.write(idx, config);
+            idx
+        }
+
+        fn set_default_proposal_params(
+            ref self: ComponentState<TContractState>, quorum: u32, proposal_voting_seconds: u32
+        ) {
+            assert(get_caller_address() == get_contract_address(), 'can only be called by self');
+            assert(quorum < 30, 'quorum must be <30');
+            assert(quorum >= 1, 'quorum < 1?');
+            assert(proposal_voting_seconds > 86400, 'propvoting secs < 1day');
+            assert(proposal_voting_seconds < 3000000, 'propvoting secs > 1mo?');
+            self.quorum.write(quorum);
+            self.proposal_voting_seconds.write(proposal_voting_seconds);
         }
     }
 }

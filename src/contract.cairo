@@ -32,11 +32,13 @@ mod Governance {
     use konoha::airdrop::airdrop as airdrop_component;
     use konoha::discussion::discussion as discussion_component;
     use konoha::proposals::proposals as proposals_component;
+    use konoha::proposals::{IProposalsDispatcher, IProposalsDispatcherTrait};
     use konoha::staking::staking as staking_component;
     use konoha::staking::{IStakingDispatcher, IStakingDispatcherTrait};
     use konoha::streaming::streaming as streaming_component;
     use konoha::types::BlockNumber;
     use konoha::types::ContractType;
+    use konoha::types::CustomProposalConfig;
     use konoha::types::PropDetails;
     use konoha::types::VoteStatus;
     use konoha::upgrades::upgrades as upgrades_component;
@@ -132,18 +134,20 @@ mod Governance {
         ref self: ContractState,
         voting_token_class: ClassHash,
         floating_token_class: ClassHash,
+        treasury_classhash: ClassHash,
         recipient: ContractAddress
     ) {
         // This is not used in production on mainnet, because the governance token is already deployed (and distributed).
 
         let governance_address = get_contract_address();
+        assert(governance_address.into() != 0, 'gov addr zero??');
 
         let mut voting_token_calldata: Array<felt252> = ArrayTrait::new();
         voting_token_calldata.append(governance_address.into());
         let (voting_token_address, _) = deploy_syscall(
-            voting_token_class, 42, voting_token_calldata.span(), true
+            voting_token_class, 42, voting_token_calldata.span(), false
         )
-            .unwrap();
+            .expect('unable to deploy votingtoken');
         self.governance_token_address.write(voting_token_address);
 
         let mut floating_token_calldata: Array<felt252> = ArrayTrait::new();
@@ -152,9 +156,9 @@ mod Governance {
         floating_token_calldata.append(recipient.into());
         floating_token_calldata.append(governance_address.into());
         let (floating_token_address, _) = deploy_syscall(
-            floating_token_class, 42, floating_token_calldata.span(), true
+            floating_token_class, 1337, floating_token_calldata.span(), false
         )
-            .unwrap();
+            .expect('unable to deploy floatingtoken');
 
         let staking = IStakingDispatcher { contract_address: governance_address };
         staking.set_floating_token_address(floating_token_address);
@@ -166,6 +170,43 @@ mod Governance {
         staking.set_curve_point(THREE_MONTHS, 120);
         staking.set_curve_point(SIX_MONTHS, 160);
         staking.set_curve_point(ONE_YEAR, 250);
+
+        let proposals = IProposalsDispatcher { contract_address: governance_address };
+
+        if (treasury_classhash.into() != 0) {
+            let mut treasury_calldata: Array<felt252> = ArrayTrait::new();
+            treasury_calldata.append(governance_address.into());
+            treasury_calldata.append(0x1); // carmine amm addr
+            treasury_calldata.append(0x1); // zklend addr
+            let (treasury_address, _) = deploy_syscall(
+                treasury_classhash, 42, treasury_calldata.span(), true
+            )
+                .unwrap();
+
+            let send_tokens_custom_proposal_config: CustomProposalConfig = CustomProposalConfig {
+                target: treasury_address.into(),
+                selector: selector!("send_tokens_to_address"),
+                library_call: false,
+                proposal_voting_time: 0 // use global default
+            };
+
+            proposals.add_custom_proposal_config(send_tokens_custom_proposal_config);
+        }
+
+        let set_default_proposal_params_custom_proposal_config: CustomProposalConfig =
+            CustomProposalConfig {
+            target: governance_address.into(),
+            selector: selector!("set_default_proposal_params"),
+            library_call: false,
+            proposal_voting_time: 0 // use global default
+        };
+
+        proposals.add_custom_proposal_config(set_default_proposal_params_custom_proposal_config);
+
+        proposals
+            .set_default_proposal_params(
+                quorum: 10, proposal_voting_seconds: consteval_int!(60 * 60 * 24 * 7)
+            ); // can be omitted to keep the default values
     }
 
     #[abi(embed_v0)]
