@@ -10,6 +10,7 @@ import { CONTRACT_ADDR } from "./lib/config";
 import SubmitProposalModal from "./components/SubmitProposalModal";
 import TreasuryStatus from "./components/TreasuryStatus";
 import VotingPower from "./components/staking/VotingPower";
+import StatusTransfer from './components/StatusTransfer'
 
 function App() {
     const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -70,7 +71,7 @@ function App() {
             </div>
 
             <TreasuryStatus />
-
+            <StatusTransfer />
             {address && <VotingPower />}
         </main>
     );
