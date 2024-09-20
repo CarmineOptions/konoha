@@ -1,7 +1,7 @@
 import React, {useEffect} from "react";
 import {
     useAccount,
-    useContractRead
+    useContractRead, useNetwork
 } from "@starknet-react/core";
 import TreasuryABI from "../lib/treasury_abi.json";
 import CancelTransferBtn from "./CancelTransferBtn";
@@ -22,6 +22,14 @@ const StatusTransfer = () => {
         getTransferStatus(status) == 'PENDING' && address &&
       <CancelTransferBtn transferId={transfer_id.toString()} />
 
+      const {chain: {network}} = useNetwork()
+
+    const handleAddress = address => {
+        const sub_domain = network === 'sepolia' ? 'sepolia.' : ''
+        const url = `https://${sub_domain}starkscan.co/contract/${getAddressToHex(address)}`
+        window.open(`${url}`, '_blank')
+    }
+
     const renderData = () => {
         if (Array.isArray(data)) {
             if (data.length === 0) {
@@ -29,13 +37,14 @@ const StatusTransfer = () => {
             }
 
             return data.map((transfer_item, index) => {
+
                 return (
                     <div key={index} className="flex flex-wrap flex-row">
                         <div className='flex flex-wrap flex-row w-full'>
                             <div className="flex-1 w-1/2 basis-1/2 p-2 bg-slate-200 text-left text-gray-700 uppercase tracking-wider border-r border-slate-400">token</div>
-                            <div className="flex-1 w-1/2 basis-1/2 p-2 bg-slate-200 text-left text-gray-700 uppercase tracking-wider">reciver</div>
-                            <div className="flex-1 w-1/2 basis-1/2 p-2 overflow-hidden">{getFormatAddress(transfer_item.token_addr.toString())}</div>
-                            <div className="flex-1 w-1/2 basis-1/2 p-2 overflow-hidden">{getFormatAddress(transfer_item.receiver.toString())}</div>
+                            <div className="flex-1 w-1/2 basis-1/2 p-2 bg-slate-200 text-left text-gray-700 uppercase tracking-wider">receiver</div>
+                            <div className="flex-1 w-1/2 basis-1/2 p-2 overflow-hidden cursor-pointer" onClick={() => handleAddress(transfer_item.token_addr)}>{getFormatAddress(transfer_item.token_addr.toString())}</div>
+                            <div className="flex-1 w-1/2 basis-1/2 p-2 overflow-hidden cursor-pointer" onClick={() => handleAddress(transfer_item.receiver)}>{getFormatAddress(transfer_item.receiver.toString())}</div>
                         </div>
                         <div className='flex flex-wrap flex-row w-full'>
                             <div className="flex-1 w-1/4 basis-1/4 p-2 bg-slate-200 text-left text-gray-700 uppercase tracking-wider">amount</div>
@@ -111,5 +120,7 @@ const getTransferStatus = status => {
 }
 
 const getFormatAddress = address => address.slice(0, 12) + "..." + address.slice(-4)
+const getAddressToHex = address => "0x" + address.toString(16)
+
 
 export default StatusTransfer
