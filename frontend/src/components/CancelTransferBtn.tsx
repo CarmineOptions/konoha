@@ -12,7 +12,7 @@ const CancelTransferBtn: React.FC<CancelTransferButtonProps> = ({transferId}) =>
 
     const contract = new Contract(TreasuryABI, TREASURY_ADDRESS)
 
-    const { writeAsync: write_yes , error } = useContractWrite({
+    const { writeAsync , error } = useContractWrite({
         calls: [
             contract.populateTransaction["cancel_transfer"](transferId)
         ],
@@ -20,7 +20,7 @@ const CancelTransferBtn: React.FC<CancelTransferButtonProps> = ({transferId}) =>
 
     const handleCancelTransfer = async () => {
         try {
-            await write_yes();
+            await writeAsync();
             console.log(`Transfer ${transferId} cancelled successfully.`);
         } catch (err) {
             console.error(`Error cancelling transfer ${transferId}:`, err);
@@ -33,7 +33,7 @@ const CancelTransferBtn: React.FC<CancelTransferButtonProps> = ({transferId}) =>
             type="button"
             className='bg-blue-500 rounded-md text-white disabled:opacity-50 p-1 w-full'
             onClick={handleCancelTransfer}>
-            cancel
+            Сancel
         </button>
     );
 };
