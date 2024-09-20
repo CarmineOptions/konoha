@@ -26,6 +26,7 @@ export default function NewProposalForm({
   const calls = useMemo(() => {
     if (!selectedType) return [];
     const typeIndex = proposalIds[selectedType];
+    if(typeIndex === undefined) { return []}
     return [{
       contractAddress: CONTRACT_ADDR,
       entrypoint: "submit_proposal",
