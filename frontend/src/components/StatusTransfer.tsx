@@ -24,7 +24,7 @@ const StatusTransfer = () => {
 
     const renderData = () => {
         if (Array.isArray(data)) {
-            if (data.length > 0) {
+            if (data.length === 0) {
                 return <div className='p-2'>There are no transfers</div>;
             }
 
