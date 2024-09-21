@@ -43,6 +43,7 @@ mod Governance {
     use konoha::types::VoteStatus;
     use konoha::upgrades::upgrades as upgrades_component;
     use konoha::vesting::vesting as vesting_component;
+    use konoha::vesting::{IVestingDispatcher, IVestingDispatcherTrait};
     use starknet::get_contract_address;
 
     use starknet::syscalls::deploy_syscall;
@@ -178,19 +179,38 @@ mod Governance {
             treasury_calldata.append(governance_address.into());
             treasury_calldata.append(0x1); // carmine amm addr
             treasury_calldata.append(0x1); // zklend addr
+            treasury_calldata.append(0x027994c503bd8C32525FBDAf9d398bDd4e86757988C64581B055A06c5955eA49); // first guardian
             let (treasury_address, _) = deploy_syscall(
-                treasury_classhash, 42, treasury_calldata.span(), true
+                treasury_classhash, 42, treasury_calldata.span(), false
             )
                 .unwrap();
 
             let send_tokens_custom_proposal_config: CustomProposalConfig = CustomProposalConfig {
                 target: treasury_address.into(),
-                selector: selector!("send_tokens_to_address"),
+                selector: selector!("add_transfer"),
+                library_call: false,
+                proposal_voting_time: 86400 // 1 day, to accelerate testing
+            };
+
+            proposals.add_custom_proposal_config(send_tokens_custom_proposal_config);
+
+            let add_guardian_custom_proposal_config: CustomProposalConfig = CustomProposalConfig {
+                target: treasury_address.into(),
+                selector: selector!("add_guardian"),
                 library_call: false,
                 proposal_voting_time: 0 // use global default
             };
 
-            proposals.add_custom_proposal_config(send_tokens_custom_proposal_config);
+            proposals.add_custom_proposal_config(add_guardian_custom_proposal_config);
+
+            let remove_guardian_custom_proposal_config: CustomProposalConfig = CustomProposalConfig {
+                target: treasury_address.into(),
+                selector: selector!("remove_guardian"),
+                library_call: false,
+                proposal_voting_time: 0 // use global default
+            };
+
+            proposals.add_custom_proposal_config(remove_guardian_custom_proposal_config);
         }
 
         let set_default_proposal_params_custom_proposal_config: CustomProposalConfig =
@@ -203,9 +223,18 @@ mod Governance {
 
         proposals.add_custom_proposal_config(set_default_proposal_params_custom_proposal_config);
 
+        let vesting = IVestingDispatcher { contract_address: governance_address };
+
+        let first_vest = 1726858800; // Fri Sep 20 2024 19:00:00 GMT+0000 
+        let period = 21600; // 6 hours
+        let increments_count = 56;
+        let total_amount = 56000000000000000000; // 56 * 10**18 meaning 56 KONOHA tokens
+        vesting.add_linear_vesting_schedule(first_vest, period, increments_count, total_amount, 0x027994c503bd8C32525FBDAf9d398bDd4e86757988C64581B055A06c5955eA49.try_into().unwrap());
+        vesting.add_linear_vesting_schedule(first_vest, period, increments_count, total_amount, recipient);
+
         proposals
             .set_default_proposal_params(
-                quorum: 10, proposal_voting_seconds: consteval_int!(60 * 60 * 24 * 7)
+                quorum: 10, proposal_voting_seconds: consteval_int!(60 * 60 * 24 * 3)
             ); // can be omitted to keep the default values
     }
 

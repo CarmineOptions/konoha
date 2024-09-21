@@ -1,14 +1,36 @@
 use konoha::treasury_types::carmine::OptionType;
+use konoha::types::{Transfer};
 use starknet::ContractAddress;
 
 #[starknet::interface]
 trait ITreasury<TContractState> {
-    fn send_tokens_to_address(
+    fn add_transfer(
         ref self: TContractState,
         receiver: ContractAddress,
         amount: u256,
         token_addr: ContractAddress
-    ) -> bool;
+    ) -> Transfer;
+
+    fn get_next_pending(self: @TContractState) -> Option<Transfer>;
+
+    fn get_unprocessed_transfers(self: @TContractState) -> Span<Transfer>;
+
+    fn get_finished_transfers(self: @TContractState) -> Span<Transfer>;
+
+    fn get_live_transfers(self: @TContractState) -> Span<Transfer>;
+
+    fn get_cancelled_transfers(self: @TContractState) -> Span<Transfer>;
+
+    fn get_transfer_by_id(self: @TContractState, transfer_id: u64) -> Transfer;
+
+    fn cancel_transfer(ref self: TContractState, transfer_id: u64);
+
+    fn execute_pending_by_id(ref self: TContractState, transfer_id: u64) -> bool;
+
+    fn add_guardian(ref self: TContractState, address: ContractAddress);
+
+    fn remove_guardian(ref self: TContractState, address: ContractAddress);
+
     fn update_AMM_address(ref self: TContractState, new_amm_address: ContractAddress);
     fn provide_liquidity_to_carm_AMM(
         ref self: TContractState,
@@ -39,11 +61,15 @@ trait ITreasury<TContractState> {
 
 #[starknet::contract]
 mod Treasury {
+    use core::array::ArrayTrait;
     use core::num::traits::zero::Zero;
+    use core::option::OptionTrait;
     use core::starknet::event::EventEmitter;
     use core::traits::TryInto;
     use konoha::airdrop::{IAirdropDispatcher, IAirdropDispatcherTrait};
+    use konoha::constants::TREASURY_COOLDOWN_TIME;
     use konoha::traits::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use konoha::treasury::ITreasury;
     use konoha::treasury_types::carmine::{IAMMDispatcher, IAMMDispatcherTrait};
     use konoha::treasury_types::nostra::interface::{
         INostraInterestToken, INostraInterestTokenDispatcher, INostraInterestTokenDispatcherTrait
@@ -51,30 +77,47 @@ mod Treasury {
     use konoha::treasury_types::zklend::interfaces::{
         IMarket, IMarketDispatcher, IMarketDispatcherTrait
     };
+    use konoha::types::{Transfer, TransferStatus};
+    use openzeppelin::access::accesscontrol::interface::IAccessControl;
+    use openzeppelin::access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::interface::IOwnableTwoStep;
+    use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
+    use openzeppelin::introspection::src5::SRC5Component;
+    use openzeppelin::token::erc20::ERC20Component;
     use openzeppelin::upgrades::interface::IUpgradeable;
     use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address, ClassHash};
+    use starknet::{
+        ContractAddress, get_caller_address, get_contract_address, get_block_timestamp, ClassHash
+    };
+
     use super::{OptionType};
+
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
+
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
-
+    // Ownable
     #[abi(embed_v0)]
     impl OwnableTwoStepImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
-    impl InternalImpl = OwnableComponent::InternalImpl<ContractState>;
+    impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
+
+    // Upgradeable
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
     #[storage]
     struct Storage {
         amm_address: ContractAddress,
         zklend_market_contract_address: ContractAddress,
+        transfers_on_cooldown: LegacyMap<u64, Transfer>,
+        transfers_count: u64,
+        guardians: LegacyMap<ContractAddress, bool>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage
     }
+
     #[derive(starknet::Event, Drop)]
     struct TokenSent {
         receiver: ContractAddress,
@@ -129,10 +172,38 @@ mod Treasury {
     }
 
 
+    #[derive(starknet::Event, Drop)]
+    struct TransferCancelled {
+        receiver: ContractAddress,
+        token_addr: ContractAddress,
+        initial_amount: u256
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct TransferPending {
+        receiver: ContractAddress,
+        token_addr: ContractAddress,
+        amount: u256
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct GuardianAdded {
+        address: ContractAddress
+    }
+
+    #[derive(starknet::Event, Drop)]
+    struct GuardianRemoved {
+        address: ContractAddress
+    }
+
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
         TokenSent: TokenSent,
+        TransferCancelled: TransferCancelled,
+        TransferPending: TransferPending,
+        GuardianAdded: GuardianAdded,
+        GuardianRemoved: GuardianRemoved,
         AMMAddressUpdated: AMMAddressUpdated,
         LiquidityProvided: LiquidityProvided,
         LiquidityWithdrawn: LiquidityWithdrawn,
@@ -154,6 +225,10 @@ mod Treasury {
         const ADDRESS_ZERO_AMM: felt252 = 'AMM addr is zero address';
         const ADDRESS_ZERO_ZKLEND_MARKET: felt252 = 'zklnd markt addr is zero addrr';
         const ADDRESS_ALREADY_CHANGED: felt252 = 'New Address same as Previous';
+        const NOT_GUARDIAN: felt252 = 'You are not a guardian';
+        const INVALID_ID: felt252 = 'Invalid id provided';
+        const TRANSFER_NOT_PENDING: felt252 = 'Transfer need to be pending';
+        const COOLDOWN_NOT_PASSED: felt252 = 'Cooldown time has not passed';
     }
 
     #[constructor]
@@ -161,7 +236,8 @@ mod Treasury {
         ref self: ContractState,
         gov_contract_address: ContractAddress,
         AMM_contract_address: ContractAddress,
-        zklend_market_contract_address: ContractAddress
+        zklend_market_contract_address: ContractAddress,
+        first_guardian: ContractAddress
     ) {
         assert(gov_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_GOVERNANCE);
         assert(AMM_contract_address != zeroable::Zeroable::zero(), Errors::ADDRESS_ZERO_AMM);
@@ -171,23 +247,187 @@ mod Treasury {
         );
         self.amm_address.write(AMM_contract_address);
         self.zklend_market_contract_address.write(zklend_market_contract_address);
+
         self.ownable.initializer(gov_contract_address);
+
+        if first_guardian != zeroable::Zeroable::zero() {
+            self.guardians.write(first_guardian, true)
+        };
+    }
+
+    #[generate_trait]
+    impl InternalFunctions of InternalFunctionsTrait {
+        fn get_transfers_by_status(
+            self: @ContractState, status: TransferStatus, start_id: u64, break_id: u64
+        ) -> Span<Transfer> {
+            assert(
+                break_id >= start_id && break_id <= self.transfers_count.read(), 'Invalid range'
+            );
+            let mut transfers = ArrayTrait::<Transfer>::new();
+            let mut i: u64 = start_id;
+            let mut last_cooldown_end: u64 = 0;
+            let current_timestamp = get_block_timestamp();
+
+            while i < break_id
+                && (status != TransferStatus::FINISHED || current_timestamp > last_cooldown_end) {
+                    let current_transfer = self.transfers_on_cooldown.read(i);
+                    if status == current_transfer.status {
+                        transfers.append(current_transfer);
+                    }
+                    last_cooldown_end = current_transfer.cooldown_end;
+                    i += 1;
+                };
+            transfers.span()
+        }
     }
 
     #[abi(embed_v0)]
     impl Treasury of super::ITreasury<ContractState> {
-        fn send_tokens_to_address(
+        fn get_next_pending(self: @ContractState) -> Option<Transfer> {
+            if self.transfers_count.read() == 0 {
+                return Option::None;
+            }
+            let current_timestamp = get_block_timestamp();
+            let transfers_count = self.transfers_count.read();
+            let mut i = 0;
+            let mut next_pending_transfer = Option::None;
+            while i < transfers_count {
+                let current_transfer = self.transfers_on_cooldown.read(i);
+                if current_transfer.cooldown_end > current_timestamp
+                    && current_transfer.status == TransferStatus::PENDING {
+                    next_pending_transfer = Option::Some(current_transfer);
+                    break;
+                }
+                i += 1;
+            };
+            next_pending_transfer
+        }
+
+        fn get_unprocessed_transfers(self: @ContractState) -> Span<Transfer> {
+            match self.get_next_pending() {
+                Option::None => self
+                    .get_transfers_by_status(
+                        TransferStatus::PENDING, 0, self.transfers_count.read()
+                    ),
+                Option::Some(next_pending) => self
+                    .get_transfers_by_status(TransferStatus::PENDING, 0, next_pending.id)
+            }
+        }
+
+        fn get_live_transfers(self: @ContractState) -> Span<Transfer> {
+            match self.get_next_pending() {
+                Option::Some(next_pending) => self
+                    .get_transfers_by_status(
+                        TransferStatus::PENDING, next_pending.id, self.transfers_count.read()
+                    ),
+                Option::None => ArrayTrait::<Transfer>::new().span()
+            }
+        }
+
+        fn get_cancelled_transfers(self: @ContractState) -> Span<Transfer> {
+            self.get_transfers_by_status(TransferStatus::CANCELLED, 0, self.transfers_count.read())
+        }
+
+        fn get_finished_transfers(self: @ContractState) -> Span<Transfer> {
+            self.get_transfers_by_status(TransferStatus::FINISHED, 0, self.transfers_count.read())
+        }
+
+        fn get_transfer_by_id(self: @ContractState, transfer_id: u64) -> Transfer {
+            assert(transfer_id < self.transfers_count.read(), Errors::INVALID_ID);
+            self.transfers_on_cooldown.read(transfer_id)
+        }
+
+        fn add_transfer(
             ref self: ContractState,
             receiver: ContractAddress,
             amount: u256,
             token_addr: ContractAddress
-        ) -> bool {
+        ) -> Transfer {
             self.ownable.assert_only_owner();
             let token: IERC20Dispatcher = IERC20Dispatcher { contract_address: token_addr };
             assert(token.balanceOf(get_contract_address()) >= amount, Errors::INSUFFICIENT_FUNDS);
-            let status: bool = token.transfer(receiver, amount);
-            self.emit(TokenSent { receiver, token_addr, amount });
-            return status;
+            let transfers_count = self.transfers_count.read();
+            self.transfers_count.write(transfers_count + 1);
+            let transfer = Transfer {
+                id: transfers_count,
+                receiver,
+                token_addr,
+                amount,
+                cooldown_end: get_block_timestamp() + TREASURY_COOLDOWN_TIME,
+                status: TransferStatus::PENDING
+            };
+            self.transfers_on_cooldown.write(transfers_count, transfer);
+            self.emit(TransferPending { receiver, token_addr, amount });
+            self.transfers_on_cooldown.read(transfers_count)
+        }
+
+        fn cancel_transfer(ref self: ContractState, transfer_id: u64) {
+            assert(self.guardians.read(get_caller_address()), Errors::NOT_GUARDIAN);
+            assert(transfer_id < self.transfers_count.read(), Errors::INVALID_ID);
+            let initial_transfer = self.transfers_on_cooldown.read(transfer_id);
+            assert(
+                initial_transfer.status == TransferStatus::PENDING, Errors::TRANSFER_NOT_PENDING
+            );
+
+            let cancelation_event = TransferCancelled {
+                initial_amount: initial_transfer.amount,
+                token_addr: initial_transfer.token_addr,
+                receiver: initial_transfer.receiver
+            };
+            self
+                .transfers_on_cooldown
+                .write(
+                    transfer_id,
+                    Transfer { amount: 0, status: TransferStatus::CANCELLED, ..initial_transfer }
+                );
+            self.emit(cancelation_event);
+        }
+
+        fn execute_pending_by_id(ref self: ContractState, transfer_id: u64) -> bool {
+            assert(transfer_id < self.transfers_count.read(), Errors::INVALID_ID);
+            let transfer_pending = self.transfers_on_cooldown.read(transfer_id);
+            assert(
+                get_block_timestamp() >= transfer_pending.cooldown_end, Errors::COOLDOWN_NOT_PASSED
+            );
+
+            if transfer_pending.status == TransferStatus::CANCELLED {
+                return false;
+            }
+
+            let token: IERC20Dispatcher = IERC20Dispatcher {
+                contract_address: transfer_pending.token_addr
+            };
+            assert(
+                token.balanceOf(get_contract_address()) >= transfer_pending.amount,
+                Errors::INSUFFICIENT_FUNDS
+            );
+
+            let sent_event = TokenSent {
+                amount: transfer_pending.amount,
+                token_addr: transfer_pending.token_addr,
+                receiver: transfer_pending.receiver
+            };
+            self
+                .transfers_on_cooldown
+                .write(
+                    transfer_pending.id,
+                    Transfer { status: TransferStatus::FINISHED, ..transfer_pending }
+                );
+            self.emit(sent_event);
+
+            token.transfer(transfer_pending.receiver, transfer_pending.amount)
+        }
+
+        fn add_guardian(ref self: ContractState, address: ContractAddress) {
+            self.ownable.assert_only_owner();
+            self.guardians.write(address, true);
+            self.emit(GuardianAdded { address });
+        }
+
+        fn remove_guardian(ref self: ContractState, address: ContractAddress) {
+            self.ownable.assert_only_owner();
+            self.guardians.write(address, false);
+            self.emit(GuardianRemoved { address });
         }
 
         fn update_AMM_address(ref self: ContractState, new_amm_address: ContractAddress) {
