@@ -74,7 +74,7 @@ export const getVestingEvents = async (contract: string, address: string): Promi
             if (isVestingMilestone) {
               acc.push({
                 amount: amount,
-                timestamp: timestamp,
+                claimable_at: timestamp,
                 is_claimable: now >= timestamp,
                 is_claimed: false,
               });
@@ -82,7 +82,7 @@ export const getVestingEvents = async (contract: string, address: string): Promi
               acc.push({
                 amount: amount,
                 is_claimable: false,
-                timestamp: timestamp,
+                claimable_at: null,
                 is_claimed: true,
               });
             }
