@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import {
     useAccount,
     useContractRead, useNetwork
@@ -10,9 +10,10 @@ import { TREASURY_ADDRESS } from "../lib/config";
 
 const StatusTransfer = () => {
     const { address } = useAccount()
-    const { data, isLoading, refetch } = useContractRead({
+    const { data, isLoading } = useContractRead({
         functionName: 'get_live_transfers',
         address: TREASURY_ADDRESS,
+        args: [],
         abi: TreasuryABI,
         watch: false,
         retry: false
@@ -66,11 +67,6 @@ const StatusTransfer = () => {
             return null
         }
     }
-
-
-    useEffect(() => {
-        refetch()
-    }, [])
 
     return (
         <div>
