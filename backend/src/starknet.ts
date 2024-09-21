@@ -34,63 +34,79 @@ export const getVestingEvents = async (contract: string, address: string): Promi
     return cache.get(cacheKey);
   }
 
+  const now = Math.floor(Date.now() / 1000); // Current timestamp in seconds
+  let fromBlock = START_BLOCK;
+  const chunkSize = 100;
+  let allEvents: any[] = [];
+
   try {
-    const eventFilter = {
-      from_block: { block_number: START_BLOCK },
-      chunk_size: 100,
-      address: contract,
-      keys: [[hash.getSelectorFromName('VestingEvent')]],
-    };
+    while (true) {
+      const eventFilter = {
+        from_block: { block_number: fromBlock },
+        chunk_size: chunkSize,
+        address: contract,
+        keys: [[hash.getSelectorFromName('VestingEvent')]],
+      };
 
-    const events = await provider.getEvents(eventFilter);
+      const events = await provider.getEvents(eventFilter);
 
-    if (!events.events || events.events.length === 0) {
-      console.log(`No events found for contract: ${contract} and address: ${address}`);
-      return [];
+      if (!events.events || events.events.length === 0) {
+        // Exit the loop if no more events are found
+        break;
+      }
+
+      const newEvents = events.events.reduce((acc: any[], event: any) => {
+        try {
+          const grantee = event.data[0]; // Grantee (index 0)
+          const timestamp = Number(BigInt(event.data[1]));  // Timestamp (index 1)
+          let amount = Number(BigInt(event.data[2]));  // Amount as BigInt (index 2)
+
+          // Apply scaling if amount > 0
+          if (amount > 0) {
+            amount = amount / (10 ** 18);
+          }
+
+          // Process only if the grantee matches the address
+          if (grantee === address) {
+            const isVestingMilestone = event.keys.includes(vesting_milestone_add_selector);
+            const isVested = event.keys.includes(vested_selector);
+
+            if (isVestingMilestone) {
+              acc.push({
+                amount: amount,
+                timestamp: timestamp,
+                is_claimable: now >= timestamp,
+                is_claimed: false,
+              });
+            } else if (isVested) {
+              acc.push({
+                amount: amount,
+                is_claimable: false,
+                timestamp: timestamp,
+                is_claimed: true,
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error processing event, skipping this event:', error);
+        }
+        return acc;
+      }, []);
+
+      // Add new events to the accumulated list
+      allEvents = [...allEvents, ...newEvents];
+
+      // Update `fromBlock` to the next block after the last fetched block
+      const lastEventBlock = events.events[events.events.length - 1].block_number;
+      fromBlock = lastEventBlock + 1; // Move to the next block
+
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    const now = Math.floor(Date.now() / 1000); // Current timestamp in seconds
-
-    const results = events.events.reduce((acc: any[], event: any) => {
-      try {
-        const grantee = event.data[0]; // Grantee (index 0)
-        const timestamp = Number(BigInt(event.data[1]));  // Timestamp (index 1)
-        let amount = Number(BigInt(event.data[2]));  // Amount as BigInt (index 2)
-
-        // Apply scaling if amount > 0
-        if (amount > 0) {
-          amount = amount / (10 ** 18);
-        }
-
-        // Process only if the grantee matches the address
-        if (grantee === address) {
-          const isVestingMilestone = event.keys.includes(vesting_milestone_add_selector);
-          const isVested = event.keys.includes(vested_selector);
-
-          if (isVestingMilestone) {
-            acc.push({
-              amount: amount,
-              is_claimable: now >= timestamp,
-              is_claimed: false,
-            });
-          } else if (isVested) {
-            acc.push({
-              amount: amount,
-              is_claimable: false,
-              is_claimed: true,
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error processing event, skipping this event:', error);
-      }
-      return acc;
-    }, []);
-
     // Cache the result for future requests
-    cache.set(cacheKey, results);
+    cache.set(cacheKey, allEvents);
 
-    return results;
+    return allEvents;
   } catch (error) {
     console.error('Error in getVestingEvents:', error);
 
