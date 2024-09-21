@@ -4,7 +4,8 @@ export const CONTRACT_ADDR =
 export const VOTING_TOKEN_CONTRACT =
 	"0x4ff1af47bb9659aa83bbd33e13c25e8fb1b5ecf8359320251f03e1440e8890a";
 export const FLOATING_TOKEN_CONTRACT = "0x31868056874ad7629055ddd00eb0931cb92167851702abf6b441cb8ea02d02b";
-export const TREASURY_ADDRESS = "0x072c5c218a1ecfdd8ba10ef9b1b55af4994f2cad2210d14270ff9824fadabd70";
+// export const TREASURY_ADDRESS = "0x072c5c218a1ecfdd8ba10ef9b1b55af4994f2cad2210d14270ff9824fadabd70";
+export const TREASURY_ADDRESS = "0x039f350d8a6b3adb8ade1ec083284c64f6d3cbaaba3dc27cbfc8ee39ffebc302"
 
 export const formatAddress = (addr: string) =>
 	addr.length === 66
