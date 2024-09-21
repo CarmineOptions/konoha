@@ -1,18 +1,18 @@
 import React from 'react';
-import {useContractWrite} from "@starknet-react/core";
-import {TREASURY_ADDRESS} from "../lib/config";
-import {Contract} from "starknet";
+import { useContractWrite } from "@starknet-react/core";
+import { TREASURY_ADDRESS } from "../lib/config";
+import { Contract } from "starknet";
 import TreasuryABI from "../lib/treasury_abi.json";
 
 interface CancelTransferButtonProps {
     transferId: number;
 }
 
-const CancelTransferBtn: React.FC<CancelTransferButtonProps> = ({transferId}) => {
+const CancelTransferBtn: React.FC<CancelTransferButtonProps> = ({ transferId }) => {
 
     const contract = new Contract(TreasuryABI, TREASURY_ADDRESS)
 
-    const { writeAsync , error } = useContractWrite({
+    const { writeAsync, error } = useContractWrite({
         calls: [
             contract.populateTransaction["cancel_transfer"](transferId)
         ],

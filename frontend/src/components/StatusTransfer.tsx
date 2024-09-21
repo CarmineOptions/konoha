@@ -1,16 +1,16 @@
-import React, {useEffect} from "react";
+import React, { useEffect } from "react";
 import {
     useAccount,
     useContractRead, useNetwork
 } from "@starknet-react/core";
 import TreasuryABI from "../lib/treasury_abi.json";
 import CancelTransferBtn from "./CancelTransferBtn";
-import {formatBalance} from "../lib/erc20";
-import {TREASURY_ADDRESS} from "../lib/config";
+import { formatBalance } from "../lib/erc20";
+import { TREASURY_ADDRESS } from "../lib/config";
 
 const StatusTransfer = () => {
     const { address } = useAccount()
-    const {data, isLoading, refetch} = useContractRead({
+    const { data, isLoading, refetch } = useContractRead({
         functionName: 'get_live_transfers',
         address: TREASURY_ADDRESS,
         abi: TreasuryABI,
@@ -18,11 +18,11 @@ const StatusTransfer = () => {
         retry: false
     })
 
-    const renderCancelBtn =  (status, transfer_id) =>
+    const renderCancelBtn = (status, transfer_id) =>
         getTransferStatus(status) == 'PENDING' && address &&
-      <CancelTransferBtn transferId={transfer_id.toString()} />
+        <CancelTransferBtn transferId={transfer_id.toString()} />
 
-      const {chain: {network}} = useNetwork()
+    const { chain: { network } } = useNetwork()
 
     const handleAddress = address => {
         const sub_domain = network === 'sepolia' ? 'sepolia.' : ''
@@ -55,7 +55,7 @@ const StatusTransfer = () => {
                             <div className="flex-1 w-1/4 basis-1/4 p-2 ">{getHoursLeft(transfer_item.cooldown_end.toString())}</div>
                             <div className="flex-1 w-1/4 basis-1/4 p-2 ">{getTransferStatus(transfer_item.status)}</div>
                             <div className="flex-1 w-1/4 basis-1/4 p-2 ">
-                                { renderCancelBtn(transfer_item?.status, transfer_item?.id) }
+                                {renderCancelBtn(transfer_item?.status, transfer_item?.id)}
                             </div>
                         </div>
 
@@ -70,23 +70,23 @@ const StatusTransfer = () => {
 
     useEffect(() => {
         refetch()
-    },[])
+    }, [])
 
     return (
         <div>
             <div className="flex w-full flex-grow pb-4 text-2xl font-bold">Transfer status</div>
             {isLoading ? (
-                    <div>Loading...</div>
-                ) :(
-            <div className="w-[50rem] max-w-[50rem] grid  items-center pl-0 rounded-lg bg-slate-200">
-                <div className="min-w-full bg-white border border-gray-200 rounded-lg">
+                <div>Loading...</div>
+            ) : (
+                <div className="w-[50rem] max-w-[50rem] grid  items-center pl-0 rounded-lg bg-slate-200">
+                    <div className="min-w-full bg-white border border-gray-200 rounded-lg">
 
-                    <div>
-                        {renderData()}
+                        <div>
+                            {renderData()}
+                        </div>
                     </div>
                 </div>
-            </div>
-                )}
+            )}
         </div>
     )
 }
