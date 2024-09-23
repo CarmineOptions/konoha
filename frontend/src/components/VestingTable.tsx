@@ -3,6 +3,7 @@ import { CONTRACT_ADDR } from '../lib/config';
 import axios from 'axios';
 import { useAccount } from '@starknet-react/core';
 import { useQuery } from '@tanstack/react-query';
+import { BASE_API_URL } from "../lib/config";
 
 interface VestingEvent {
     amount: number;
@@ -23,7 +24,7 @@ const VestingTable: React.FC = () => {
             if (!address) {
                 return [];
             }
-            const response = await axios.get('/api/vesting-events', {
+            const response = await axios.get(`${BASE_API_URL}/api/vesting-events`, {
                 params: {
                     contract: CONTRACT_ADDR,
                     address: address,
