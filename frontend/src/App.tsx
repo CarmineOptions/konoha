@@ -1,16 +1,14 @@
 import React from "react";
-// import { useBlock } from "@starknet-react/core";
 import Header from "./components/Header";
 import { useContractRead, useAccount } from "@starknet-react/core";
-//import Tokens from "./helpers/tokens";
 import { abi } from "./lib/abi";
 import Proposal from "./components/Proposal";
 import { CONTRACT_ADDR } from "./lib/config";
-// import { useAccount } from "@starknet-react/core";
 import SubmitProposalModal from "./components/SubmitProposalModal";
 import TreasuryStatus from "./components/TreasuryStatus";
 import VotingPower from "./components/staking/VotingPower";
-import StatusTransfer from './components/StatusTransfer'
+import StatusTransfer from './components/StatusTransfer';
+import VestingTable from './components/VestingTable';
 
 function App() {
     const [isModalOpen, setIsModalOpen] = React.useState(false);
@@ -31,7 +29,6 @@ function App() {
         return <div>{error?.message}</div>;
     }
 
-    // Display the proposals
     return (
         <main className="flex flex-col items-center min-h-screen gap-12 mt-16">
             <Header />
@@ -72,6 +69,8 @@ function App() {
 
             <TreasuryStatus />
             <StatusTransfer />
+
+            {address && <VestingTable />}
             {address && <VotingPower />}
         </main>
     );
