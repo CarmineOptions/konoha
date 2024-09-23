@@ -59,7 +59,9 @@ export const getVestingEvents = async (contract: string, address: string): Promi
   let allEvents: any[] = [];
 
   try {
-    while (true) {
+    let hasMoreEvents = true;
+
+    do {
       const eventFilter = {
         from_block: { block_number: fromBlock },
         chunk_size: chunkSize,
@@ -71,56 +73,56 @@ export const getVestingEvents = async (contract: string, address: string): Promi
 
       if (!events.events || events.events.length === 0) {
         // Exit the loop if no more events are found
-        break;
-      }
+        hasMoreEvents = false;
+      } else {
+        const newEvents = events.events.reduce((acc: any[], event: any) => {
+          try {
+            const grantee = event.data[0]; // Grantee (index 0)
+            const timestamp = Number(BigInt(event.data[1])); // Timestamp (index 1)
+            let amount = Number(BigInt(event.data[2])); // Amount as BigInt (index 2)
 
-      const newEvents = events.events.reduce((acc: any[], event: any) => {
-        try {
-          const grantee = event.data[0]; // Grantee (index 0)
-          const timestamp = Number(BigInt(event.data[1]));  // Timestamp (index 1)
-          let amount = Number(BigInt(event.data[2]));  // Amount as BigInt (index 2)
-
-          // Apply scaling if amount > 0
-          if (amount > 0) {
-            amount = amount / (10 ** 18);
-          }
-
-          // Process only if the grantee matches the address
-          if (grantee === address) {
-            const isVestingMilestone = event.keys.includes(vesting_milestone_add_selector);
-            const isVested = event.keys.includes(vested_selector);
-
-            if (isVestingMilestone) {
-              acc.push({
-                amount: amount,
-                claimable_at: timestamp,
-                is_claimable: now >= timestamp,
-                is_claimed: false,
-              });
-            } else if (isVested) {
-              acc.push({
-                amount: amount,
-                is_claimable: false,
-                claimable_at: null,
-                is_claimed: true,
-              });
+            // Apply scaling if amount > 0
+            if (amount > 0) {
+              amount = amount / (10 ** 18);
             }
+
+            // Process only if the grantee matches the address
+            if (grantee === address) {
+              const isVestingMilestone = event.keys.includes(vesting_milestone_add_selector);
+              const isVested = event.keys.includes(vested_selector);
+
+              if (isVestingMilestone) {
+                acc.push({
+                  amount: amount,
+                  claimable_at: timestamp,
+                  is_claimable: now >= timestamp,
+                  is_claimed: false,
+                });
+              } else if (isVested) {
+                acc.push({
+                  amount: amount,
+                  is_claimable: false,
+                  claimable_at: null,
+                  is_claimed: true,
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Error processing event, skipping this event:', error);
           }
-        } catch (error) {
-          console.error('Error processing event, skipping this event:', error);
-        }
-        return acc;
-      }, []);
+          return acc;
+        }, []);
 
-      // Add new events to the accumulated list
-      allEvents = [...allEvents, ...newEvents];
+        // Add new events to the accumulated list
+        allEvents = [...allEvents, ...newEvents];
 
-      // Update `fromBlock` to the next block after the last fetched block
-      const lastEventBlock = events.events[events.events.length - 1].block_number;
-      fromBlock = lastEventBlock + 1; // Move to the next block
+        // Update `fromBlock` to the next block after the last fetched block
+        const lastEventBlock = events.events[events.events.length - 1].block_number;
+        fromBlock = lastEventBlock + 1; // Move to the next block
 
-      await new Promise(resolve => setTimeout(resolve, 100)); // Pause briefly before the next request
-    }
+        await new Promise(resolve => setTimeout(resolve, 100)); // Pause briefly before the next request
+      }
+    } while (hasMoreEvents);
 
     // Cache the result for future requests with an expiry time
     cache.set(cacheKey, {
