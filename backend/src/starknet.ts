@@ -33,7 +33,7 @@ export const getVestingEvents = async (contract: string, address: string): Promi
   const vesting_milestone_add_selector = hash.getSelectorFromName('VestingMilestoneAdded');
   const vested_selector = hash.getSelectorFromName('Vested');
 
-  const rawEvents = await getRawVestingEvents(contract, provider, START_BLOCK)
+  const rawEvents = await getRawVestingEvents(contract, provider, START_BLOCK);
 
   try {
     const events = rawEvents.reduce((acc: VestingEvent[], event: any) => {
@@ -63,18 +63,30 @@ export const getVestingEvents = async (contract: string, address: string): Promi
             acc.push({
               amount: amount,
               is_claimable: false,
-              claimable_at: null,
+              claimable_at: timestamp,
               is_claimed: true,
             });
           }
         }
+
       } catch (error) {
         console.error('Error processing event, skipping this event:', error);
       }
+
       return acc;
     }, []);
 
-    return events;
+    // Filter out isVestingMilestone if it has a corresponding isVested event with the same claimable_at timestamp
+    const filteredEvents = events.filter((event, index, self) => {
+      if (event.is_claimable) {
+        const matchingVested = self.find(e => e.is_claimed && e.claimable_at === event.claimable_at);
+        return !matchingVested;
+      }
+      return true;
+    });
+
+    return filteredEvents;
+
   } catch (error) {
     console.error('Error in getVestingEvents:', error);
 
@@ -85,6 +97,7 @@ export const getVestingEvents = async (contract: string, address: string): Promi
     }
   }
 };
+
 
 export const getStarknetId = async (
   address: string
