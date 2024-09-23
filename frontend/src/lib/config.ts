@@ -16,7 +16,7 @@ export const formatIpfsHash = (hash: string) => {
 	return hash.replace(/,/g, "");
 };
 
-export const BASE_API_URL = "https://konoha.vote/discussion-api/api/"
+export const BASE_API_URL = "https://konoha.vote/discussion-api/api"
 export const NETWORK: string = "sepolia";
 
 export const ETH_ADDRESS = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
