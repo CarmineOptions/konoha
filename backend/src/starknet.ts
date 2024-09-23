@@ -62,8 +62,8 @@ export const getVestingEvents = async (contract: string, address: string): Promi
           } else if (isVested) {
             acc.push({
               amount: amount,
-              is_claimable: false,
               claimable_at: timestamp,
+              is_claimable: false,
               is_claimed: true,
             });
           }
@@ -76,16 +76,20 @@ export const getVestingEvents = async (contract: string, address: string): Promi
       return acc;
     }, []);
 
-    // Filter out isVestingMilestone if it has a corresponding isVested event with the same claimable_at timestamp
-    const filteredEvents = events.filter((event, index, self) => {
-      if (event.is_claimable) {
-        const matchingVested = self.find(e => e.is_claimed && e.claimable_at === event.claimable_at);
-        return !matchingVested;
-      }
-      return true;
-    });
+    // Create a set of claimable_at values from vested events
+    const vestedClaimableAts = new Set(
+        events.filter(e => e.is_claimed).map(e => e.claimable_at)
+    );
 
-    return filteredEvents;
+    // Filter events, removing is_claimable if there's a matching vested event with the same claimable_at
+    const filteredEvents = events.filter(event =>
+        !event.is_claimable || !vestedClaimableAts.has(event.claimable_at)
+    );
+
+    // Sort the filtered events by claimable_at in ascending order
+    const sortedEvents = filteredEvents.sort((a, b) => (a.claimable_at || 0) - (b.claimable_at || 0));
+
+    return sortedEvents;
 
   } catch (error) {
     console.error('Error in getVestingEvents:', error);
