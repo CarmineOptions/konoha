@@ -4,14 +4,14 @@ import * as dotenv from "dotenv";
 
 dotenv.config();
 
-const NODE_URL: string = process.env.NODE_URL || "";
+const STARKNET_RPC: string = process.env.STARKNET_RPC || "";
 const START_BLOCK: number = process.env.NETWORK === 'mainnet' ? 720000 : 196000; // Started block number before vesting added
 const CHAIN_ID: constants.StarknetChainId = process.env.NETWORK === 'mainnet'
     ? constants.StarknetChainId.SN_MAIN
     : constants.StarknetChainId.SN_SEPOLIA;
 
 const provider = new RpcProvider({
-  nodeUrl: NODE_URL,
+  nodeUrl: STARKNET_RPC,
   chainId: CHAIN_ID,
 });
 
@@ -20,7 +20,24 @@ const starknetIdNavigator = new StarknetIdNavigator(
     CHAIN_ID,
 );
 
-const cache = new Map<string, { amount: number; is_claimable: boolean, is_claimed: boolean }[]>();
+const cache: Map<string, CachedData> = new Map();
+
+const CACHE_TTL_SECONDS = 3600; // TTL for cache (60 minutes)
+
+
+interface VestingEvent {
+  amount: number;         // The amount vested
+  claimable_at: number;   // The timestamp when the amount becomes claimable
+  is_claimable: boolean;  // Whether the amount is claimable at the current time
+  is_claimed: boolean;    // Whether the amount has already been claimed
+}
+
+interface CachedData {
+  data: VestingEvent[]; // Array of events
+  expiry: number; // Expiry timestamp
+}
+
+
 
 export const getVestingEvents = async (contract: string, address: string): Promise<any> => {
   const vesting_milestone_add_selector = hash.getSelectorFromName('VestingMilestoneAdded');
@@ -29,12 +46,14 @@ export const getVestingEvents = async (contract: string, address: string): Promi
   // Cache key using both contract and address
   const cacheKey = `${contract}-${address}`;
 
-  // Check if the result is already cached
-  if (cache.has(cacheKey)) {
-    return cache.get(cacheKey);
+  // Check if the result is already cached and not expired
+  const cached: CachedData | undefined = cache.get(cacheKey);
+  const now = Math.floor(Date.now() / 1000); // Current timestamp in seconds
+
+  if (cached && cached.expiry > now) {
+    return cached.data; // Return cached data if not expired
   }
 
-  const now = Math.floor(Date.now() / 1000); // Current timestamp in seconds
   let fromBlock = START_BLOCK;
   const chunkSize = 100;
   let allEvents: any[] = [];
@@ -100,11 +119,14 @@ export const getVestingEvents = async (contract: string, address: string): Promi
       const lastEventBlock = events.events[events.events.length - 1].block_number;
       fromBlock = lastEventBlock + 1; // Move to the next block
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 100)); // Pause briefly before the next request
     }
 
-    // Cache the result for future requests
-    cache.set(cacheKey, allEvents);
+    // Cache the result for future requests with an expiry time
+    cache.set(cacheKey, {
+      data: allEvents,
+      expiry: now + CACHE_TTL_SECONDS,
+    } as CachedData);
 
     return allEvents;
   } catch (error) {
