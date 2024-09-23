@@ -13,9 +13,7 @@ export const getRawVestingEvents = async (contract: string, provider: RpcProvide
     let cached = getCachedVestingEvents(contract, fromBlock);
 
     const newlyFetched = await fetchVestingEvents(contract, provider, cached.lastBlock);
-    console.log("fetched ", newlyFetched.length, " events")
     const events = [...cached.events, ...newlyFetched];
-    const cacheKey = { contract, fromBlock };
     console.log('saving ', newlyFetched.length, ' newly fetched to cache');
     cache.set(`${contract}-${fromBlock}`, { events, lastBlock: (await latestBlockPromise).block_number });
     return events;
@@ -44,8 +42,6 @@ const fetchVestingEvents = async (contract: string, provider: RpcProvider, fromB
     let res = events.events
 
     if (events.continuation_token) { // means we can continue, more to fetch
-        console.debug('continuing', events.continuation_token);
-        console.debug(res.length)
         const nextEvents = await fetchVestingEvents(contract, provider, fromBlock, events.continuation_token);
         res = [...res, ...nextEvents];
     }
