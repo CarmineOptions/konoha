@@ -24,7 +24,7 @@ const starknetIdNavigator = new StarknetIdNavigator(
 
 interface VestingEvent {
   amount: number;         // The amount vested
-  claimable_at: number | null;   // The timestamp when the amount becomes claimable
+  claimable_at: number;   // The timestamp when the amount becomes claimable
   is_claimable: boolean;  // Whether the amount is claimable at the current time
   is_claimed: boolean;    // Whether the amount has already been claimed
 }
@@ -78,16 +78,16 @@ export const getVestingEvents = async (contract: string, address: string): Promi
 
     // Create a set of claimable_at values from vested events
     const vestedClaimableAts = new Set(
-        events.filter(e => e.is_claimed).map(e => e.claimable_at)
+      events.filter(e => e.is_claimed).map(e => e.claimable_at)
     );
 
     // Filter events, removing is_claimable if there's a matching vested event with the same claimable_at
     const filteredEvents = events.filter(event =>
-        !event.is_claimable || !vestedClaimableAts.has(event.claimable_at)
+      !event.is_claimable || !vestedClaimableAts.has(event.claimable_at)
     );
 
     // Sort the filtered events by claimable_at in ascending order
-    const sortedEvents = filteredEvents.sort((a, b) => (a.claimable_at || 0) - (b.claimable_at || 0));
+    const sortedEvents = filteredEvents.sort((a, b) => a.claimable_at - b.claimable_at);
 
     return sortedEvents;
 
