@@ -24,7 +24,7 @@ const VestingTable: React.FC = () => {
             if (!address) {
                 return [];
             }
-            const response = await axios.get(`${BASE_API_URL}vesting-events`, {
+            const response = await axios.get(`${BASE_API_URL}/vesting-events`, {
                 params: {
                     contract: CONTRACT_ADDR,
                     address: address,
@@ -62,52 +62,61 @@ const VestingTable: React.FC = () => {
     }
 
     return (
-        <div>
+        <div className="w-full max-w-[50rem] mt-4">
             {/* Title */}
-            <div className="flex w-full flex-grow pb-4 text-2xl font-bold">Vesting Event</div>
+            <h2 className="text-xl font-bold mb-2">Vesting Milestones</h2>
 
             {/* Table */}
-            <div className="w-[50rem] max-w-[50rem] grid items-center p-2 pl-0 rounded-lg bg-slate-200">
-                <div className="grid grid-cols-4 bg-slate-100 p-2 font-semibold text-gray-700">
-                    <div className="pl-5">Amount</div>
-                    <div>Claimable At</div>
-                    <div>Is Claimable</div>
-                    <div>Is Claimed</div>
-                </div>
+            <table className="w-full border-collapse">
+                <thead>
+                <tr className="bg-gray-100">
+                    <th className="border p-2 text-left">Amount</th>
+                    <th className="border p-2 text-left">Claimable At</th>
+                    <th className="border p-2 text-left">Is Claimable</th>
+                    <th className="border p-2 text-left">Is Claimed</th>
+                </tr>
+                </thead>
+                <tbody>
                 {paginatedEvents.map((event: VestingEvent, index: number) => (
-                    <div key={index} className="grid grid-cols-4 p-2 bg-white even:bg-gray-50">
-                        <div className="pl-5">{event.amount}</div>
-                        <div>{event.claimable_at ? new Date(event.claimable_at * 1000).toLocaleString() : 'N/A'}</div>
-                        <div>{event.is_claimable ? 'Yes' : 'No'}</div>
-                        <div>{event.is_claimed ? 'Yes' : 'No'}</div>
-                    </div>
+                    <tr key={index} className="hover:bg-gray-50">
+                        <td className="border p-2">{event.amount}</td>
+                        <td className="border p-2">
+                            {event.claimable_at ? new Date(event.claimable_at * 1000).toLocaleString() : 'N/A'}
+                        </td>
+                        <td className="border p-2">{event.is_claimable ? 'Yes' : 'No'}</td>
+                        <td className="border p-2">{event.is_claimed ? 'Yes' : 'No'}</td>
+                    </tr>
                 ))}
-            </div>
+                </tbody>
+            </table>
 
             {/* Pagination Controls */}
-            <div className="flex justify-between items-center mt-4">
-                <button
-                    onClick={handlePreviousPage}
-                    disabled={currentPage === 1}
-                    className={`px-4 py-2 bg-gray-300 rounded ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-400'}`}
-                >
-                    Previous
-                </button>
+            {totalPages > 1 && (
+                <div className="flex justify-between items-center mt-4">
+                    <button
+                        onClick={handlePreviousPage}
+                        disabled={currentPage === 1}
+                        className={`px-4 py-2 bg-gray-300 rounded ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-400'}`}
+                    >
+                        Previous
+                    </button>
 
-                <span className="text-sm">
-                    Page {currentPage} of {totalPages}
-                </span>
+                    <span className="text-sm">
+          Page {currentPage} of {totalPages}
+        </span>
 
-                <button
-                    onClick={handleNextPage}
-                    disabled={currentPage === totalPages}
-                    className={`px-4 py-2 bg-gray-300 rounded ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-400'}`}
-                >
-                    Next
-                </button>
-            </div>
+                    <button
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
+                        className={`px-4 py-2 bg-gray-300 rounded ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-400'}`}
+                    >
+                        Next
+                    </button>
+                </div>
+            )}
         </div>
     );
+
 };
 
 export default VestingTable;
