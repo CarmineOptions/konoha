@@ -24,7 +24,7 @@ const VestingTable: React.FC = () => {
             if (!address) {
                 return [];
             }
-            const response = await axios.get(`${BASE_API_URL}/api/vesting-events`, {
+            const response = await axios.get(`${BASE_API_URL}vesting-events`, {
                 params: {
                     contract: CONTRACT_ADDR,
                     address: address,
