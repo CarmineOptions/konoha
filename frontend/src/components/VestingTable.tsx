@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { CONTRACT_ADDR } from '../lib/config';
 import axios from 'axios';
-import { useAccount } from '@starknet-react/core';
+import { useAccount, useContractWrite } from '@starknet-react/core';
 import { useQuery } from '@tanstack/react-query';
 import { BASE_API_URL } from "../lib/config";
+import { toast } from 'react-hot-toast';
 
 interface VestingEvent {
     amount: number;
@@ -12,11 +13,35 @@ interface VestingEvent {
     is_claimed: boolean;
 }
 
-const ITEMS_PER_PAGE = 10; // Items per page
+const ITEMS_PER_PAGE = 10;
 
 const VestingTable: React.FC = () => {
     const { address } = useAccount();
-    const [currentPage, setCurrentPage] = useState(1); // Track the current page
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const { writeAsync } = useContractWrite({ calls: [] });
+
+    const handleClaim = async (vestedTimestamp: number) => {
+        if (!address) {
+            toast.error('Please connect your wallet');
+            return;
+        }
+
+        const calls = [{
+            contractAddress: CONTRACT_ADDR,
+            entrypoint: 'vest',
+            calldata: [address, vestedTimestamp.toString()],
+        }];
+
+        try {
+            await writeAsync({ calls });
+            toast.success('Vesting claimed successfully');
+            // Optionally, refetch the vesting events here
+        } catch (error) {
+            toast.error('Failed to claim vesting');
+            console.error(error);
+        }
+    };
 
     const { data: events = [], isLoading, error } = useQuery({
         queryKey: ['vesting-events', address],
@@ -63,30 +88,38 @@ const VestingTable: React.FC = () => {
 
     return (
         <div className="w-full max-w-[50rem] mt-4">
-            {/* Title */}
             <h2 className="text-xl font-bold mb-2">Vesting Milestones</h2>
-
-            {/* Table */}
             <table className="w-full border-collapse">
                 <thead>
-                <tr className="bg-gray-100">
-                    <th className="border p-2 text-left">Amount</th>
-                    <th className="border p-2 text-left">Claimable At</th>
-                    <th className="border p-2 text-left">Is Claimable</th>
-                    <th className="border p-2 text-left">Is Claimed</th>
-                </tr>
+                    <tr className="bg-gray-100">
+                        <th className="border p-2 text-left">Amount</th>
+                        <th className="border p-2 text-left">Claimable At</th>
+                        <th className="border p-2 text-left">Status</th>
+                    </tr>
                 </thead>
                 <tbody>
-                {paginatedEvents.map((event: VestingEvent, index: number) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                        <td className="border p-2">{event.amount}</td>
-                        <td className="border p-2">
-                            {event.claimable_at ? new Date(event.claimable_at * 1000).toLocaleString() : 'N/A'}
-                        </td>
-                        <td className="border p-2">{event.is_claimable ? 'Yes' : 'No'}</td>
-                        <td className="border p-2">{event.is_claimed ? 'Yes' : 'No'}</td>
-                    </tr>
-                ))}
+                    {paginatedEvents.map((event: VestingEvent, index: number) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                            <td className="border p-2">{event.amount}</td>
+                            <td className="border p-2">
+                                {event.claimable_at ? new Date(event.claimable_at * 1000).toLocaleString() : 'N/A'}
+                            </td>
+                            <td className="border p-2">
+                                {event.is_claimed ? (
+                                    'Claimed'
+                                ) : event.is_claimable ? (
+                                    <button
+                                        onClick={() => handleClaim(event.claimable_at!)}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                    >
+                                        Claim
+                                    </button>
+                                ) : (
+                                    'Not Claimable'
+                                )}
+                            </td>
+                        </tr>
+                    ))}
                 </tbody>
             </table>
 
@@ -102,8 +135,8 @@ const VestingTable: React.FC = () => {
                     </button>
 
                     <span className="text-sm">
-          Page {currentPage} of {totalPages}
-        </span>
+                        Page {currentPage} of {totalPages}
+                    </span>
 
                     <button
                         onClick={handleNextPage}
