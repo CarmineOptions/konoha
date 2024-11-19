@@ -8,16 +8,22 @@ type StoryProps = ComponentProps<typeof Proposal>;
 const meta: Meta<StoryProps> = {
   title: "Components/Proposals",
   component: Proposal,
+  argTypes:{
+    proposalId: {
+      control: "number",
+      options: [0, 8, 5]
+    }
+  }
  
 };
 
 export default meta;
 type Story = StoryObj<StoryProps>;
 export const Default: Story = {
-  args: {
-    proposalId:  num.toBigInt(0)
+  args: { 
+    proposalId: num.toBigInt(0)
   },
-  render: (args) => {
-    return <Proposal {...args} />;
+  render: ({proposalId, ...args}) => {
+    return <Proposal proposalId={proposalId} {...args} />;
   },
 };

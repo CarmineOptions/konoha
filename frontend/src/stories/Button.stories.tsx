@@ -1,3 +1,4 @@
+import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import { Button } from "../components/ui/Button";
 import { ComponentProps } from "react";
@@ -7,7 +8,8 @@ type StoryProps = ComponentProps<typeof Button> & {
 };
 
 const meta: Meta<StoryProps> = {
-    title: "Components/Button",
+    title: "Components/UI/Button",
+    tags: ["autodocs"],
     component: Button,
 
 };
@@ -20,7 +22,7 @@ export const Primary: Story = {
         buttonText: "Konoha"
     },
     render: ({ buttonText, ...args }) => {
-        return <Button className="w-[200px] h-[46]" {...args} >{buttonText}</Button>;
+        return <Button onClick={() => alert("I was clicked")} className="w-[200px] h-[46]" {...args} >{buttonText}</Button>;
     },
 };
 

@@ -2,7 +2,7 @@ import { Meta, StoryObj, } from "@storybook/react";
 import Comments from "../components/Comments";
 import { ComponentProps } from 'react';
 
-type StoryProps = ComponentProps<typeof Comments>;
+type StoryProps = ComponentProps<typeof Comments> 
 
 
 
@@ -10,28 +10,16 @@ type Story = StoryObj<StoryProps>;
 
 const meta: Meta<StoryProps> = {
     title: "Components/Comments",
+    tags: ["autodocs"],
     component: Comments,
+   
 };
 
 export default meta;
 
 
-
-export const Default: Story = {
+export const CommentList: Story = {
     args: {
-        proposalId: "123",
+       proposalId: "0",
     },
-};
-
-export const EmptyComments: Story = {
-    args: {
-        proposalId: "456",
-    },
-};
-
-export const Loading: Story = {
-    args: {
-        proposalId: "789",
-    },
-    
 };

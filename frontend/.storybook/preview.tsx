@@ -7,6 +7,14 @@ import "../src/globals.css"
 
 const preview: Preview = {
   parameters: {
+    backgrounds: {
+      default: 'light',
+    },
+    options: {
+      storySort: {
+        order: ['Button', 'Dailog', 'ConnectModal', 'Header', 'Proposal', 'Comments']
+      }
+    },
     controls: {
       matchers: {
         color: /(background|color)$/i,
@@ -37,8 +45,8 @@ const preview: Preview = {
           provider={provider}
           connectors={connectors}
         >
-            <div className="h-[100vh] mt-10 flex flex-col items-center justify-center">
-              {Story()}
+          <div className="h-[100vh] mt-10 flex flex-col items-center justify-center">
+            {Story()}
           </div>
 
         </StarknetConfig>

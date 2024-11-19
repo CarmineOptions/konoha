@@ -6,6 +6,7 @@ import { CallData, Contract } from "starknet";
 
 import { submitCommentApi } from "../api/apiService";
 import { abi } from "../lib/abi";
+
 export default function NewcommentCommentForm({
   setIsModalOpen,
   propId,

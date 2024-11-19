@@ -1,3 +1,4 @@
+import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import Header from "../components/Header";
 import { ComponentProps } from "react";
@@ -10,9 +11,6 @@ const meta: Meta<StoryProps> = {
 export default meta;
 type Story = StoryObj<StoryProps>;
 
-export const Connected: Story = {
+export const Default: Story = {
     render: (args) => <Header {...args} />,
-};
-export const NotConnected: Story = {
-  render: (args) => <Header {...args} />,
 };
