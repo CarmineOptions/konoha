@@ -1,6 +1,5 @@
 import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
-import { num } from "starknet"
 import SubmitProposalModal from "../components/SubmitProposalModal";
 import { ComponentProps } from "react";
 

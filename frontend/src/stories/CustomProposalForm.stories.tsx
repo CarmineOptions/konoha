@@ -28,8 +28,7 @@ export const Form: Story = {
     },
 
     render: ({ isModalOpen, ...args }) => {
-
-        const [_, setIsModalOpen] = useState(isModalOpen);
+        const [, setIsModalOpen] = useState(isModalOpen);
         return <CustomProposalForm setIsModalOpen={setIsModalOpen}  {...args} />;
     },
 };

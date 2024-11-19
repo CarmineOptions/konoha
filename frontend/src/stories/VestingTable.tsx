@@ -1,3 +1,4 @@
+import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import VestingTable from "../components/VestingTable";
 import { ComponentProps } from "react";

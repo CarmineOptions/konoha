@@ -1,3 +1,4 @@
+import React from "react";
 import { Meta, StoryObj } from "@storybook/react";
 import NewProposalForm from "../components/NewProposalForm";
 import { ComponentProps, useState } from "react";
@@ -28,7 +29,7 @@ export const Form: Story = {
     isModalOpen: true
    },   
     render: ({isModalOpen, ...args }) => {
-        const [_, setIsModalOpen] = useState(isModalOpen)
+        const [, setIsModalOpen] = useState(isModalOpen)
         
         return <NewProposalForm setIsModalOpen={setIsModalOpen}   {...args} />;
     },
