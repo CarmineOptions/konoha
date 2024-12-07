@@ -1,0 +1,31 @@
+{
+  "name": "konoha",
+  "version": "1.0.0",
+  "description": "Many projects on Starknet will need the same functionality: DAO-like governance, upgrades, token vesting, staking and airdrops,  treasury management, etc. On Ethereum, they can use adapt open-source solutions such as [Compound Governance](https://github.com/compound-finance/compound-protocol/tree/master/contracts/Governance). No such solution currently exists for Starknet (with the noble exception of [Ekubo governance](https://github.com/EkuboProtocol/governance/tree/main/src)).",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@chromatic-com/storybook": "^3.2.2",
+    "@storybook/addon-essentials": "^8.4.2",
+    "@storybook/addon-interactions": "^8.4.2",
+    "@storybook/addon-onboarding": "^8.4.2",
+    "@storybook/blocks": "^8.4.2",
+    "@storybook/react": "^8.4.2",
+    "@storybook/react-vite": "^8.4.2",
+    "@storybook/test": "^8.4.2",
+    "prop-types": "^15.8.1",
+    "storybook": "^8.4.2"
+  },
+  "packageManager": "pnpm@9.12.3+sha512.cce0f9de9c5a7c95bef944169cc5dfe8741abfb145078c0d508b868056848a87c81e626246cb60967cbd7fd29a6c062ef73ff840d96b3c86c40ac92cf4a813ee"
+}

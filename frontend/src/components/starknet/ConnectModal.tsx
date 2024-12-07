@@ -19,7 +19,7 @@ export default function ConnectModal() {
                 connector.available() ? connect({ connector }) : null
               }
               disabled={!connector.available()}
-              className="flex flex-row items-center justify-start gap-4 w-96"
+              className="flex bg-black flex-row items-center justify-start gap-4 w-96"
             >
               {connector.icon.light && (
                 <img src={connector.icon.dark} className="w-10 h-10" />
