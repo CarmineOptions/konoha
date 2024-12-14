@@ -15,7 +15,7 @@ Reach out to us via [Telegram](https://t.me/+_BpaFo4iarszZmQ0)
 
 See [CONTRIBUTING.md](docs/src/CONTRIBUTING.md) for contributor guidelines
 
-We're rewarding contributors with fiat and STRK tokens through [OnlyDust](https://app.onlydust.com/p/carmine-options-amm).
+We're rewarding contributors with fiat and STRK tokens through [OnlyDust](https://app.onlydust.com/p/konoha).
 
 ## Frontend
 
@@ -31,6 +31,6 @@ Run this in a Devcontainer or on Codespaces in VSCode. Cairo, Scarb and the Cair
 
 ### Useful links
 
-[C1.0 docs](https://cairo-lang.org/docs/v1.0/index.html)
+[C1.0 docs](https://www.cairo-lang.org/)
 
 [StarkNet docs](https://docs.starknet.io/documentation/)
