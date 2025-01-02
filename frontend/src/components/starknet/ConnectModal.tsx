@@ -7,10 +7,9 @@ import Dialog from "../ui/Dialog";
 export default function ConnectModal() {
   const { connect, connectors } = useConnect();
 
-  console.log(connectors);
   return (
-    <Dialog title="Connect Wallet">
-      <div className="flex flex-col gap-2">
+    <Dialog title="Connect Wallet" >
+      <div className="flex flex-col gap-2 ">
         {connectors.map((connector: Connector) => {
           return (
             <Button

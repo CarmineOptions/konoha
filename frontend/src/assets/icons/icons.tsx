@@ -195,3 +195,47 @@ export const STRKLogo = (props: SVGProps<SVGSVGElement>) => (
     </defs>
   </svg>
 );
+
+export const StakeIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={15}
+    height={15}
+    fill="none"
+    {...props}
+  >
+    <g clipPath="url(#a)">
+      <rect width={15} height={15} fill="#403C30" rx={7.5} />
+      <g clipPath="url(#b)">
+        <path
+          fill="#FFF0C5"
+          d="M8.007 5.354a1.35 1.35 0 0 1 2.068-1.043.15.15 0 0 1-.02.263 1.952 1.952 0 0 0-1.147 1.91.15.15 0 0 1-.225.14 1.35 1.35 0 0 1-.676-1.27Zm4.196 3.871a.917.917 0 0 1-.51.825l-.016.008-1.457.62a.252.252 0 0 1-.044.015l-2.4.6a.298.298 0 0 1-.073.01h-3.9a.6.6 0 0 1-.6-.6v-1.5a.6.6 0 0 1 .6-.6H4.88l.848-.849a1.193 1.193 0 0 1 .849-.351h1.877a1.05 1.05 0 0 1 1.022 1.291l1.569-.36a.923.923 0 0 1 1.16.891Zm-.6 0a.322.322 0 0 0-.408-.31l-.011.002-2.513.578a.312.312 0 0 1-.067.008h-1.2a.3.3 0 1 1 0-.6h1.05a.45.45 0 0 0 0-.9H6.575a.595.595 0 0 0-.424.175l-.849.849v1.676h2.363l2.34-.586 1.426-.607a.32.32 0 0 0 .171-.285Zm-2.1-2.872a1.35 1.35 0 1 0 2.7 0 1.35 1.35 0 0 0-2.7 0Z"
+        />
+      </g>
+    </g>
+    <defs>
+      <clipPath id="a">
+        <rect width={15} height={15} fill="#fff" rx={7.5} />
+      </clipPath>
+      <clipPath id="b">
+        <path fill="#fff" d="M3.203 3.203h9.6v9.6h-9.6z" />
+      </clipPath>
+    </defs>
+  </svg>
+);
+
+
+export const CircleNotch = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width={48}
+    height={48}
+    fill="none"
+    {...props}
+  >
+    <path
+      fill="#fff"
+      d="M43.5 24a19.5 19.5 0 0 1-39 0c0-7.687 4.464-14.692 11.374-17.863a1.5 1.5 0 0 1 1.252 2.726C11.278 11.548 7.5 17.488 7.5 24a16.5 16.5 0 0 0 33 0c0-6.512-3.778-12.452-9.626-15.137a1.5 1.5 0 0 1 1.252-2.726C39.036 9.307 43.5 16.313 43.5 24Z"
+    />
+  </svg>
+)
