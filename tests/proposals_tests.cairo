@@ -626,7 +626,7 @@ fn test_get_appliable_proposals() {
     upgrades_dispatcher.apply_passed_proposal(prop_id_2);
 
     // should be only proposal 1
-    let appliable_proposals_after = dispatcher.get_appliable_proposals();
+    let mut appliable_proposals_after = dispatcher.get_appliable_proposals();
     assert!(appliable_proposals_after.len() == 1, "more than 1 appliable proposal!");
 
     assert!(
