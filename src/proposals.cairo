@@ -270,8 +270,7 @@ mod proposals {
         fn _find_free_custom_proposal_type(self: @ComponentState<TContractState>) -> u32 {
             let mut i = 0;
             let mut res = self.custom_proposal_type.read(i);
-            while(res.target.is_non_zero())
-            {
+            while (res.target.is_non_zero()) {
                 i += 1;
                 res = self.custom_proposal_type.read(i);
             };
