@@ -13,6 +13,7 @@ trait IProposals<TContractState> {
     ) -> felt252;
     fn get_proposal_status(self: @TContractState, prop_id: felt252) -> felt252;
     fn get_live_proposals(self: @TContractState) -> Array<felt252>;
+    fn get_appliable_proposals(self: @TContractState) -> Array<felt252>;
     fn get_user_voted(
         self: @TContractState, user_address: ContractAddress, prop_id: felt252
     ) -> VoteStatus;
@@ -269,7 +270,8 @@ mod proposals {
         fn _find_free_custom_proposal_type(self: @ComponentState<TContractState>) -> u32 {
             let mut i = 0;
             let mut res = self.custom_proposal_type.read(i);
-            while (res.target.is_non_zero()) {
+            while(res.target.is_non_zero())
+            {
                 i += 1;
                 res = self.custom_proposal_type.read(i);
             };
@@ -331,6 +333,34 @@ mod proposals {
                     arr.append(prop_id);
                 }
 
+                i += 1;
+            };
+
+            arr
+        }
+
+        fn get_appliable_proposals(self: @ComponentState<TContractState>) -> Array<felt252> {
+            let max: u32 = self.get_free_prop_id_timestamp().try_into().unwrap();
+            let mut i: u32 = 0;
+            let mut arr = ArrayTrait::<felt252>::new();
+
+            loop {
+                if i >= max {
+                    break;
+                }
+
+                let prop_id: felt252 = i.into();
+                let current_status = self.get_proposal_status(prop_id);
+
+                // is passed
+                if current_status == 1 {
+                    let applied: felt252 = self.proposal_applied.read(prop_id);
+
+                    // is not applied
+                    if applied == 0 {
+                        arr.append(prop_id);
+                    }
+                }
                 i += 1;
             };
 

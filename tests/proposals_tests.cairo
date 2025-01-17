@@ -586,3 +586,50 @@ fn test_get_comments() {
     assert_eq!(res_span.at(2).ipfs_hash.clone(), ipfs_hash_3);
 }
 
+#[test]
+fn test_get_appliable_proposals() {
+    let (gov, _voting, floating) = deploy_governance_and_both_tokens();
+    set_staking_curve(gov.contract_address);
+    let gov_contract_addr = gov.contract_address;
+
+    let dispatcher = IProposalsDispatcher { contract_address: gov_contract_addr };
+    stake_all(gov.contract_address, floating, admin_addr.try_into().unwrap());
+    start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
+
+    // create proposals 1, 2, 3
+    let prop_id_1: u128 = dispatcher.submit_proposal(123, 4).try_into().unwrap();
+    let prop_id_2: u128 = dispatcher.submit_proposal(124, 4).try_into().unwrap();
+    let prop_id_3: u128 = dispatcher.submit_proposal(125, 4).try_into().unwrap();
+
+    // vote on proposals 1, 2
+    dispatcher.vote(prop_id_1, 1);
+    dispatcher.vote(prop_id_2, 1);
+
+    //simulate passage of time
+    let current_timestamp = get_block_timestamp();
+    let end_timestamp = current_timestamp + PROPOSAL_VOTING_SECONDS;
+    start_warp(CheatTarget::One(gov.contract_address), end_timestamp + 1);
+
+    // 1, 2 should be passed, 3 should be expired
+    assert!(dispatcher.get_proposal_status(prop_id_1) == 1, "proposal 1 not passed!");
+    assert!(dispatcher.get_proposal_status(prop_id_2) == 1, "proposal 2 not passed!");
+    assert!(
+        dispatcher.get_proposal_status(prop_id_3) == constants::MINUS_ONE, "proposal 3 not expired!"
+    );
+
+    let upgrades_dispatcher = IUpgradesDispatcher { contract_address: gov_contract_addr };
+
+    let appliable_proposals_before = dispatcher.get_appliable_proposals();
+    assert!(appliable_proposals_before.len() == 2, "unexpected number of appliable proposals!");
+
+    // apply proposal 2
+    upgrades_dispatcher.apply_passed_proposal(prop_id_2);
+
+    // should be only proposal 1
+    let appliable_proposals_after = dispatcher.get_appliable_proposals();
+    assert!(appliable_proposals_after.len() == 1, "more than 1 appliable proposal!");
+
+    assert!(
+        appliable_proposals_after.pop_front().unwrap() == prop_id_1, "wrong appliable proposal id!"
+    );
+}
