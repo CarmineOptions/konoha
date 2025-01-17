@@ -597,9 +597,9 @@ fn test_get_appliable_proposals() {
     start_prank(CheatTarget::One(gov_contract_addr), admin_addr.try_into().unwrap());
 
     // create proposals 1, 2, 3
-    let prop_id_1: u128 = dispatcher.submit_proposal(123, 4).try_into().unwrap();
-    let prop_id_2: u128 = dispatcher.submit_proposal(124, 4).try_into().unwrap();
-    let prop_id_3: u128 = dispatcher.submit_proposal(125, 4).try_into().unwrap();
+    let prop_id_1 = dispatcher.submit_proposal(123, 4);
+    let prop_id_2 = dispatcher.submit_proposal(124, 4);
+    let prop_id_3 = dispatcher.submit_proposal(125, 4);
 
     // vote on proposals 1, 2
     dispatcher.vote(prop_id_1, 1);
