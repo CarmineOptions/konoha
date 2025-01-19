@@ -23,12 +23,12 @@ sort-module-level-items = true
 
 [[tool.snforge.fork]]
 name = "MAINNET"
-url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
+url = "$MAINNET_NODE_URL"
 block_id.tag = "Latest"
 
 [[tool.snforge.fork]]
 name = "SEPOLIA"
-url = "https://starknet-mainnet.public.blastapi.io/rpc/v0_7"
+url = "$SEPOLIA_NODE_URL"
 block_id.tag = "Latest"
 
 RUST_BACKTRACE = 1
