@@ -23,12 +23,12 @@ sort-module-level-items = true
 
 [[tool.snforge.fork]]
 name = "MAINNET"
-url = "http://178.32.172.148:6060/v0_7"
+url = "$MAINNET_NODE_URL"
 block_id.tag = "Latest"
 
 [[tool.snforge.fork]]
 name = "SEPOLIA"
-url = "http://178.32.172.148:6062/v0_7"
+url = "$SEPOLIA_NODE_URL"
 block_id.tag = "Latest"
 
 RUST_BACKTRACE = 1

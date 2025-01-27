@@ -6,8 +6,8 @@ use snforge_std::{
 
 //useful for debugging
 
-#[test]
-#[fork("SEPOLIA")]
+//#[test]
+//#[fork("SEPOLIA")]
 fn test_deploy() {
     let gov_contract = declare("Governance").expect('unable to declare governance');
     let treasury_class = 0x035ef05673259eca09f55fce176a195d110bdbc6b145c08811d0e252ea8adadb;

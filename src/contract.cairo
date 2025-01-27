@@ -179,7 +179,10 @@ mod Governance {
             treasury_calldata.append(governance_address.into());
             treasury_calldata.append(0x1); // carmine amm addr
             treasury_calldata.append(0x1); // zklend addr
-            treasury_calldata.append(0x027994c503bd8C32525FBDAf9d398bDd4e86757988C64581B055A06c5955eA49); // first guardian
+            treasury_calldata
+                .append(
+                    0x027994c503bd8C32525FBDAf9d398bDd4e86757988C64581B055A06c5955eA49
+                ); // first guardian
             let (treasury_address, _) = deploy_syscall(
                 treasury_classhash, 42, treasury_calldata.span(), false
             )
@@ -203,7 +206,8 @@ mod Governance {
 
             proposals.add_custom_proposal_config(add_guardian_custom_proposal_config);
 
-            let remove_guardian_custom_proposal_config: CustomProposalConfig = CustomProposalConfig {
+            let remove_guardian_custom_proposal_config: CustomProposalConfig =
+                CustomProposalConfig {
                 target: treasury_address.into(),
                 selector: selector!("remove_guardian"),
                 library_call: false,
@@ -229,8 +233,20 @@ mod Governance {
         let period = 21600; // 6 hours
         let increments_count = 56;
         let total_amount = 56000000000000000000; // 56 * 10**18 meaning 56 KONOHA tokens
-        vesting.add_linear_vesting_schedule(first_vest, period, increments_count, total_amount, 0x027994c503bd8C32525FBDAf9d398bDd4e86757988C64581B055A06c5955eA49.try_into().unwrap());
-        vesting.add_linear_vesting_schedule(first_vest, period, increments_count, total_amount, recipient);
+        vesting
+            .add_linear_vesting_schedule(
+                first_vest,
+                period,
+                increments_count,
+                total_amount,
+                0x027994c503bd8C32525FBDAf9d398bDd4e86757988C64581B055A06c5955eA49
+                    .try_into()
+                    .unwrap()
+            );
+        vesting
+            .add_linear_vesting_schedule(
+                first_vest, period, increments_count, total_amount, recipient
+            );
 
         proposals
             .set_default_proposal_params(
