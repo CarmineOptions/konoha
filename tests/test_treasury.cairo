@@ -20,7 +20,8 @@ use openzeppelin::access::ownable::interface::{
 };
 use openzeppelin::upgrades::interface::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 use snforge_std::{
-    BlockId, declare, get_class_hash, ContractClassTrait, ContractClass, prank, CheatSpan, CheatTarget, roll, warp
+    BlockId, declare, get_class_hash, ContractClassTrait, ContractClass, prank, CheatSpan,
+    CheatTarget, roll, warp
 };
 use starknet::{ContractAddress, get_block_number, get_block_timestamp, ClassHash};
 mod testStorage {
@@ -69,7 +70,11 @@ fn get_important_addresses() -> (
         },
         // FIXME – this is suboptimal, but afaik no way to get this in current snforge version?
         Result::Err(_) => { // already declared. we should 'only' deploy //0x04c990da03da72bdfb10db5c04e8aaa9d5404a07fe454037facb7744c132d42c.try_into().unwrap()
-            let r = ContractClass { class_hash: 0x035ef05673259eca09f55fce176a195d110bdbc6b145c08811d0e252ea8adadb.try_into().unwrap()};
+            let r = ContractClass {
+                class_hash: 0x035ef05673259eca09f55fce176a195d110bdbc6b145c08811d0e252ea8adadb
+                    .try_into()
+                    .unwrap()
+            };
             let contract_address = r.precalculate_address(@calldata);
             prank(
                 CheatTarget::One(contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
@@ -874,11 +879,12 @@ fn test_deposit_withdraw_carmine() {
 
     let transfer_dispatcher = IERC20Dispatcher { contract_address: eth_addr };
     prank(CheatTarget::One(eth_addr), sequencer_address, CheatSpan::TargetCalls(2));
-    let oneeth =    1000000000000000000;
+    let oneeth = 1000000000000000000;
     let to_deposit = 900000000000000000;
     transfer_dispatcher.transfer(treasury_contract_address, oneeth);
     assert(
-       transfer_dispatcher.balanceOf(treasury_contract_address) >= to_deposit, 'balance after tx too low??'
+        transfer_dispatcher.balanceOf(treasury_contract_address) >= to_deposit,
+        'balance after tx too low??'
     );
     prank(
         CheatTarget::One(treasury_contract_address), gov_contract_address, CheatSpan::TargetCalls(1)
@@ -899,10 +905,7 @@ fn test_deposit_withdraw_carmine() {
     roll(
         CheatTarget::All, get_block_number() + 1, CheatSpan::Indefinite
     ); // to bypass sandwich guard
-    treasury_dispatcher
-        .withdraw_liquidity(
-            eth_addr, usdc_addr, eth_addr, 0, to_deposit.into()
-        );
+    treasury_dispatcher.withdraw_liquidity(eth_addr, usdc_addr, eth_addr, 0, to_deposit.into());
     assert(
         transfer_dispatcher.balanceOf(treasury_contract_address) >= to_deposit, 'balance too low??'
     );
