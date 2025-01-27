@@ -13,6 +13,7 @@ type Props = {
   proposalId: string;
 };
 export default function Comments({ proposalId }: Props) {
+  
   const [comments, setComments] = useState<CommentProps>([]);
   const { data, isLoading } = useContractRead({
     functionName: "get_comments",

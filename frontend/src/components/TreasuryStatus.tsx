@@ -10,11 +10,13 @@ export default function TreasuryStatus() {
   ];
   const { balances, isLoading } = useTokenBalances(tokens, TREASURY_ADDRESS);
 
+  console.log(isLoading)
+
   return (
     <TokenBalance
       balances={balances}
-      isLoading={isLoading}
-      title="Treasury status"
+      isLoading={false}
+      title="TRESURY"
     />
   );
 }
