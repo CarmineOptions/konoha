@@ -10,6 +10,13 @@ struct PropDetails {
     to_upgrade: felt252,
 }
 
+#[derive(Copy, Drop, Serde)]
+struct FullPropDetails {
+    payload: felt252,
+    to_upgrade: felt252,
+    proposal_vote_end_timestamp: u64
+}
+
 struct VoteCounts {
     yay: felt252,
     nay: felt252

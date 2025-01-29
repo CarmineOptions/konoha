@@ -1,12 +1,12 @@
 // Proposals component. Does not depend on anything. Holds governance token address.
 
-use konoha::types::{ContractType, PropDetails, VoteStatus, CustomProposalConfig};
+use konoha::types::{ContractType, FullPropDetails, PropDetails, VoteStatus, CustomProposalConfig};
 use starknet::ContractAddress;
 
 #[starknet::interface]
 trait IProposals<TContractState> {
     fn vote(ref self: TContractState, prop_id: felt252, opinion: felt252);
-    fn get_proposal_details(self: @TContractState, prop_id: felt252) -> PropDetails;
+    fn get_proposal_details(self: @TContractState, prop_id: felt252) -> FullPropDetails;
     fn get_vote_counts(self: @TContractState, prop_id: felt252) -> (u128, u128);
     fn submit_proposal(
         ref self: TContractState, payload: felt252, to_upgrade: ContractType
@@ -61,8 +61,8 @@ mod proposals {
     use konoha::types::BlockNumber;
     use konoha::types::ContractType;
     use konoha::types::CustomProposalConfig;
-    use konoha::types::PropDetails;
     use konoha::types::VoteStatus;
+    use konoha::types::{FullPropDetails, PropDetails};
     use option::OptionTrait;
     use starknet::BlockInfo;
     use starknet::ClassHash;
@@ -311,8 +311,14 @@ mod proposals {
 
         fn get_proposal_details(
             self: @ComponentState<TContractState>, prop_id: felt252
-        ) -> PropDetails {
-            self.proposal_details.read(prop_id)
+        ) -> FullPropDetails {
+            let prop_details = self.proposal_details.read(prop_id);
+            let vote_ends = self.proposal_vote_end_timestamp.read(prop_id);
+            FullPropDetails {
+                payload: prop_details.payload,
+                to_upgrade: prop_details.to_upgrade,
+                proposal_vote_end_timestamp: vote_ends
+            }
         }
 
         fn get_live_proposals(self: @ComponentState<TContractState>) -> Array<felt252> {
