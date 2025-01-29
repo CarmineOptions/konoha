@@ -2,7 +2,7 @@
 name = "konoha"
 description = "Flexible monolithic governance components for Starknet"
 version = "1.0.0"
-cairo-version = "2.6.3"
+cairo-version = "2.6.4"
 
 [dependencies]
 starknet = ">=2.0.0"
