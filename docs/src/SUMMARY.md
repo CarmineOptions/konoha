@@ -9,6 +9,7 @@
 2. [Upgrades](./upgrades.md)
 3. [Treasury](./treasury.md)
 4. [Staking](./staking.md)
+5. [Security Pool](./security-pool.md)
 
 # Development
 

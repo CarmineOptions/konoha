@@ -54,6 +54,8 @@ To prepare an arbitrary proposal, first declare a class with the function `execu
 
 To then propose an arbitrary proposal, call `submit_proposal` with `to_upgrade = 6`, and the payload being the class hash of the previously declared class.
 
+See [Security Pool](./security-pool.md) or [Treasury](./treasury.md) for examples of an arbitrary proposal.
+
 ## Customization
 
 Protocols can customize the proposal system in several ways:
