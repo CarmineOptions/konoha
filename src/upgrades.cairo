@@ -30,8 +30,7 @@ mod upgrades {
 
     #[storage]
     struct Storage {
-        proposal_applied: LegacyMap::<felt252, bool>,
-        amm_address: ContractAddress
+        proposal_applied: LegacyMap::<felt252, bool>
     }
 
     #[derive(starknet::Event, Drop)]
