@@ -905,7 +905,15 @@ fn test_deposit_withdraw_carmine() {
     roll(
         CheatTarget::All, get_block_number() + 1, CheatSpan::Indefinite
     ); // to bypass sandwich guard
-    treasury_dispatcher.withdraw_liquidity(eth_addr, usdc_addr, eth_addr, 0, to_deposit.into());
+    let carm_AMM: IAMMDispatcher = IAMMDispatcher {
+        contract_address: _AMM_contract_address
+    };
+    let lp_token_addr = carm_AMM.get_lptoken_address_for_given_option(
+        usdc_addr, eth_addr, 0
+    );
+    let lp_token: IERC20Dispatcher = IERC20Dispatcher { contract_address: lp_token_addr };
+    let lpt_amt = lp_token.balanceOf(treasury_contract_address);
+    treasury_dispatcher.withdraw_liquidity(eth_addr, usdc_addr, eth_addr, 0, lpt_amt);
     assert(
         transfer_dispatcher.balanceOf(treasury_contract_address) >= to_deposit, 'balance too low??'
     );
