@@ -78,13 +78,9 @@ mod Treasury {
         IMarket, IMarketDispatcher, IMarketDispatcherTrait
     };
     use konoha::types::{Transfer, TransferStatus};
-    use openzeppelin::access::accesscontrol::interface::IAccessControl;
-    use openzeppelin::access::accesscontrol::{AccessControlComponent, DEFAULT_ADMIN_ROLE};
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::access::ownable::interface::IOwnableTwoStep;
     use openzeppelin::access::ownable::ownable::OwnableComponent::InternalTrait;
-    use openzeppelin::introspection::src5::SRC5Component;
-    use openzeppelin::token::erc20::ERC20Component;
     use openzeppelin::upgrades::interface::IUpgradeable;
     use openzeppelin::upgrades::upgradeable::UpgradeableComponent;
     use starknet::{
