@@ -31,6 +31,6 @@ Run this in a Devcontainer or on Codespaces in VSCode. Cairo, Scarb and the Cair
 
 ### Useful links
 
-[C1.0 docs](https://cairo-lang.org/docs/v1.0/index.html)
+[C1.0 docs](https://cairo-lang.org/)
 
 [StarkNet docs](https://docs.starknet.io/documentation/)
