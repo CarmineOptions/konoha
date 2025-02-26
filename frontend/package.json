@@ -7,27 +7,40 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint ./src"
+    "lint": "eslint ./src",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@starknet-react/core": "^2.9.0",
+    "@tanstack/react-query": "^5.0.1",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
     "axios": "^1.7.2",
     "next": "^14.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
-    "tailwindcss": "^3.3.5",
-    "@tanstack/react-query": "^5.0.1"
+    "react-router-dom": "^7.1.1",
+    "tailwindcss": "^3.3.5"
   },
   "devDependencies": {
+    "@chromatic-com/storybook": "^3.2.2",
+    "@storybook/addon-essentials": "^8.4.2",
+    "@storybook/addon-interactions": "^8.4.2",
+    "@storybook/addon-onboarding": "^8.4.2",
+    "@storybook/blocks": "^8.4.2",
+    "@storybook/nextjs": "^8.4.2",
+    "@storybook/react": "^8.4.2",
+    "@storybook/test": "^8.4.2",
     "@types/react": "^18.0.27",
     "@types/react-dom": "^18.0.10",
     "@vitejs/plugin-react": "^3.1.0",
     "autoprefixer": "^10.4.16",
     "eslint": "8.33.0",
     "eslint-plugin-react": "^7.31.4",
+    "eslint-plugin-storybook": "^0.11.0",
     "postcss": "^8.4.31",
+    "storybook": "^8.4.2",
     "typescript": "4.9.5",
     "vite": "^4.1.0",
     "vite-plugin-checker": "^0.5.1"

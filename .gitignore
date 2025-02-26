@@ -35,3 +35,4 @@ account*
 *.tsbuildinfo  # TypeScript build information files
 dist/           # Common directory for compiled JavaScript files
 build/          # Alternative directory for compiled files
+*storybook.log

@@ -8,10 +8,10 @@ export default function Dialog({
   const [isOpen, setIsOpen] = React.useState(false);
 
   return (
-    <div>
+    <div className="">
       <Button onClick={() => setIsOpen(true)}>{title}</Button>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/30">
           <div className="flex flex-col p-8 bg-white rounded-md gap-12">
             <div className="flex flex-row justify-between w-full">
               <h1 className="text-xl font-semibold">{title}</h1>
