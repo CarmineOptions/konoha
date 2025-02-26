@@ -1,5 +1,5 @@
+import React from "react";
 import { useContractRead } from '@starknet-react/core';
-import React, { } from 'react';
 import { VOTING_TOKEN_CONTRACT } from '../lib/config';
 import { TokenABI } from '../lib/tokenContractABI';
 

@@ -13,7 +13,6 @@ export default function VotingPower() {
         { name: "FLOATING", address: FLOATING_TOKEN_CONTRACT },
     ];
     const { balances, isLoading } = useTokenBalances(tokens, address);
-
     const floatingBalance = balances.find(b => b.name === "FLOATING")?.balance || "0";
 
     return (
